@@ -1,0 +1,24 @@
+*.md
+!README.md
+
+# Rust のビルド成果物
+/src-tauri/target/
+
+# Capabilities 補完用スキーマ
+/src-tauri/gen/schemas/
+
+# 一時的な Tauri 設定ファイル
+/src-tauri/tauri.conf.json.tmp
+
+# ── フロントエンド系
+/node_modules/
+/dist/
+
+# ── エディタ設定
+.vscode/
+
+*.env
+!*.env.development
+!*.env.production
+
+*.pem

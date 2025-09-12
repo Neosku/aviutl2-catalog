@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AviUtl2_Catalog",
+  "mainBinaryName": "AviUtl2_Catalog",
+  "version": "0.1.0",
+  "identifier": "aviutl2-catalog",
+  "build": {
+    "beforeDevCommand": "vite",
+    "beforeBuildCommand": "vite build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "bundle": {
+    "active": true,
+    "externalBin": [],
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "certificateThumbprint": null,
+      "timestampUrl": null
+    },
+    "resources": [
+      "resources/UpdateChecker.aui2"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://raw.githubusercontent.com/Neosku/deta_test/main/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDODNBNTVDRjYyNEFDNDcKUldSSHJDVDJYS1dEM09tc09VWjlzVHJaeGo1MFlJMTVOZnBGSTAvOUQ3MUZHTDM1cjZ6akVqWjEK"
+    }
+  },
+  "app": {
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost 'self' https: http:;"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "AviUtl2 \u30AB\u30BF\u30ED\u30B0",
+        "width": 1100,
+        "height": 760,
+        "decorations": false
+      }
+    ]
+  }
+}
