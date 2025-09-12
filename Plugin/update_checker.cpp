@@ -24,6 +24,7 @@
 #include <sstream>
 #include <algorithm>
 #include <utility>
+#include <cwctype>
 
 #include "input2.h"
 
@@ -44,8 +45,9 @@ static bool g_MenuReady = false;        // 起動直後はメニューを出さ�
 static bool g_UpdateAvailable = false;  // 比較結果
 
 // メニューアイコン用ビットマップ
-static HBITMAP g_hBmpUpdateAvail = nullptr;   // 更新ありアイコン
-static HBITMAP g_hBmpUpdateNone = nullptr;  // 更新なしアイコン
+static HBITMAP g_hBmpUpdateAvail = nullptr;  // 更新ありアイコン
+static HBITMAP g_hBmpUpdateNone = nullptr;   // 更新なしアイコン
+static int g_MenuIconSizePx = 0;             // メニューアイコンのサイズ
 
 struct UpdateEntry {
     std::wstring id;
@@ -55,7 +57,40 @@ struct UpdateEntry {
 static std::vector<UpdateEntry> g_Updates;  // 比較結果
 
 // ------------------------ ユーティリティ ------------------------
-// AppData/Roaming のパスを取得する（C:\\Users\\<name>\\AppData\\Roaming）
+// 画面スケーリング（DPI）関連のユーティリティ
+static float GetScaleForHwnd(HWND hWnd) {
+    // 既定値（96DPI = 1.0）
+    UINT dpi = 96;
+    // GetDpiForWindow を動的取得
+    typedef UINT(WINAPI * PFN_GetDpiForWindow)(HWND);
+    static PFN_GetDpiForWindow pGetDpiForWindow = (PFN_GetDpiForWindow)GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow");
+    if (pGetDpiForWindow) {
+        dpi = pGetDpiForWindow(hWnd);
+    } else {
+        // フォールバック: デバイスコンテキストから DPI を取得
+        HDC hdc = GetDC(hWnd ? hWnd : nullptr);
+        if (hdc) {
+            int dpix = GetDeviceCaps(hdc, LOGPIXELSX);
+            if (dpix > 0) dpi = (UINT)dpix;
+            ReleaseDC(hWnd ? hWnd : nullptr, hdc);
+        }
+    }
+    if (dpi < 96) dpi = 96;  // 最低 100%
+    return (float)dpi / 96.0f;
+}
+
+static inline int ScalePx(int v, float s) { return (int)(v * s + 0.5f); }
+
+// UI 用に少し抑えたスケール（高DPIで大きくなりすぎないよう緩和）
+static float GetUiScaleForHwnd(HWND hWnd) {
+    float s = GetScaleForHwnd(hWnd);
+    if (s <= 1.0f) return 1.0f;
+    // 緩和率 0.8: 200%→180% 程度に抑制（必要に応じて微調整可能）
+    float s2 = 1.0f + (s - 1.0f) * 0.8f;
+    return s2;
+}
+
+// AppData/Roaming のパスを取得（C:\\Users\\<name>\\AppData\\Roaming）
 static std::wstring GetRoamingAppDataDir() {
     PWSTR psz = nullptr;
     std::wstring path;
@@ -89,7 +124,7 @@ static bool EnsureDir(const std::wstring& path) {
     return true;
 }
 
-// 指定パスのファイルを全読み込みしてバイト列（std::string）に格納します。
+// 指定パスのファイルを全読み込みしてバイト列（std::string）に格納
 static bool ReadFileAll(const std::wstring& path, std::string& out) {
     HANDLE h = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) return false;
@@ -178,13 +213,51 @@ static HBITMAP MakeCircleBitmap(COLORREF color, int size = 16) {
 }
 
 // メニューアイコンを初期化
-static void InitializeMenuIcons() {
-    if (!g_hBmpUpdateAvail) {
-        g_hBmpUpdateAvail = MakeCircleBitmap(RGB(76, 175, 80));  // 緑の丸
-        // g_hBmpUpdateAvail = MakeCircleBitmap(RGB(198, 40, 40));  // 赤い丸
+// 指定ウィンドウの DPI からメニューアイコン推奨サイズを取得
+static int GetMenuIconSizeForHwnd(HWND hWnd) {
+    // DIP（96DPI基準）のサイズをスケーリングして決定
+    const float s = GetUiScaleForHwnd(hWnd);
+    const int baseDip = 10;  // 10dip を基準
+    const int minDip = 7;    // 下限 7dip
+    int dipPx = ScalePx(baseDip, s);
+    int minPx = ScalePx(minDip, s);
+
+    // Windows 10 以降: メニューの推奨チェックサイズを上限として使用
+    typedef int(WINAPI * PFN_GetSystemMetricsForDpi)(int, UINT);
+    typedef UINT(WINAPI * PFN_GetDpiForWindow)(HWND);
+    static PFN_GetSystemMetricsForDpi pGetSysMetForDpi = (PFN_GetSystemMetricsForDpi)GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetSystemMetricsForDpi");
+    static PFN_GetDpiForWindow pGetDpiForWindow = (PFN_GetDpiForWindow)GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow");
+    if (pGetSysMetForDpi && pGetDpiForWindow && hWnd) {
+        UINT dpi = pGetDpiForWindow(hWnd);
+        int w = pGetSysMetForDpi(SM_CXMENUCHECK, dpi);
+        int h = pGetSysMetForDpi(SM_CYMENUCHECK, dpi);
+        int sys = (w > 0 && h > 0) ? (w < h ? w : h) : 0;
+        int sz = (sys > 0) ? std::min(dipPx, sys) : dipPx;
+        if (sz < minPx) sz = minPx;
+        return sz;
     }
-    if (!g_hBmpUpdateNone) {
-        g_hBmpUpdateNone = MakeCircleBitmap(RGB(153, 153, 153));  // グレーの丸
+    // フォールバック: システム値がなければ DIP ベースのみ
+    if (dipPx < minPx) dipPx = minPx;
+    return dipPx;
+}
+
+// DPI に応じたメニューアイコンを用意（サイズが変われば作り直し）
+static void EnsureMenuIcons(HWND hWnd) {
+    int desired = GetMenuIconSizeForHwnd(hWnd);
+    if (desired <= 0) desired = 16;
+    if (g_MenuIconSizePx != desired || !g_hBmpUpdateAvail || !g_hBmpUpdateNone) {
+        // 既存を破棄して作り直す
+        if (g_hBmpUpdateAvail) {
+            DeleteObject(g_hBmpUpdateAvail);
+            g_hBmpUpdateAvail = nullptr;
+        }
+        if (g_hBmpUpdateNone) {
+            DeleteObject(g_hBmpUpdateNone);
+            g_hBmpUpdateNone = nullptr;
+        }
+        g_hBmpUpdateAvail = MakeCircleBitmap(RGB(76, 175, 80), desired);
+        g_hBmpUpdateNone = MakeCircleBitmap(RGB(153, 153, 153), desired);
+        g_MenuIconSizePx = desired;
     }
 }
 // メニューアイコンをクリーンアップ
@@ -197,6 +270,7 @@ static void CleanupMenuIcons() {
         DeleteObject(g_hBmpUpdateNone);
         g_hBmpUpdateNone = nullptr;
     }
+    g_MenuIconSizePx = 0;
 }
 
 // ------------------------ JSON パース（簡易） ------------------------
@@ -390,8 +464,8 @@ static bool HasUpdateItem(HMENU hMenu) {
 static void ApplyUpdateLabel(HWND hWnd) {
     HMENU hMenu = GetMenu(hWnd);
     if (!hMenu) return;
-    // アイコン初期化
-    InitializeMenuIcons();
+    // DPI に応じたアイコンを準備
+    EnsureMenuIcons(hWnd);
     // 更新メニュー項目が無ければ追加
     if (!HasUpdateItem(hMenu)) {
         AppendMenuW(hMenu, MF_STRING | MF_ENABLED, ID_MENU_UPDATE, L"更新");
@@ -439,6 +513,112 @@ static std::wstring Trim(const std::wstring& s) {
     while (a < b && iswspace(s[a])) ++a;
     while (b > a && iswspace(s[b - 1])) --b;
     return s.substr(a, b - a);
+}
+
+// 前後の二重引用符を除去
+static std::wstring StripQuotes(const std::wstring& s) {
+    if (s.size() >= 2 && s.front() == L'"' && s.back() == L'"') {
+        return s.substr(1, s.size() - 2);
+    }
+    return s;
+}
+
+static std::wstring ToLower(const std::wstring& s) {
+    std::wstring t = s;
+    std::transform(t.begin(), t.end(), t.begin(), towlower);
+    return t;
+}
+
+// 指定パスをコンソールなしで起動する（必要に応じてスクリプトも隠し起動）
+static bool LaunchExternalNoConsole(const std::wstring& rawPath) {
+    std::wstring path = StripQuotes(Trim(rawPath));
+    if (path.empty()) return false;
+
+    DWORD attr = GetFileAttributesW(path.c_str());
+    if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) {
+        // ディレクトリはエクスプローラーで開く（コンソールなし）
+        HINSTANCE hr = ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        return (INT_PTR)hr > 32;
+    }
+
+    // 拡張子によって起動方法を分岐
+    std::wstring lower = ToLower(path);
+    size_t dot = lower.find_last_of(L'.');
+    std::wstring ext = (dot != std::wstring::npos) ? lower.substr(dot) : L"";
+
+    // 作業ディレクトリ
+    std::wstring workDir;
+    size_t slash = path.find_last_of(L"/\\");
+    if (slash != std::wstring::npos) workDir = path.substr(0, slash);
+
+    if (ext == L".exe") {
+        STARTUPINFOW si{};
+        si.cb = sizeof(si);
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNORMAL;
+        PROCESS_INFORMATION pi{};
+        // applicationName に直接 exe を指定（引数なし）
+        BOOL ok = CreateProcessW(path.c_str(), nullptr, nullptr, nullptr, FALSE,
+                                 CREATE_NO_WINDOW, nullptr,
+                                 workDir.empty() ? nullptr : workDir.c_str(),
+                                 &si, &pi);
+        if (ok) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+            return true;
+        }
+        // 失敗したら ShellExecute にフォールバック
+        HINSTANCE hr = ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, workDir.empty() ? nullptr : workDir.c_str(), SW_SHOWNORMAL);
+        return (INT_PTR)hr > 32;
+    } else if (ext == L".bat" || ext == L".cmd") {
+        wchar_t comspec[MAX_PATH] = L"";
+        DWORD n = GetEnvironmentVariableW(L"COMSPEC", comspec, MAX_PATH);
+        std::wstring cmdExe = (n > 0 && n < MAX_PATH) ? std::wstring(comspec) : std::wstring(L"C\\Windows\\System32\\cmd.exe");
+        std::wstring cmdLine = L"/c \"" + path + L"\"";
+        // 可変コマンドラインバッファ
+        std::vector<wchar_t> cl(cmdLine.begin(), cmdLine.end());
+        cl.push_back(L'\0');
+        STARTUPINFOW si{};
+        si.cb = sizeof(si);
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+        PROCESS_INFORMATION pi{};
+        BOOL ok = CreateProcessW(cmdExe.c_str(), cl.data(), nullptr, nullptr, FALSE,
+                                 CREATE_NO_WINDOW, nullptr,
+                                 workDir.empty() ? nullptr : workDir.c_str(),
+                                 &si, &pi);
+        if (ok) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+            return true;
+        }
+        return false;
+    } else if (ext == L".ps1") {
+        // PowerShell スクリプトを隠れて実行
+        std::wstring ps = L"C\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+        std::wstring cmdLine = L"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + path + L"\"";
+        std::vector<wchar_t> cl(cmdLine.begin(), cmdLine.end());
+        cl.push_back(L'\0');
+        STARTUPINFOW si{};
+        si.cb = sizeof(si);
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+        PROCESS_INFORMATION pi{};
+        BOOL ok = CreateProcessW(ps.c_str(), cl.data(), nullptr, nullptr, FALSE,
+                                 CREATE_NO_WINDOW, nullptr,
+                                 workDir.empty() ? nullptr : workDir.c_str(),
+                                 &si, &pi);
+        if (ok) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+            return true;
+        }
+        return false;
+    } else {
+        // その他は関連付けに任せる
+        HINSTANCE hr = ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, workDir.empty() ? nullptr : workDir.c_str(), SW_SHOWNORMAL);
+        return (INT_PTR)hr > 32;
+    }
 }
 
 // 1バイト文字が空白類か判定
@@ -504,18 +684,19 @@ static int ReadCatalogExePath(std::wstring& outPath) {
 // 更新一覧の ListView にID/現在/最新を追加します。
 static void InitListViewColumns(HWND hList) {
     // while (ListView_DeleteColumn(hList, 0)) {}// 初期化されるため必要なし
+    const float s = GetUiScaleForHwnd(hList);
     LVCOLUMNW col{};
     col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
     col.pszText = const_cast<wchar_t*>(L"パッケージ ID");
-    col.cx = 300;
+    col.cx = ScalePx(300, s);
     col.iSubItem = 0;
     ListView_InsertColumn(hList, 0, &col);
     col.pszText = const_cast<wchar_t*>(L"現在のバージョン");
-    col.cx = 165;
+    col.cx = ScalePx(165, s);
     col.iSubItem = 1;
     ListView_InsertColumn(hList, 1, &col);
     col.pszText = const_cast<wchar_t*>(L"最新バージョン");
-    col.cx = 165;
+    col.cx = ScalePx(165, s);
     col.iSubItem = 2;
     ListView_InsertColumn(hList, 2, &col);
 }
@@ -533,6 +714,25 @@ static void PopulateListView(HWND hList) {
         ListView_SetItemText(hList, (int)i, 1, const_cast<wchar_t*>(e.installed.c_str()));
         ListView_SetItemText(hList, (int)i, 2, const_cast<wchar_t*>(e.latest.c_str()));
     }
+}
+
+// ListView 列幅をクライアント幅に合わせて設定（DPIを考慮しつつ可変）
+static void SetListViewColumnWidths(HWND hList, float s, int clientCX, int margin) {
+    if (!hList) return;
+    int contentW = clientCX - (margin * 2) - 4;  // 境界線分の余白
+    // 比率: ID 55%, 現在 22.5%, 最新 22.5%
+    int w0 = (contentW * 55) / 100;
+    int w12 = (contentW - w0) / 2;
+    int w1 = w12;
+    int w2 = contentW - w0 - w1;  // 端数調整
+    LVCOLUMNW col{};
+    col.mask = LVCF_WIDTH;
+    col.cx = w0;
+    ListView_SetColumn(hList, 0, &col);
+    col.cx = w1;
+    ListView_SetColumn(hList, 1, &col);
+    col.cx = w2;
+    ListView_SetColumn(hList, 2, &col);
 }
 
 // ダイアログ用のフォントハンドルと、所有権を管理するためのグローバル変数
@@ -629,14 +829,17 @@ static INT_PTR CALLBACK UpdateDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
             GetClientRect(hWnd, &rc);
             int cx = rc.right - rc.left;
             int cy = rc.bottom - rc.top;
+            // スケール係数（DPI に応じて）
+            const float s = GetUiScaleForHwnd(hWnd);
             // 共通コントロールを初期化
             INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_LISTVIEW_CLASSES};
             InitCommonControlsEx(&icc);
-            // レイアウト用
-            const int margin = 8;
-            const int spacing = 8;   // ボタン間の隙間
-            const int btnH = 50;     // ボタンの高さ
-            const int closeW = 100;  // 閉じるボタンの幅
+            // レイアウト用（小さめ基準をDPIスケール）
+            const int margin = ScalePx(8, s);
+            const int spacing = ScalePx(8, s);       // ボタン間の隙間
+            const int btnH = ScalePx(32, s);         // ボタンの高さ
+            const int closeW = ScalePx(96, s);       // 閉じるボタンの幅
+            const int minLaunchW = ScalePx(120, s);  // 起動ボタンの最小幅
             // 更新一覧の ListView を作成
             s_hList = CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
                                       WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
@@ -647,7 +850,7 @@ static INT_PTR CALLBACK UpdateDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
             // ボタンを作成
             int launchX = margin;
             int launchW = cx - margin - spacing - closeW - margin;
-            if (launchW < 240) launchW = 240;
+            if (launchW < minLaunchW) launchW = minLaunchW;
             HWND hBtn = CreateWindowExW(0, L"BUTTON", L"AviUtl2 カタログを起動",
                                         WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
                                         launchX, cy - margin - btnH, launchW, btnH, hWnd, (HMENU)(INT_PTR)IDC_BTN_LAUNCH, g_hInst, nullptr);
@@ -667,23 +870,32 @@ static INT_PTR CALLBACK UpdateDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
                 SendMessageW(GetDlgItem(hWnd, IDCANCEL), WM_SETFONT, (WPARAM)hFont, TRUE);
             }
 
-            // 調整: 列幅にクライアント幅を合わせる
-            int w0 = (int)SendMessageW(s_hList, LVM_GETCOLUMNWIDTH, 0, 0);
-            int w1 = (int)SendMessageW(s_hList, LVM_GETCOLUMNWIDTH, 1, 0);
-            int w2 = (int)SendMessageW(s_hList, LVM_GETCOLUMNWIDTH, 2, 0);
-            int desiredClientW = margin * 2 + w0 + w1 + w2 + 4;  // +4は境界線
-            int minClientW = margin + 240 + spacing + closeW + margin;
+            // 列幅を現在のクライアント幅に合わせる
+            SetListViewColumnWidths(s_hList, s, cx, margin);
+
+            // 最小幅・最小高さの確保（極端に小さい場合のみ拡大）
+            int minClientW = margin + minLaunchW + spacing + closeW + margin;
+            int maxClientW = ScalePx(380, s);  // 初期の最大横幅
+            int minListH = ScalePx(180, s);
+            int minClientH = margin + minListH + margin + btnH + margin;
+            int desiredClientW = cx;
             if (desiredClientW < minClientW) desiredClientW = minClientW;
-            if (cx != desiredClientW) {
-                RECT adj{0, 0, desiredClientW, cy};
+            if (desiredClientW > maxClientW) desiredClientW = maxClientW;
+            int desiredClientH = (cy < minClientH) ? minClientH : cy;
+            if (desiredClientW != cx || desiredClientH != cy) {
+                RECT adj{0, 0, desiredClientW, desiredClientH};
                 DWORD style = (DWORD)GetWindowLongPtrW(hWnd, GWL_STYLE);
                 DWORD exStyle = (DWORD)GetWindowLongPtrW(hWnd, GWL_EXSTYLE);
                 AdjustWindowRectEx(&adj, style, FALSE, exStyle);
                 RECT wr{};
                 GetWindowRect(hWnd, &wr);
                 int newW = adj.right - adj.left;
-                int winH = wr.bottom - wr.top;
-                SetWindowPos(hWnd, nullptr, 0, 0, newW, winH, SWP_NOMOVE | SWP_NOZORDER);
+                int newH = adj.bottom - adj.top;
+                SetWindowPos(hWnd, nullptr, 0, 0, newW, newH, SWP_NOMOVE | SWP_NOZORDER);
+                // 幅が変わったので再度列幅を調整
+                GetClientRect(hWnd, &rc);
+                cx = rc.right - rc.left;
+                SetListViewColumnWidths(s_hList, s, cx, margin);
             }
 
             // 親ウィンドウ中央へ配置
@@ -696,21 +908,67 @@ static INT_PTR CALLBACK UpdateDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
             GetClientRect(hWnd, &rc);
             int cx = rc.right - rc.left;
             int cy = rc.bottom - rc.top;
-            // レイアウト用
-            const int margin = 8;
-            const int spacing = 8;   // ボタン間の隙間
-            const int btnH = 50;     // ボタンの高さ
-            const int closeW = 100;  // 閉じるボタンの幅
+            // レイアウト用（スケール適用）
+            const float s = GetUiScaleForHwnd(hWnd);
+            const int margin = ScalePx(8, s);
+            const int spacing = ScalePx(8, s);       // ボタン間の隙間
+            const int btnH = ScalePx(32, s);         // ボタンの高さ
+            const int closeW = ScalePx(96, s);       // 閉じるボタンの幅
+            const int minLaunchW = ScalePx(120, s);  // 起動ボタンの最小幅
             // ListView をリサイズ
             if (s_hList) {
                 MoveWindow(s_hList, margin, margin, cx - (margin * 2), cy - (margin * 3) - btnH, TRUE);
+                // 列幅もクライアント幅に合わせて更新
+                SetListViewColumnWidths(s_hList, s, cx, margin);
             }
             // ボタンをリサイズ/再配置
             int launchX = margin;
             int launchW = cx - margin - spacing - closeW - margin;
-            if (launchW < 240) launchW = 240;
+            if (launchW < minLaunchW) launchW = minLaunchW;
             MoveWindow(GetDlgItem(hWnd, IDC_BTN_LAUNCH), launchX, cy - margin - btnH, launchW, btnH, TRUE);
             MoveWindow(GetDlgItem(hWnd, IDCANCEL), cx - margin - closeW, cy - margin - btnH, closeW, btnH, TRUE);
+            return TRUE;
+        }
+        case WM_DPICHANGED: {
+            // DPI 変更の推奨矩形に合わせて位置・サイズを更新
+            if (lParam) {
+                RECT* prc = (RECT*)lParam;
+                // 推奨サイズをベースに、最大横幅を超えないように調整
+                const float s = GetScaleForHwnd(hWnd);
+                int suggestedW = prc->right - prc->left;
+                int suggestedH = prc->bottom - prc->top;
+                // クライアントの最大幅（DPIに応じて）
+                int maxClientW = ScalePx(380, s);
+                // 現在のウィンドウスタイルのフレーム込みサイズへ変換
+                RECT clientRect{0, 0, maxClientW, 100};
+                DWORD style = (DWORD)GetWindowLongPtrW(hWnd, GWL_STYLE);
+                DWORD exStyle = (DWORD)GetWindowLongPtrW(hWnd, GWL_EXSTYLE);
+                AdjustWindowRectEx(&clientRect, style, FALSE, exStyle);
+                int maxWindowW = clientRect.right - clientRect.left;
+                if (suggestedW > maxWindowW) suggestedW = maxWindowW;
+                SetWindowPos(hWnd, nullptr, prc->left, prc->top,
+                             suggestedW, suggestedH,
+                             SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+            // 新 DPI に応じてフォントと列幅を再適用
+            HFONT hFont = (HFONT)SendMessageW(hWnd, WM_GETFONT, 0, 0);
+            if (!hFont) {
+                if (!g_hDlgFont) g_hDlgFont = CreateSystemMessageFont();
+                hFont = g_hDlgFont;
+            }
+            if (hFont) {
+                if (s_hList) SendMessageW(s_hList, WM_SETFONT, (WPARAM)hFont, TRUE);
+                HWND hBtn1 = GetDlgItem(hWnd, IDC_BTN_LAUNCH);
+                if (hBtn1) SendMessageW(hBtn1, WM_SETFONT, (WPARAM)hFont, TRUE);
+                HWND hBtn2 = GetDlgItem(hWnd, IDCANCEL);
+                if (hBtn2) SendMessageW(hBtn2, WM_SETFONT, (WPARAM)hFont, TRUE);
+            }
+            const float s = GetUiScaleForHwnd(hWnd);
+            RECT rc{};
+            GetClientRect(hWnd, &rc);
+            int cx = rc.right - rc.left;
+            const int margin = ScalePx(8, s);
+            SetListViewColumnWidths(s_hList, s, cx, margin);
             return TRUE;
         }
         case WM_COMMAND:
@@ -726,8 +984,7 @@ static INT_PTR CALLBACK UpdateDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
                         MessageBoxW(hWnd, L"設定ファイルに catalogDir が見つかりません。",
                                     L"起動エラー", MB_OK | MB_ICONERROR | MB_TOPMOST);
                     } else {
-                        HINSTANCE hr = ShellExecuteW(hWnd, L"open", exePath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-                        if ((INT_PTR)hr <= 32) {
+                        if (!LaunchExternalNoConsole(exePath)) {
                             MessageBoxW(hWnd, L"AviUtl2 カタログを起動できませんでした。\nパスが正しいか、実行権限があるかをご確認ください。",
                                         L"起動エラー", MB_OK | MB_ICONERROR | MB_TOPMOST);
                         }
@@ -775,6 +1032,10 @@ static LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
                 ShowUpdatesDialog(hWnd);
                 return 0;
             }
+            break;
+        case WM_DPICHANGED:
+            // メニューアイコンサイズを DPI に合わせて更新
+            ApplyUpdateLabel(hWnd);
             break;
         // 起動完了後にメニューを適用
         case WM_APP_APPLY_MENU:

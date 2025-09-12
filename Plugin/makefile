@@ -1,6 +1,7 @@
 CXX      := g++
 CXXFLAGS := -std=gnu++17 -O2 -Wall -DUNICODE -D_UNICODE -DWIN32_LEAN_AND_MEAN
-LDFLAGS  := -shared -Wl,--subsystem,windows
+LDFLAGS  := -shared -Wl,--subsystem,windows -static-libstdc++ -static-libgcc
+
 
 SRC   := update_checker.cpp
 DLL   := UpdateChecker.dll
