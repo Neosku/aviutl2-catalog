@@ -73,16 +73,12 @@ export default function FilterPanel() {
 
   return (
     <React.Fragment>
-      {/* すべてをクリア（最上段のカード内、右寄せ） */}
-      <div className="sidebar" aria-label="フィルター全消去">
+      {/* 表示設定 */}
+      <div className="sidebar" aria-label="表示設定">
         <div className="sidebar__actions">
-          <button className="btn btn--clear" onClick={clearAll} title="すべての条件をクリア">
-            すべてをクリア
-          </button>
+          <button className="btn btn--clear btn--block" onClick={clearAll} title="すべての条件をクリア">すべてをクリア</button>
         </div>
       </div>
-
-      {/* インストール済みのみ */}
       <div className="sidebar">
         <div className="sidebar__header">表示設定</div>
         <div className="sidebar__group">

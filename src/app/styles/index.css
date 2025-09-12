@@ -401,6 +401,8 @@ select {
   grid-template-columns: 220px 1fr;
   gap: 16px;
   align-items: start;
+  /* メインページ最下部に余白を追加 */
+  padding-bottom: 40px;
 }
 
 .sidebar {
@@ -419,6 +421,10 @@ select {
 }
 
 .sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-weight: 600;
   margin-bottom: 8px;
   font-size: 14px;
@@ -434,6 +440,12 @@ select {
   display: flex;
   justify-content: flex-end;
   margin-top: 8px;
+}
+
+/* small clear-all in sidebar header */
+.sidebar__clearall {
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .chip--block {
@@ -1040,6 +1052,13 @@ select {
 .btn--sm {
   padding: 4px 8px;
   font-size: 0.92em;
+}
+
+/* full-width button helper */
+.btn--block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
 }
 
 .form {
