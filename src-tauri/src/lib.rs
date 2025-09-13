@@ -715,24 +715,6 @@ fn list_dir_names(p: &str) -> Result<(Vec<String>, Vec<String>), String> {
     Ok((folders, files))
 }
 
-// プラグインディレクトリの代替パスを生成（plugins/Plugin の相互変換）
-fn alt_plugins_dirs(d: &str) -> Vec<String> {
-    let base = d.trim_end_matches(['/', '\\']).to_string();
-    if base.is_empty() { return vec![String::new()]; }
-    let mut set = std::collections::BTreeSet::<String>::new();
-    set.insert(base.clone());
-    let lower = base.to_lowercase();
-    if lower.ends_with("plugins") {
-        let mut alt = base.clone();
-        let cut = alt.len() - "plugins".len();
-        alt.replace_range(cut.., "Plugin");
-        set.insert(alt);
-    }
-    if lower.ends_with("plugin") {
-        set.insert(format!("{}s", base));
-    }
-    set.into_iter().collect()
-}
 
 // ハッシュキャッシュファイルを読み込み
 fn read_hash_cache(app: &tauri::AppHandle) -> std::collections::HashMap<String, serde_json::Value> {
@@ -807,37 +789,59 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
     let mut has_app_exe = false;
     for p in &candidates_exe { if exists_file_abs(p) { has_app_exe = true; break; } }
 
-    let mut scanned_path = String::new();
-    let mut folders_set: HashSet<String> = HashSet::new();
-    let mut files_set: HashSet<String> = HashSet::new();
-    let try_dirs = alt_plugins_dirs(&settings.plugins_dir);
-    for dir in try_dirs.iter() {
-        if dir.is_empty() { continue; }
+    let mut scanned_plugins_path = String::new();
+    let mut folders_plugins_set: HashSet<String> = HashSet::new();
+    let mut files_plugins_set: HashSet<String> = HashSet::new();
+    let dir = settings.plugins_dir.trim();
+    if !dir.is_empty() {
         match list_dir_names(dir) {
             Ok((folders, files)) => {
-                scanned_path = dir.clone();
-                for f in folders { folders_set.insert(f); }
-                for f in files { files_set.insert(f); }
-                if !folders_set.is_empty() || !files_set.is_empty() { break; }
+                scanned_plugins_path = dir.to_string();
+                for f in folders { folders_plugins_set.insert(f); }
+                for f in files { files_plugins_set.insert(f); }
             }
             Err(e) => {
                 log_error(&app, &format!("readDir failed path=\"{}\": {}", dir, e));
             }
         }
     }
-    let folders_vec: Vec<String> = folders_set.iter().cloned().collect();
-    let files_vec: Vec<String> = files_set.iter().cloned().collect();
+    let mut scanned_scripts_path = String::new();
+    let mut folders_scripts_set: HashSet<String> = HashSet::new();
+    let mut files_scripts_set: HashSet<String> = HashSet::new();
+    let sdir = settings.scripts_dir.trim();
+    if !sdir.is_empty() {
+        match list_dir_names(sdir) {
+            Ok((folders, files)) => {
+                scanned_scripts_path = sdir.to_string();
+                for f in folders { folders_scripts_set.insert(f); }
+                for f in files { files_scripts_set.insert(f); }
+            }
+            Err(e) => {
+                log_error(&app, &format!("readDir failed path=\"{}\": {}", sdir, e));
+            }
+        }
+    }
+
+    let folders_plugins_vec: Vec<String> = folders_plugins_set.iter().cloned().collect();
+    let files_plugins_vec: Vec<String> = files_plugins_set.iter().cloned().collect();
+    let folders_scripts_vec: Vec<String> = folders_scripts_set.iter().cloned().collect();
+    let files_scripts_vec: Vec<String> = files_scripts_set.iter().cloned().collect();
     log_info(&app, &format!(
-        "scan appExe={} pluginsDir=\"{}\" folders=[{}] files=[{}]",
+        "scan appExe={} pluginsDir=\"{}\" pFolders=[{}] pFiles=[{}] scriptsDir=\"{}\" sFolders=[{}] sFiles=[{}]",
         has_app_exe,
-        scanned_path,
-        folders_vec.join(","),
-        files_vec.join(",")
+        scanned_plugins_path,
+        folders_plugins_vec.join(","),
+        files_plugins_vec.join(","),
+        scanned_scripts_path,
+        folders_scripts_vec.join(","),
+        files_scripts_vec.join(","),
     ));
 
     // ヘルパー：アイテムが候補かどうかを判定
-    let folders_lower: HashSet<String> = folders_set.iter().map(|s| s.to_lowercase()).collect();
-    let files_lower: HashSet<String> = files_set.iter().map(|s| s.to_lowercase()).collect();
+    let folders_plugins_lower: HashSet<String> = folders_plugins_set.iter().map(|s| s.to_lowercase()).collect();
+    let files_plugins_lower: HashSet<String> = files_plugins_set.iter().map(|s| s.to_lowercase()).collect();
+    let folders_scripts_lower: HashSet<String> = folders_scripts_set.iter().map(|s| s.to_lowercase()).collect();
+    let files_scripts_lower: HashSet<String> = files_scripts_set.iter().map(|s| s.to_lowercase()).collect();
     let mut is_candidate = vec![false; list.len()];
     for (idx, it) in list.iter().enumerate() {
         let mut ok = false;
@@ -859,9 +863,19 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
                         let rest = rest.trim_start_matches('/');
                         let seg: Vec<&str> = rest.split('/').collect();
                         if seg.len() >= 2 {
-                            if folders_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if folders_plugins_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
                         } else if seg.len() == 1 && !seg[0].is_empty() {
-                            if files_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if files_plugins_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                        }
+                    }
+                    if let Some(pos) = norm.find("{scriptsDir}") {
+                        let rest = &norm[pos + "{scriptsDir}".len()..];
+                        let rest = rest.trim_start_matches('/');
+                        let seg: Vec<&str> = rest.split('/').collect();
+                        if seg.len() >= 2 {
+                            if folders_scripts_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                        } else if seg.len() == 1 && !seg[0].is_empty() {
+                            if files_scripts_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
                         }
                     }
                 }
@@ -883,7 +897,7 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
                         let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                         let ctx = HashMap::from([
                             ("tmp", ""), ("appDir", settings.app_dir.as_str()), ("pluginsDir", settings.plugins_dir.as_str()),
-                            ("scriptsDir", ""), ("id", it.get("id").and_then(|v| v.as_str()).unwrap_or("")), ("version", ver_str),
+                            ("scriptsDir", settings.scripts_dir.as_str()), ("id", it.get("id").and_then(|v| v.as_str()).unwrap_or("")), ("version", ver_str),
                             ("download", ""), ("PRODUCT_CODE", ""),
                         ]);
                         let expanded = expand_macros(raw, &ctx).replace('/', "\\");
@@ -956,7 +970,7 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
                     let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     let ctx = HashMap::from([
                         ("tmp", ""), ("appDir", settings.app_dir.as_str()), ("pluginsDir", settings.plugins_dir.as_str()),
-                        ("scriptsDir", ""), ("id", id.as_str()), ("version", ver_str),
+                        ("scriptsDir", settings.scripts_dir.as_str()), ("id", id.as_str()), ("version", ver_str),
                         ("download", ""), ("PRODUCT_CODE", ""),
                     ]);
                     let expanded = expand_macros(raw, &ctx).replace('/', "\\");
@@ -1108,11 +1122,7 @@ fn list_installed_plugins(app: tauri::AppHandle) -> Result<Vec<String>, String> 
 
     let settings = read_settings(&app);
     let mut roots: Vec<String> = Vec::new();
-    if !settings.plugins_dir.is_empty() {
-        for d in alt_plugins_dirs(&settings.plugins_dir) {
-            if !d.is_empty() { roots.push(d); }
-        }
-    }
+    if !settings.plugins_dir.is_empty() { roots.push(settings.plugins_dir.clone()); }
     if !settings.scripts_dir.is_empty() { roots.push(settings.scripts_dir.clone()); }
     if roots.is_empty() { return Ok(Vec::new()); }
 

@@ -172,7 +172,7 @@ export default function Package() {
                   <button className="btn btn--danger sideactions__btn" onClick={onRemove} disabled={removing}>{removing ? (<><span className="spinner" aria-hidden></span> 削除中…</>) : (<><Icon name="delete" size={18} /> 削除</>)}</button>
                 </>
               ) : (
-                <button className="btn btn--primary sideactions__btn" onClick={onDownload} disabled={!canInstall || downloading}>{downloading ? (<><span className="spinner" aria-hidden></span> 実行中…</>) : (<><span aria-hidden><svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><g stroke="currentColor" strokeWidth="2" stroke-linecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></g></svg></span> ダウンロード</>)}</button>
+                <button className="btn btn--primary sideactions__btn" onClick={onDownload} disabled={!canInstall || downloading}>{downloading ? (<><span className="spinner" aria-hidden></span> 実行中…</>) : (<><span aria-hidden><svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><g stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></g></svg></span> ダウンロード</>)}</button>
               )}
             </div>
           </div>
