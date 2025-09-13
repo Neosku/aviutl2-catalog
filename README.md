@@ -51,8 +51,8 @@ Tauri のアプリ設定ディレクトリに以下のデータを保存しま�
 ## カタログデータ
 
 * パッケージやカタログデータの投稿は、アプリ内の **フィードバック機能** からお願いします。
-* カタログデータは`aviutl2-catalog-data`のindex.jsonに記録しています。30分ごとに更新を自動確認します（対応しているもののみ,一覧はsearch.jsonにあります）
-
+* カタログデータは`aviutl2-catalog-data`のindex.jsonに記録しています。30分ごとに更新を自動確認します(対応しているもののみ)
+（[パッケージ一覧](https://github.com/Neosku/aviutl2-catalog-data/blob/main/パッケージ.md)）
 ---
 
 ## ライセンス
