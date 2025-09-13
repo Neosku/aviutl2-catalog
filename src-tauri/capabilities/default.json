@@ -3,7 +3,9 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "local": true,
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-is-maximized",
@@ -11,28 +13,29 @@
     "core:window:allow-unmaximize",
     "core:window:allow-minimize",
     "core:window:allow-close",
-
     "shell:default",
     "shell:allow-open",
     {
       "identifier": "shell:allow-execute",
-      "allow": [ { "name": "powershell", "cmd": "powershell", "args": true } ]
+      "allow": [
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
+        }
+      ]
     },
-
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
     "dialog:allow-ask",
     "dialog:allow-confirm",
-
     "updater:default",
     "updater:allow-check",
     "updater:allow-download-and-install",
     "process:allow-restart",
-
     "http:default",
-
     "fs:default",
     "fs:allow-app-read-recursive",
     "fs:allow-app-write-recursive",
@@ -40,68 +43,88 @@
       "identifier": "fs:allow-read-dir",
       "allow": [
         "C:/Program Files/AviUtl2",
-        "C:/Program Files/AviUtl2/*",
+        "C:/Program Files/AviUtl2/**",
         "C:/ProgramData/aviutl2/Plugin",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-read-file",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-write-file",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-mkdir",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
         "C:/Program Files/AviUtl2",
-        "C:/ProgramData/aviutl2/Plugin/*",
+        "C:/Program Files/AviUtl2/**",
         "C:/ProgramData/aviutl2/Plugin",
-        "C:/*"
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-copy-file",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-rename",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-remove",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     },
     {
       "identifier": "fs:allow-exists",
       "allow": [
-        "C:/Program Files/AviUtl2/*",
-        "C:/ProgramData/aviutl2/Plugin/*",
-        "C:/*"
+        "C:/Program Files/AviUtl2",
+        "C:/Program Files/AviUtl2/**",
+        "C:/ProgramData/aviutl2/Plugin",
+        "C:/ProgramData/aviutl2/Plugin/**",
+        "C:/ProgramData/aviutl2/Script",
+        "C:/ProgramData/aviutl2/Script/**"
       ]
     }
   ]
