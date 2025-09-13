@@ -1,5 +1,6 @@
 *.md
 !README.md
+!Plugin/update.md
 
 # Rust のビルド成果物
 /src-tauri/target/

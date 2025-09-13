@@ -1087,9 +1087,9 @@ static DWORD WINAPI WorkerThread(LPVOID) {
 // ------------------------ 入力プラグイン スタブ ------------------------
 static INPUT_PLUGIN_TABLE s_table = {
     INPUT_PLUGIN_TABLE::FLAG_VIDEO | INPUT_PLUGIN_TABLE::FLAG_AUDIO,
-    L"AviUtl2 カタログ",           // プラグインの名前
-    L"*.*",                        // 入力ファイルフィルタ
-    L"AviUtl2 カタログ beta 0.1",  // プラグインの情報
+    L"AviUtl2 カタログ",                   // プラグインの名前
+    L"*.*",                                // 入力ファイルフィルタ
+    L"AviUtl2 カタログ UpdateChecker v2",  // プラグインの情報
 };
 
 // 入力プラグイン構造体を返す関数
