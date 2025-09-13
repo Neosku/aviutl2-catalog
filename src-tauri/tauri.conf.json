@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "AviUtl2_Catalog",
   "mainBinaryName": "AviUtl2_Catalog",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "identifier": "aviutl2-catalog",
   "build": {
     "beforeDevCommand": "vite",
@@ -27,7 +27,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://raw.githubusercontent.com/Neosku/deta_test/main/latest.json"
+        "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/aviutl2_catalog_update.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDODNBNTVDRjYyNEFDNDcKUldSSHJDVDJYS1dEM09tc09VWjlzVHJaeGo1MFlJMTVOZnBGSTAvOUQ3MUZHTDM1cjZ6akVqWjEK"
     }
