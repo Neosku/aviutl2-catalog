@@ -1140,7 +1140,7 @@ export async function runUninstallerForItem(item, dispatch) {
     } catch (_) { }
 
     if (!removedAny) {
-      const settings = await ensurePaths(['appDir', 'pluginsDir']);
+      const settings = await ensurePaths(['appDir', 'pluginsDir', 'scriptsDir']);
       const ctxBase = { tmpDir: '', appDir: settings.appDir || '', pluginsDir: settings.pluginsDir || '', scriptsDir: settings.scriptsDir || '', id: item.id, version: '', downloadPath: '', productCode: '' };
       const arr = Array.isArray(item.versions) ? item.versions : (Array.isArray(item.version) ? item.version : []);
       for (const ver of arr) {
@@ -1176,7 +1176,7 @@ export async function runUninstallerForItem(item, dispatch) {
   const version = latestVersionOf(item);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
   const tmp = await ensureTmpDir(idVersion);
-  const settings = await ensurePaths(['appDir', 'pluginsDir']);
+  const settings = await ensurePaths(['appDir', 'pluginsDir', 'scriptsDir']);
   const ctx = {
     id: item.id,
     version,
@@ -1236,6 +1236,20 @@ export async function runUninstallerForItem(item, dispatch) {
       if (!ok) throw lastErr || new Error('remove failed');
       return ok;
     }
+    // 複数の許可ルート（pluginsDir, scriptsDir 等）に対して順に試行
+    async function deleteWithVariantsAnyRoot(absPath, allowedRoots = []) {
+      let lastErr = null;
+      const roots = Array.isArray(allowedRoots) ? allowedRoots.filter(Boolean) : [];
+      if (!roots.length) return await deleteWithVariants(absPath, '');
+      for (const r of roots) {
+        try {
+          const ok = await deleteWithVariants(absPath, r);
+          if (ok) return true;
+        } catch (e) { lastErr = e; }
+      }
+      if (lastErr) throw lastErr;
+      return false;
+    }
     for (let i = 0; i < item.installer.uninstall.length; i++) {
       const step = item.installer.uninstall[i];
       try {
@@ -1243,9 +1257,9 @@ export async function runUninstallerForItem(item, dispatch) {
           case 'delete': {
             const p = expandMacros(step.path, ctx);
             try {
-              const pluginsRoot = ctx.pluginsDir;
+              const allowedRoots = [ctx.pluginsDir, ctx.scriptsDir].filter(Boolean);
               const abs = isAbsPath(p) ? p : p; // アンインストールのパスは原則絶対パス。相対ならそのまま扱う
-              const ok = await deleteWithVariants(abs, pluginsRoot);
+              const ok = await deleteWithVariantsAnyRoot(abs, allowedRoots);
               if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
               else await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
             } catch (e) {
