@@ -514,6 +514,10 @@ select {
 .card__thumb {
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
 }
 
 .card:focus-within,
@@ -523,8 +527,10 @@ select {
 
 .card__thumb img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
   display: block;
   filter: saturate(1.06) contrast(1.02);
 }
@@ -538,6 +544,10 @@ select {
   font-size: 42px;
   color: #e5e7eb;
   background: linear-gradient(180deg, #1f2937, #0f172a);
+}
+
+.card__thumb .thumb {
+  align-self: stretch;
 }
 
 .thumb--placeholder {
