@@ -1,6 +1,6 @@
 // パッケージの詳細ページコンポーネント
-import React, { useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import ImageCarousel from '../components/ImageCarousel.jsx';
 import Icon from '../components/Icon.jsx';
@@ -9,23 +9,101 @@ import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, r
 import { renderMarkdown } from '../app/markdown.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
 
+// パスがmdファイルパスかどうか判定
+function isMarkdownFilePath(path) {
+  if (typeof path !== 'string') return false;
+  const trimmedPath = path.trim();
+  if (!trimmedPath || trimmedPath.includes('\n')) return false;
+  return /\.md$/i.test(trimmedPath);
+}
+
+// 相対パスの場合絶対パスに変更
+function resolveMarkdownURL(path, baseUrl) {
+  const trimmed = String(path || '').trim();
+  if (!trimmed) throw new Error('Empty markdown path');
+  // 絶対URLならそのまま返す
+  try {
+    return new URL(trimmed).toString();
+  } catch (_) { }
+  // 相対URLならbaseUrlを基準に解決
+  try {
+    return new URL(trimmed, baseUrl).toString();
+  } catch (_) { }
+  throw new Error('Unable to resolve markdown path');
+}
+
 // パッケージ詳細ページコンポーネント
 // 指定されたパッケージの詳細情報を表示し、インストール・更新・削除機能を提供
 export default function Package() {
   const { id } = useParams();
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
-  
+
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find(i => i.id === id), [items, id]);
   const thumb = item?.images?.[0]?.src;
-  
+  const descriptionSource = item?.description || '';
+
   // UI状態管理（エラー/処理中フラグ）
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [removing, setRemoving] = useState(false);
-  
+  const [descriptionHtml, setDescriptionHtml] = useState(() => (
+    isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource)
+  ));
+  const [descriptionLoading, setDescriptionLoading] = useState(false);
+  const [descriptionError, setDescriptionError] = useState('');
+
+  const baseURL = "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/"
+  // MarkdownファイルのベースURL（相対パス解決用）
+  // const remote = import.meta?.env?.VITE_REMOTE;
+  // const remoteWithMd = remote ? `${remote.replace(/\/+$/, '')}/md/` : null;
+  useEffect(() => {
+    let cancelled = false;
+    const raw = descriptionSource;
+    if (!raw) {
+      setDescriptionHtml('');
+      setDescriptionError('');
+      setDescriptionLoading(false);
+      return undefined;
+    }
+    // Markdownファイルパスでなければそのままレンダリング
+    if (!isMarkdownFilePath(raw)) {
+      setDescriptionHtml(renderMarkdown(raw));
+      setDescriptionError('');
+      setDescriptionLoading(false);
+      return undefined;
+    }
+    setDescriptionLoading(true);
+    setDescriptionError('');
+    setDescriptionHtml('');
+    // Markdownファイルをフェッチしてレンダリング
+    (async () => {
+      try {
+        const url = resolveMarkdownURL(raw, baseURL);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (!cancelled) {
+          setDescriptionHtml(renderMarkdown(text));
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setDescriptionHtml(renderMarkdown('詳細説明を読み込めませんでした。'));
+          setDescriptionError('詳細説明を読み込めませんでした。');
+        }
+      } finally {
+        if (!cancelled) {
+          setDescriptionLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [descriptionSource, baseURL]);
+
   // インストール可能かどうかの判定
   const canInstall = hasInstaller(item) || !!item.downloadURL;
 
@@ -126,7 +204,14 @@ export default function Package() {
           {item.description && (
             <section>
               <h2>詳細説明</h2>
-              <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(item.description) }} />
+              {descriptionLoading ? (
+                <p>詳細説明を読み込み中です…</p>
+              ) : (
+                <div className="md" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+              )}
+              {descriptionError ? (
+                <p className="error" role="alert">{descriptionError}</p>
+              ) : null}
             </section>
           )}
 

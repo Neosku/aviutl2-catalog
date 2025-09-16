@@ -23,3 +23,5 @@
 !*.env.production
 
 *.pem
+
+/test/
