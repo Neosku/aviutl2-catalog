@@ -25,7 +25,13 @@
         "$APPCONFIG/*",
         "$APPDATA/*",
         "$APPLOCALDATA/*",
-        "C:/*"
+        "$HOME/*",
+        "$DESKTOP/*",
+        "$DOCUMENT/*",
+        "$DOWNLOAD/*",
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -34,7 +40,13 @@
         "$APPCONFIG/*",
         "$APPDATA/*",
         "$APPLOCALDATA/*",
-        "C:/*"
+        "$HOME/*",
+        "$DESKTOP/*",
+        "$DOCUMENT/*",
+        "$DOWNLOAD/*",
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -47,9 +59,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -62,9 +74,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -77,9 +89,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -92,9 +104,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -107,9 +119,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     },
     {
@@ -122,9 +134,9 @@
         "$DESKTOP/*",
         "$DOCUMENT/*",
         "$DOWNLOAD/*",
-        "C:/*",
-        "D:/*",
-        "E:/*"
+        "C:/**",
+        "D:/**",
+        "E:/**"
       ]
     }
   ]
