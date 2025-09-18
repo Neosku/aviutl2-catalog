@@ -118,23 +118,25 @@ async fn drive_fetch_name_reqwest(file_id: &str, api_key: &str) -> Result<String
     Ok(sanitize_filename(name))
 }
 
-fn drive_fetch_name_ureq(file_id: &str, api_key: &str) -> Result<String, DriveError> {
+fn drive_fetch_name_blocking(file_id: &str, api_key: &str) -> Result<String, DriveError> {
     let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
-    let agent = ureq::AgentBuilder::new()
+    let client = reqwest::blocking::Client::builder()
         .user_agent("AviUtl2Catalog/0.1")
-        .build();
-    let resp = agent.get(&url)
-        .set("x-goog-api-key", api_key)
-        .call()
-        .map_err(|e| DriveError::Net(format!("ureq error: {e}")))?;
-    if !(200..300).contains(&resp.status()) {
-        let status = resp.status();
-        let mut s = String::new();
-        use std::io::Read;
-        let _ = resp.into_reader().read_to_string(&mut s);
-        return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s })));
+        .build()
+        .map_err(|e| DriveError::Net(e.to_string()))?;
+    let resp = client
+        .get(url)
+        .header("x-goog-api-key", api_key)
+        .send()
+        .map_err(|e| DriveError::Net(e.to_string()))?;
+    let status = resp.status();
+    let text = resp.text().map_err(|e| DriveError::Net(e.to_string()))?;
+    if !status.is_success() {
+        let msg: String = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+            v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or(text)
+        } else { text };
+        return Err(DriveError::Http(format!("{} {}", status, msg)));
     }
-    let text = resp.into_string().map_err(|e| DriveError::Net(e.to_string()))?;
     let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
     let name = v.get("name").and_then(|x| x.as_str()).ok_or_else(|| DriveError::Http(String::from("missing name field")))?;
     Ok(sanitize_filename(name))
@@ -161,7 +163,7 @@ async fn drive_download_to_file(
     let drive_name = match drive_fetch_name_reqwest(&file_id, api_key).await {
         Ok(n) => n,
         Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
-            drive_fetch_name_ureq(&file_id, api_key)?
+            drive_fetch_name_blocking(&file_id, api_key)?
         }
         Err(_) => file_id.clone(),
     };
@@ -199,26 +201,25 @@ async fn drive_download_to_file(
             Ok(())
         }
         Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
-            // Fallback to blocking ureq (rustls)
-            // Note: keep memory footprint small by streaming chunks
+            // Fallback to blocking reqwest
             use std::io::Read;
             let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
-            let agent = ureq::AgentBuilder::new()
+            let client = reqwest::blocking::Client::builder()
                 .user_agent("AviUtl2Catalog/0.1")
-                .build();
-            let resp = agent.get(&url)
-                .set("x-goog-api-key", api_key)
-                .call()
-                .map_err(|e| DriveError::Net(format!("ureq error: {e}")))?;
-
-            if !(200..300).contains(&resp.status()) {
-                let status = resp.status();
+                .build()
+                .map_err(|e| DriveError::Net(e.to_string()))?;
+            let mut resp = client
+                .get(url)
+                .header("x-goog-api-key", api_key)
+                .send()
+                .map_err(|e| DriveError::Net(e.to_string()))?;
+            let status = resp.status();
+            if !status.is_success() {
                 let mut s = String::new();
-                let _ = resp.into_reader().read_to_string(&mut s);
-                return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s } )));
+                let _ = resp.read_to_string(&mut s);
+                return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s })));
             }
-
-            let total_opt = resp.header("Content-Length").and_then(|s| s.parse::<u64>().ok());
+            let total_opt = resp.content_length();
             let mut read: u64 = 0;
             let mut f = OpenOptions::new()
                 .create(true)
@@ -226,10 +227,9 @@ async fn drive_download_to_file(
                 .write(true)
                 .open(&final_dest)
                 .map_err(|e| DriveError::Io(e.to_string()))?;
-            let mut reader = resp.into_reader();
-            let mut buf = vec![0u8; 64 * 1024];
+            let mut buf = [0u8; 64 * 1024];
             loop {
-                let n = reader.read(&mut buf).map_err(|e| DriveError::Net(e.to_string()))?;
+                let n = resp.read(&mut buf).map_err(|e| DriveError::Net(e.to_string()))?;
                 if n == 0 { break; }
                 f.write_all(&buf[..n]).map_err(|e| DriveError::Io(e.to_string()))?;
                 read += n as u64;
@@ -554,7 +554,7 @@ fn extract_zip(app: tauri::AppHandle, zip_path: String, dest_path: String, base:
     use std::fs::{self, File};
     use std::io::copy;
     use std::path::{Path, PathBuf};
-    use zip::read::ZipArchive;
+    use zip::ZipArchive;
 
     fn is_abs(p: &str) -> bool {
         let p = p.replace('\\', "/");
