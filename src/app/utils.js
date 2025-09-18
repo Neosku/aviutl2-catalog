@@ -592,7 +592,18 @@ async function ensureTmpDir(idVersion) {
 
 // URL から推定ファイル名を取得
 function fileNameFromUrl(url) {
-  try { return new URL(url).pathname.split('/').pop() || 'download.bin'; } catch { return 'download.bin'; }
+  try {
+    if (typeof url === 'string') {
+      // Google Drive 仮想スキームや非HTTP(S)は既定名にフォールバック
+      if (/^gdrive:/i.test(url)) return 'download.bin';
+    }
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'download.bin';
+    const name = u.pathname.split('/').pop() || '';
+    return name || 'download.bin';
+  } catch {
+    return 'download.bin';
+  }
 }
 
 // 相対パスを絶対パスに変換（PowerShell 実行に適した形式）
@@ -644,6 +655,10 @@ async function resolveSource(item) {
   if (!src) return '';
   if (typeof src === 'string') return src;
   if (typeof src.direct === 'string') return src.direct;
+  if (src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
+    // Google Drive は Rust 側のコマンドでのみダウンロードする
+    return `gdrive:${src.GoogleDrive.id}`;
+  }
   if (src.github && src.github.owner && src.github.repo) {
     // GitHub の最新リリース資産を取得し、パターンに一致するものを選択
     const http = await import('@tauri-apps/plugin-http');
@@ -679,6 +694,7 @@ function isAbsPath(p) {
 async function downloadTo(url, toPath, toBaseDir) {
   const http = await import('@tauri-apps/plugin-http');
   const fs = await import('@tauri-apps/plugin-fs');
+  const { invoke } = await import('@tauri-apps/api/core');
   // 親ディレクトリの存在を保証
   const dir = toPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '.';
   try {
@@ -686,6 +702,12 @@ async function downloadTo(url, toPath, toBaseDir) {
     else await fs.mkdir(dir, { baseDir: toBaseDir, recursive: true });
   } catch (_) { }
   try {
+    // Google Drive (gdrive:<fileId>) は Rust 側にストリーム保存を委譲
+    if (typeof url === 'string' && url.startsWith('gdrive:')) {
+      const fileId = url.slice('gdrive:'.length);
+      await invoke('drive_download_to_file', { fileId, destPath: toPath });
+      return { path: toPath, baseDir: toBaseDir };
+    }
     // URL がローカル絶対パスや file:// の場合は、HTTP 経由ではなく直接コピー/読み取り
     let isLocal = false;
     let localPath = '';
@@ -718,7 +740,7 @@ async function downloadTo(url, toPath, toBaseDir) {
     else await fs.writeFile(toPath, buf, { baseDir: toBaseDir });
     return { path: toPath, baseDir: toBaseDir };
   } catch (e) {
-    const detail = (e && (e.message || e.toString())) || 'unknown error';
+    const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
     throw new Error(`downloadTo failed (src=${url}, dst=${toPath}): ${detail}`);
   }
 }
@@ -776,6 +798,9 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
   const fs = await import('@tauri-apps/plugin-fs');
   const shell = await import('@tauri-apps/plugin-shell');
   const pathApi = await import('@tauri-apps/api/path');
+  // toDirRel が未指定/空ならカレント相対にフォールバック
+  let toDir = String(toDirRel || '.');
+  toDir = toDir.replace(/\\/g, '/').replace(/\/+$/, '') || '.';
   const norm = String(fromPattern || '').replace(/\\/g, '/');
   // 末尾の "/*" は再帰コピー（"/**/*"）とみなし、サブフォルダも含める
   const effective = norm.replace(/\/\*$/, '/**/*');
@@ -821,11 +846,11 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
       }
     } catch (e) { try { await logError(`[copyPattern] probing Plugin root failed: ${e?.message || e}`); } catch (_) {} }
   }
-  if (isAbsPath(toDirRel)) await fs.mkdir(toDirRel, { recursive: true });
-  else await fs.mkdir(toDirRel, { baseDir, recursive: true });
+  if (isAbsPath(toDir)) await fs.mkdir(toDir, { recursive: true });
+  else await fs.mkdir(toDir, { baseDir, recursive: true });
 
   // 転送先が絶対パスかつ Plugin/ を対象にする場合、PowerShell の一括コピーを優先（権限や UAC に強い）
-  if (matched.length > 0 && isAbsPath(toDirRel) && /\/plugin\//i.test(effective)) {
+  if (matched.length > 0 && isAbsPath(toDir) && /\/plugin\//i.test(effective)) {
     try {
       // 絶対ソースの Plugin ルートを決定
       const first = matched[0];
@@ -839,7 +864,7 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
       function psEscape(s) { return String(s).replace(/'/g, "''"); }
       const ps = shell.Command.create('powershell', [
         '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command',
-        `Copy-Item -Path '${psEscape(srcPluginAbs)}\\*' -Destination '${psEscape(toDirRel)}' -Recurse -Force -ErrorAction Stop`
+        `Copy-Item -Path '${psEscape(srcPluginAbs)}\\*' -Destination '${psEscape(toDir)}' -Recurse -Force -ErrorAction Stop`
       ]);
       const res = await ps.execute();
       if (res.code === 0) return {
@@ -849,7 +874,7 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
           const idxPlugin2 = src.indexOf('/Plugin/');
           if (idxPlugin2 >= 0) rel = src.slice(idxPlugin2 + '/Plugin/'.length);
           else rel = src.startsWith(root + '/') ? src.slice(root.length + 1) : src.split('/').pop();
-          return `${toDirRel}/${rel}`;
+          return `${toDir}/${rel}`;
         })
       };
       // 非 0（失敗）ならファイル単位コピーへフォールスルー
@@ -862,7 +887,7 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
     const idxPlugin = src.indexOf('/Plugin/');
     if (idxPlugin >= 0) rel = src.slice(idxPlugin + '/Plugin/'.length);
     else rel = src.startsWith(root + '/') ? src.slice(root.length + 1) : src.split('/').pop();
-    const dst = `${toDirRel}/${rel}`;
+    const dst = `${toDir}/${rel}`;
     const dstDir = dst.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '.';
     try {
       // 転送先のサブディレクトリを作成しておく
@@ -1022,15 +1047,18 @@ export async function runInstallerForItem(item, dispatch) {
       try {
         switch (step.action) {
           case 'download': {
-            // 'to' がディレクトリ（ありがちな誤り）の場合はファイル名を付与
             const toRaw = expandMacros(step.to || '', ctx);
+            const isGDrive = typeof url === 'string' && url.startsWith('gdrive:');
             let toRel = toRaw;
             const looksDir = !toRaw || toRaw === ctx.tmpDir || /[\\\/]$/.test(toRaw);
-            if (!toRaw) toRel = `{tmp}/${suggested}`;
-            else if (looksDir) toRel = `${toRaw.replace(/[\\\/]$/, '')}/${suggested}`;
-            // 最終パスを組み立てた後にマクロを展開（デフォルトケースもカバー）
+            if (!toRaw) {
+              toRel = isGDrive ? `{tmp}` : `{tmp}/${suggested}`;
+            } else if (looksDir) {
+              toRel = isGDrive ? toRaw.replace(/[\\\/]$/, '') : `${toRaw.replace(/[\\\/]$/, '')}/${suggested}`;
+            }
             const toPath = expandMacros(toRel, ctx);
             await downloadTo(url, toPath, tmp.baseDir);
+            // GoogleDrive はディレクトリ基準で扱い、後続の {download} はディレクトリを指す
             ctx.downloadPath = toPath;
             break;
           }
@@ -1093,7 +1121,7 @@ export async function runInstallerForItem(item, dispatch) {
             throw new Error(`unsupported action: ${String(step.action)}`);
         }
       } catch (e) {
-        const detail = (e && (e.message || e.toString())) || 'unknown error';
+        const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
         const msg = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed: ${detail}`;
         try { await logError(msg); } catch (_) { }
         throw new Error(msg);
@@ -1114,7 +1142,7 @@ export async function runInstallerForItem(item, dispatch) {
       await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
     } catch (_) { /* ignore cleanup errors */ }
   } catch (e) {
-    const detail = (e && (e.message || e.toString())) || 'unknown error';
+    const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
     try { await logError(`[installer ${item.id}] error: ${detail}`); } catch (_) { }
     throw e;
   }

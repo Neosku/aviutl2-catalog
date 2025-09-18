@@ -25,3 +25,7 @@
 *.pem
 
 /test/
+
+*.key
+
+/src-tauri/src/api_key.rs

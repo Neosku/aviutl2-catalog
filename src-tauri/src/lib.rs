@@ -1,6 +1,249 @@
 use once_cell::sync::Lazy;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use std::sync::RwLock;
+use std::path::PathBuf;
+
+mod api_key;
+
+// -----------------------
+// Google Drive ダウンロード
+// -----------------------
+
+// エラー型定義
+// - thiserrorでエラーメッセージを自動実装
+// - Serializeは、フロント側へJSONで返したい場合などに備えて付与
+#[derive(thiserror::Error, Debug, serde::Serialize)]
+enum DriveError {
+    #[error("io error: {0}")]
+    Io(String),
+    #[error("http error: {0}")]
+    Http(String),
+    #[error("network error: {0}")]
+    Net(String),
+}
+
+/// Windowsドライブ指定（"C:\..."）やUNIXの絶対パス（"/..."）を判定
+fn is_abs(p: &str) -> bool {
+    let s = p.replace('\\', "/");
+    s.starts_with('/') || (s.len() >= 3 && s.as_bytes()[1] == b':' && (s.as_bytes()[2] == b'/' || s.as_bytes()[2] == b'\\'))
+}
+
+/// 相対パスをアプリの設定ディレクトリ基準に解決
+/// - 絶対パスならそのまま返す
+/// - 取得に失敗した場合は一時ディレクトリを基準にする
+fn resolve_rel_to_app_config(app: &tauri::AppHandle, p: &str) -> PathBuf {
+    if is_abs(p) {
+        PathBuf::from(p)
+    } else {
+        app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir()).join(p)
+    }
+}
+
+fn sanitize_filename(name: &str) -> String {
+    let mut out = String::new();
+    for ch in name.chars() {
+        // forbid separators and reserved Windows characters
+        if matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { out.push('_'); }
+        else { out.push(ch); }
+    }
+    let trimmed = out.trim();
+    if trimmed.is_empty() { String::from("download.bin") } else { trimmed.to_string() }
+}
+
+async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::Response, DriveError> {
+    let url = format!(
+        "https://www.googleapis.com/drive/v3/files/{}?alt=media",
+        file_id
+    );
+    let client = reqwest::Client::builder()
+        .user_agent("AviUtl2Catalog/0.1")
+        .build()
+        .map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let res = client
+        .get(url)
+        .header("x-goog-api-key", api_key)
+        .send()
+        .await
+        .map_err(|e| DriveError::Net(e.to_string()))?;
+
+    if !res.status().is_success() {
+        // try read error body and include
+        let status = res.status();
+        match res.text().await {
+            Ok(text) => {
+                // Try to extract JSON error message
+                let msg = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+                    v.get("error")
+                        .and_then(|e| e.get("message")).and_then(|m| m.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| text.chars().take(500).collect())
+                } else {
+                    text.chars().take(500).collect()
+                };
+                Err(DriveError::Http(format!("{} {}", status, msg)))
+            }
+            Err(_) => Err(DriveError::Http(format!("{}", status))),
+        }
+    } else {
+        Ok(res)
+    }
+}
+
+async fn drive_fetch_name_reqwest(file_id: &str, api_key: &str) -> Result<String, DriveError> {
+    let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
+    let client = reqwest::Client::builder()
+        .user_agent("AviUtl2Catalog/0.1")
+        .build()
+        .map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let res = client
+        .get(url)
+        .header("x-goog-api-key", api_key)
+        .send()
+        .await
+        .map_err(|e| DriveError::Net(e.to_string()))?;
+    let status = res.status();
+    let text = res.text().await.map_err(|e| DriveError::Net(e.to_string()))?;
+    if !status.is_success() {
+        let msg: String = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+            v.get("error")
+                .and_then(|e| e.get("message"))
+                .and_then(|m| m.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| text.clone())
+        } else { text.clone() };
+        return Err(DriveError::Http(format!("{} {}", status, msg)));
+    }
+    let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
+    let name = v.get("name").and_then(|x| x.as_str()).ok_or_else(|| DriveError::Http(String::from("missing name field")))?;
+    Ok(sanitize_filename(name))
+}
+
+fn drive_fetch_name_ureq(file_id: &str, api_key: &str) -> Result<String, DriveError> {
+    let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
+    let agent = ureq::AgentBuilder::new()
+        .user_agent("AviUtl2Catalog/0.1")
+        .build();
+    let resp = agent.get(&url)
+        .set("x-goog-api-key", api_key)
+        .call()
+        .map_err(|e| DriveError::Net(format!("ureq error: {e}")))?;
+    if !(200..300).contains(&resp.status()) {
+        let status = resp.status();
+        let mut s = String::new();
+        use std::io::Read;
+        let _ = resp.into_reader().read_to_string(&mut s);
+        return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s })));
+    }
+    let text = resp.into_string().map_err(|e| DriveError::Net(e.to_string()))?;
+    let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
+    let name = v.get("name").and_then(|x| x.as_str()).ok_or_else(|| DriveError::Http(String::from("missing name field")))?;
+    Ok(sanitize_filename(name))
+}
+
+#[tauri::command]
+async fn drive_download_to_file(
+    window: tauri::Window,
+    file_id: String,
+    dest_path: String,
+) -> Result<(), DriveError> {
+    use std::fs::{create_dir_all, OpenOptions};
+    use std::io::Write;
+
+    let app = window.app_handle();
+    let api_key: &str = api_key::GOOGLE_DRIVE_API_KEY;
+    let dest_abs = resolve_rel_to_app_config(&app, &dest_path);
+    let looks_dir = dest_path.ends_with('/') || dest_path.ends_with('\\') || dest_abs.is_dir();
+    let is_placeholder = dest_abs
+        .file_name()
+        .and_then(|s| s.to_str())
+        .map(|s| s.eq_ignore_ascii_case("download.bin") || s == file_id)
+        .unwrap_or(true);
+    let drive_name = match drive_fetch_name_reqwest(&file_id, api_key).await {
+        Ok(n) => n,
+        Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
+            drive_fetch_name_ureq(&file_id, api_key)?
+        }
+        Err(_) => file_id.clone(),
+    };
+    let final_dest = if looks_dir || is_placeholder {
+        if looks_dir { dest_abs.join(&drive_name) } else { dest_abs.parent().map(|p| p.join(&drive_name)).unwrap_or(dest_abs.clone()) }
+    } else { dest_abs.clone() };
+    if let Some(parent) = final_dest.parent() { let _ = create_dir_all(parent); }
+
+    // Try reqwest (async)
+    match drive_fetch_response(&file_id, api_key).await {
+        Ok(mut res) => {
+            let mut f = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&final_dest)
+                .map_err(|e| DriveError::Io(e.to_string()))?;
+
+            let total_opt = res
+                .headers()
+                .get(reqwest::header::CONTENT_LENGTH)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.parse::<u64>().ok());
+
+            let mut read: u64 = 0;
+            while let Some(chunk) = res.chunk().await.map_err(|e| DriveError::Net(e.to_string()))? {
+                f.write_all(&chunk).map_err(|e| DriveError::Io(e.to_string()))?;
+                read += chunk.len() as u64;
+                let _ = window.emit(
+                    "drive:progress",
+                    serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }),
+                );
+            }
+            let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
+            Ok(())
+        }
+        Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
+            // Fallback to blocking ureq (rustls)
+            // Note: keep memory footprint small by streaming chunks
+            use std::io::Read;
+            let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
+            let agent = ureq::AgentBuilder::new()
+                .user_agent("AviUtl2Catalog/0.1")
+                .build();
+            let resp = agent.get(&url)
+                .set("x-goog-api-key", api_key)
+                .call()
+                .map_err(|e| DriveError::Net(format!("ureq error: {e}")))?;
+
+            if !(200..300).contains(&resp.status()) {
+                let status = resp.status();
+                let mut s = String::new();
+                let _ = resp.into_reader().read_to_string(&mut s);
+                return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s } )));
+            }
+
+            let total_opt = resp.header("Content-Length").and_then(|s| s.parse::<u64>().ok());
+            let mut read: u64 = 0;
+            let mut f = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&final_dest)
+                .map_err(|e| DriveError::Io(e.to_string()))?;
+            let mut reader = resp.into_reader();
+            let mut buf = vec![0u8; 64 * 1024];
+            loop {
+                let n = reader.read(&mut buf).map_err(|e| DriveError::Net(e.to_string()))?;
+                if n == 0 { break; }
+                f.write_all(&buf[..n]).map_err(|e| DriveError::Io(e.to_string()))?;
+                read += n as u64;
+                let _ = window.emit(
+                    "drive:progress",
+                    serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }),
+                );
+            }
+            let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
 
 // XXH3-128ハッシュを計算してhex文字列で返す（リトルエンディアン）
 #[tauri::command]
@@ -1104,6 +1347,7 @@ pub fn run() {
             add_installed_id_cmd,
             remove_installed_id_cmd,
             list_installed_plugins,
+            drive_download_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
