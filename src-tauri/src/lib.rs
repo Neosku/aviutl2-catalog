@@ -1,13 +1,15 @@
 use once_cell::sync::Lazy;
-use tauri::{Emitter, Manager};
-use std::sync::RwLock;
 use std::path::PathBuf;
+use std::sync::RwLock;
+use tauri::{Emitter, Manager};
 
 mod api_key;
 
 // -----------------------
 // Google Drive ダウンロード
 // -----------------------
+
+// DataRootにします
 
 // エラー型定義
 // - thiserrorでエラーメッセージを自動実装
@@ -43,28 +45,24 @@ fn sanitize_filename(name: &str) -> String {
     let mut out = String::new();
     for ch in name.chars() {
         // forbid separators and reserved Windows characters
-        if matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { out.push('_'); }
-        else { out.push(ch); }
+        if matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+            out.push('_');
+        } else {
+            out.push(ch);
+        }
     }
     let trimmed = out.trim();
-    if trimmed.is_empty() { String::from("download.bin") } else { trimmed.to_string() }
+    if trimmed.is_empty() {
+        String::from("download.bin")
+    } else {
+        trimmed.to_string()
+    }
 }
 
 async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::Response, DriveError> {
-    let url = format!(
-        "https://www.googleapis.com/drive/v3/files/{}?alt=media",
-        file_id
-    );
-    let client = reqwest::Client::builder()
-        .user_agent("AviUtl2Catalog/0.1")
-        .build()
-        .map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
-    let res = client
-        .get(url)
-        .header("x-goog-api-key", api_key)
-        .send()
-        .await
-        .map_err(|e| DriveError::Net(e.to_string()))?;
+    let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
 
     if !res.status().is_success() {
         // try read error body and include
@@ -73,10 +71,7 @@ async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::R
             Ok(text) => {
                 // Try to extract JSON error message
                 let msg = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-                    v.get("error")
-                        .and_then(|e| e.get("message")).and_then(|m| m.as_str())
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| text.chars().take(500).collect())
+                    v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or_else(|| text.chars().take(500).collect())
                 } else {
                     text.chars().take(500).collect()
                 };
@@ -91,50 +86,16 @@ async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::R
 
 async fn drive_fetch_name_reqwest(file_id: &str, api_key: &str) -> Result<String, DriveError> {
     let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
-    let client = reqwest::Client::builder()
-        .user_agent("AviUtl2Catalog/0.1")
-        .build()
-        .map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
-    let res = client
-        .get(url)
-        .header("x-goog-api-key", api_key)
-        .send()
-        .await
-        .map_err(|e| DriveError::Net(e.to_string()))?;
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
     let status = res.status();
     let text = res.text().await.map_err(|e| DriveError::Net(e.to_string()))?;
     if !status.is_success() {
         let msg: String = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-            v.get("error")
-                .and_then(|e| e.get("message"))
-                .and_then(|m| m.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| text.clone())
-        } else { text.clone() };
-        return Err(DriveError::Http(format!("{} {}", status, msg)));
-    }
-    let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
-    let name = v.get("name").and_then(|x| x.as_str()).ok_or_else(|| DriveError::Http(String::from("missing name field")))?;
-    Ok(sanitize_filename(name))
-}
-
-fn drive_fetch_name_blocking(file_id: &str, api_key: &str) -> Result<String, DriveError> {
-    let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
-    let client = reqwest::blocking::Client::builder()
-        .user_agent("AviUtl2Catalog/0.1")
-        .build()
-        .map_err(|e| DriveError::Net(e.to_string()))?;
-    let resp = client
-        .get(url)
-        .header("x-goog-api-key", api_key)
-        .send()
-        .map_err(|e| DriveError::Net(e.to_string()))?;
-    let status = resp.status();
-    let text = resp.text().map_err(|e| DriveError::Net(e.to_string()))?;
-    if !status.is_success() {
-        let msg: String = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-            v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or(text)
-        } else { text };
+            v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or_else(|| text.clone())
+        } else {
+            text.clone()
+        };
         return Err(DriveError::Http(format!("{} {}", status, msg)));
     }
     let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
@@ -143,11 +104,7 @@ fn drive_fetch_name_blocking(file_id: &str, api_key: &str) -> Result<String, Dri
 }
 
 #[tauri::command]
-async fn drive_download_to_file(
-    window: tauri::Window,
-    file_id: String,
-    dest_path: String,
-) -> Result<(), DriveError> {
+async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_path: String) -> Result<(), DriveError> {
     use std::fs::{create_dir_all, OpenOptions};
     use std::io::Write;
 
@@ -155,47 +112,42 @@ async fn drive_download_to_file(
     let api_key: &str = api_key::GOOGLE_DRIVE_API_KEY;
     let dest_abs = resolve_rel_to_app_config(&app, &dest_path);
     let looks_dir = dest_path.ends_with('/') || dest_path.ends_with('\\') || dest_abs.is_dir();
-    let is_placeholder = dest_abs
-        .file_name()
-        .and_then(|s| s.to_str())
-        .map(|s| s.eq_ignore_ascii_case("download.bin") || s == file_id)
-        .unwrap_or(true);
+    let is_placeholder = dest_abs.file_name().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("download.bin") || s == file_id).unwrap_or(true);
     let drive_name = match drive_fetch_name_reqwest(&file_id, api_key).await {
         Ok(n) => n,
-        Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
-            drive_fetch_name_blocking(&file_id, api_key)?
+        Err(e) => {
+            // ログに出力
+            log_error(&app, &format!("failed to fetch drive file name (id={}): {}", file_id, e));
+            // そのままエラーを返して終了
+            return Err(e);
         }
-        Err(_) => file_id.clone(),
     };
+
     let final_dest = if looks_dir || is_placeholder {
-        if looks_dir { dest_abs.join(&drive_name) } else { dest_abs.parent().map(|p| p.join(&drive_name)).unwrap_or(dest_abs.clone()) }
-    } else { dest_abs.clone() };
-    if let Some(parent) = final_dest.parent() { let _ = create_dir_all(parent); }
+        if looks_dir {
+            dest_abs.join(&drive_name)
+        } else {
+            dest_abs.parent().map(|p| p.join(&drive_name)).unwrap_or(dest_abs.clone())
+        }
+    } else {
+        dest_abs.clone()
+    };
+    if let Some(parent) = final_dest.parent() {
+        let _ = create_dir_all(parent);
+    }
 
     // Try reqwest (async)
     match drive_fetch_response(&file_id, api_key).await {
         Ok(mut res) => {
-            let mut f = OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(&final_dest)
-                .map_err(|e| DriveError::Io(e.to_string()))?;
+            let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(&final_dest).map_err(|e| DriveError::Io(e.to_string()))?;
 
-            let total_opt = res
-                .headers()
-                .get(reqwest::header::CONTENT_LENGTH)
-                .and_then(|v| v.to_str().ok())
-                .and_then(|s| s.parse::<u64>().ok());
+            let total_opt = res.headers().get(reqwest::header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<u64>().ok());
 
             let mut read: u64 = 0;
             while let Some(chunk) = res.chunk().await.map_err(|e| DriveError::Net(e.to_string()))? {
                 f.write_all(&chunk).map_err(|e| DriveError::Io(e.to_string()))?;
                 read += chunk.len() as u64;
-                let _ = window.emit(
-                    "drive:progress",
-                    serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }),
-                );
+                let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
             }
             let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
             Ok(())
@@ -204,15 +156,8 @@ async fn drive_download_to_file(
             // Fallback to blocking reqwest
             use std::io::Read;
             let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
-            let client = reqwest::blocking::Client::builder()
-                .user_agent("AviUtl2Catalog/0.1")
-                .build()
-                .map_err(|e| DriveError::Net(e.to_string()))?;
-            let mut resp = client
-                .get(url)
-                .header("x-goog-api-key", api_key)
-                .send()
-                .map_err(|e| DriveError::Net(e.to_string()))?;
+            let client = reqwest::blocking::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(e.to_string()))?;
+            let mut resp = client.get(url).header("x-goog-api-key", api_key).send().map_err(|e| DriveError::Net(e.to_string()))?;
             let status = resp.status();
             if !status.is_success() {
                 let mut s = String::new();
@@ -221,22 +166,16 @@ async fn drive_download_to_file(
             }
             let total_opt = resp.content_length();
             let mut read: u64 = 0;
-            let mut f = OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(&final_dest)
-                .map_err(|e| DriveError::Io(e.to_string()))?;
+            let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(&final_dest).map_err(|e| DriveError::Io(e.to_string()))?;
             let mut buf = [0u8; 64 * 1024];
             loop {
                 let n = resp.read(&mut buf).map_err(|e| DriveError::Net(e.to_string()))?;
-                if n == 0 { break; }
+                if n == 0 {
+                    break;
+                }
                 f.write_all(&buf[..n]).map_err(|e| DriveError::Io(e.to_string()))?;
                 read += n as u64;
-                let _ = window.emit(
-                    "drive:progress",
-                    serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }),
-                );
+                let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
             }
             let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
             Ok(())
@@ -245,95 +184,23 @@ async fn drive_download_to_file(
     }
 }
 
-// XXH3-128ハッシュを計算してhex文字列で返す（リトルエンディアン）
-#[tauri::command]
-fn xxh3_128_hex(path: String) -> Result<String, String> {
-    use std::fs::File;
-    use std::io::{BufReader, Read};
-    use xxhash_rust::xxh3::Xxh3;
+// -------------------------
+// ハッシュ計算 (OK)
+// -------------------------
 
-    let file = File::open(&path).map_err(|e| format!("open error: {}", e))?;
-    let mut reader = BufReader::new(file);
-    let mut hasher = Xxh3::new();
-    let mut buf = [0u8; 8192];
-    loop {
-        let n = reader
-            .read(&mut buf)
-            .map_err(|e| format!("read error: {}", e))?;
-        if n == 0 {
-            break;
-        }
-        hasher.update(&buf[..n]);
-    }
-    // XXH3-128の正規表現はリトルエンディアンバイト順が一般的
-    // カタログで使用される共通のhexダイジェストに合わせるためリトルエンディアンを使用
-    let digest = hasher.digest128().to_le_bytes();
-    let hex = digest.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-    Ok(hex)
+// ファイルのハッシュ(xxh3-128)を計算
+use std::{fs, path::Path};
+use xxhash_rust::xxh3::xxh3_128;
+
+pub fn xxh3_128_hex<P: AsRef<Path>>(path: P) -> Result<String, String> {
+    let buf = fs::read(path).map_err(|e| format!("open/read error: {}", e))?;
+    let h = xxh3_128(&buf);
+    Ok(format!("{:032x}", h))
 }
 
-// xxh3_128_hexの別名エイリアス
-#[tauri::command]
-fn xxh3_file_hex(path: String) -> Result<String, String> {
-    xxh3_128_hex(path)
-}
-
-// ハッシュ計算結果の構造体
-#[derive(serde::Serialize)]
-struct HashResult {
-    path: String,
-    hex: Option<String>,
-    error: Option<String>,
-}
-
-// 複数ファイルのハッシュを一括計算
-#[tauri::command]
-fn xxh3_many(paths: Vec<String>) -> Vec<HashResult> {
-    use std::fs::File;
-    use std::io::{BufReader, Read};
-    use xxhash_rust::xxh3::Xxh3;
-    let mut out: Vec<HashResult> = Vec::with_capacity(paths.len());
-    for p in paths {
-        let mut res = HashResult {
-            path: p.clone(),
-            hex: None,
-            error: None,
-        };
-        match File::open(&p) {
-            Ok(file) => {
-                let mut reader = BufReader::new(file);
-                let mut hasher = Xxh3::new();
-                let mut buf = [0u8; 8192];
-                loop {
-                    match reader.read(&mut buf) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            hasher.update(&buf[..n]);
-                        }
-                        Err(e) => {
-                            res.error = Some(format!("read error: {}", e));
-                            break;
-                        }
-                    }
-                }
-                if res.error.is_none() {
-                    let digest = hasher.digest128().to_le_bytes();
-                    let hex = digest.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-                    res.hex = Some(hex);
-                }
-            }
-            Err(e) => {
-                res.error = Some(format!("open error: {}", e));
-            }
-        }
-        out.push(res);
-    }
-    out
-}
-
-// -----------------------
+// -------------------------
 // カタログインデックスとRust内での検索処理
-// -----------------------
+// -------------------------
 
 // カタログアイテムのインデックス情報を保持する構造体
 #[derive(Clone)]
@@ -387,14 +254,21 @@ fn parse_updated_at(value: &serde_json::Value) -> Option<i64> {
     } else {
         None
     };
-    let arr = match arr_opt { Some(a) => a, None => return None };
-    if arr.is_empty() { return None; }
+    let arr = match arr_opt {
+        Some(a) => a,
+        None => return None,
+    };
+    if arr.is_empty() {
+        return None;
+    }
     let last = &arr[arr.len() - 1];
     let s = last.get("release_date").and_then(|v| v.as_str()).unwrap_or("");
     // YYYY-MM-DDまたはYYYY/MM/DDを受け入れ、非常に寛容
     let s = s.replace('/', "-");
     let parts: Vec<&str> = s.split('-').collect();
-    if parts.len() < 3 { return None; }
+    if parts.len() < 3 {
+        return None;
+    }
     let y = parts[0].parse::<i32>().ok()?;
     let m = parts[1].parse::<u8>().ok()?;
     let d = parts[2].parse::<u8>().ok()?;
@@ -411,43 +285,16 @@ fn parse_updated_at(value: &serde_json::Value) -> Option<i64> {
 fn set_catalog_index(items: Vec<serde_json::Value>) -> Result<usize, String> {
     let mut v: Vec<IndexItem> = Vec::with_capacity(items.len());
     for it in items {
-        let id = it
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
+        let id = it.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
         if id.is_empty() {
             continue;
         }
-        let name = it
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let item_type = it
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let tags: Vec<String> = it
-            .get("tags")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|x| x.as_str().map(|s| s.to_string()))
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        let author = it
-            .get("author")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let summary = it
-            .get("summary")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
+        let name = it.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let item_type = it.get("type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let tags: Vec<String> =
+            it.get("tags").and_then(|v| v.as_array()).map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect::<Vec<_>>()).unwrap_or_default();
+        let author = it.get("author").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let summary = it.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let updated_at = parse_updated_at(&it);
         let item = IndexItem {
             id,
@@ -460,63 +307,37 @@ fn set_catalog_index(items: Vec<serde_json::Value>) -> Result<usize, String> {
         };
         v.push(item);
     }
-    let mut guard = CATALOG
-        .write()
-        .map_err(|_| String::from("catalog lock poisoned"))?;
+    let mut guard = CATALOG.write().map_err(|_| String::from("catalog lock poisoned"))?;
     *guard = v;
     Ok(guard.len())
 }
 
 // カタログ検索クエリ実行
 #[tauri::command]
-fn query_catalog_index(
-    q: Option<String>,
-    tags: Option<Vec<String>>,
-    types: Option<Vec<String>>,
-    sort: Option<String>,
-    dir: Option<String>,
-) -> Vec<String> {
+fn query_catalog_index(q: Option<String>, tags: Option<Vec<String>>, types: Option<Vec<String>>, sort: Option<String>, dir: Option<String>) -> Vec<String> {
     let guard = match CATALOG.read() {
         Ok(g) => g,
         Err(_) => return Vec::new(),
     };
     let qnorm = q.unwrap_or_default();
-    let terms: Vec<String> = normalize(&qnorm)
-        .split_whitespace()
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect();
+    let terms: Vec<String> = normalize(&qnorm).split_whitespace().filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
     let tag_filter = tags.unwrap_or_default();
     let type_filter = types.unwrap_or_default();
     let mut filtered: Vec<&IndexItem> = guard
         .iter()
         .filter(|it| {
             // クエリでのフィルタリング
-            let qok = if terms.is_empty() {
-                true
-            } else {
-                terms.iter().all(|t| {
-                    it.name_key.contains(t) || it.author_key.contains(t) || it.summary_key.contains(t)
-                })
-            };
+            let qok = if terms.is_empty() { true } else { terms.iter().all(|t| it.name_key.contains(t) || it.author_key.contains(t) || it.summary_key.contains(t)) };
             if !qok {
                 return false;
             }
             // タグでのフィルタリング（OR条件）
-            let tag_ok = if tag_filter.is_empty() {
-                true
-            } else {
-                it.tags.iter().any(|t| tag_filter.iter().any(|x| x == t))
-            };
+            let tag_ok = if tag_filter.is_empty() { true } else { it.tags.iter().any(|t| tag_filter.iter().any(|x| x == t)) };
             if !tag_ok {
                 return false;
             }
             // 種別でのフィルタリング（OR条件）
-            let type_ok = if type_filter.is_empty() {
-                true
-            } else {
-                type_filter.iter().any(|x| x == &it.item_type)
-            };
+            let type_ok = if type_filter.is_empty() { true } else { type_filter.iter().any(|x| x == &it.item_type) };
             type_ok
         })
         .collect();
@@ -546,61 +367,44 @@ fn query_catalog_index(
 }
 
 // -----------------------
-// 高速ZIPファイル解凍（JavaScriptのfflateの代わりにRustで実装）
+// ZIPファイル解凍
 // -----------------------
 
 #[tauri::command]
+// zip_path: 解凍するZIPファイルのパス（絶対または相対）
 fn extract_zip(app: tauri::AppHandle, zip_path: String, dest_path: String, base: Option<String>) -> Result<(), String> {
-    use std::fs::{self, File};
-    use std::io::copy;
-    use std::path::{Path, PathBuf};
-    use zip::ZipArchive;
-
-    fn is_abs(p: &str) -> bool {
-        let p = p.replace('\\', "/");
-        p.starts_with('/') || p.get(1..3) == Some(":/") || p.get(1..3) == Some(":\\")
-    }
-    fn resolve_base(app: &tauri::AppHandle, p: &str, base: &Option<String>) -> PathBuf {
-        if is_abs(p) {
-            return PathBuf::from(p);
-        }
-        match base.as_deref() {
-            Some("AppConfig") | Some("app_config") | Some("app-config") | None => {
-                if let Ok(dir) = app.path().app_config_dir() {
-                    return dir.join(p);
-                }
-                PathBuf::from(p)
-            }
-            Some(_) => PathBuf::from(p),
-        }
-    }
-
+    // 相対/別名ベースを解決して、絶対（に相当する）PathBufへ
     let zip_abs = resolve_base(&app, &zip_path, &base);
     let dest_abs = resolve_base(&app, &dest_path, &base);
 
-    let file = File::open(&zip_abs).map_err(|e| format!("open zip error: {}", e))?;
+    // コア処理へ委譲（絶対パス版）
+    extract_zip_abs(&zip_abs, &dest_abs)
+}
+
+use std::fs::File;
+use zip::read::ZipArchive;
+// 絶対パスを受け取って解凍するコア処理
+pub fn extract_zip_abs(zip_abs: &Path, dest_abs: &Path) -> Result<(), String> {
+    let file = File::open(zip_abs).map_err(|e| format!("open zip error: {}", e))?;
     let mut archive = ZipArchive::new(file).map_err(|e| format!("zip open error: {}", e))?;
-    for i in 0..archive.len() {
-        let mut entry = archive.by_index(i).map_err(|e| format!("zip index error: {}", e))?;
-        let name = entry.name().to_string();
-        let outpath = dest_abs.join(Path::new(&name));
-        if entry.is_dir() {
-            fs::create_dir_all(&outpath).map_err(|e| format!("mkdir error: {}", e))?;
-        } else {
-            if let Some(parent) = outpath.parent() { fs::create_dir_all(parent).map_err(|e| format!("mkdir error: {}", e))?; }
-            let mut outfile = File::create(&outpath).map_err(|e| format!("create file error: {}", e))?;
-            copy(&mut entry, &mut outfile).map_err(|e| format!("write file error: {}", e))?;
-            // 可能な場合はファイルパーミッションを保持
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                if let Some(mode) = entry.unix_mode() {
-                    let _ = fs::set_permissions(&outpath, fs::Permissions::from_mode(mode));
-                }
-            }
-        }
-    }
+    archive.extract(dest_abs).map_err(|e| format!("extract error: {}", e))?;
     Ok(())
+}
+
+/// 相対パスを基準ディレクトリから解決する
+fn resolve_base(app: &tauri::AppHandle, p: &str, base: &Option<String>) -> PathBuf {
+    if is_abs(p) {
+        return PathBuf::from(p);
+    }
+    match base.as_deref() {
+        Some("AppConfig") | Some("app_config") | Some("app-config") | None => {
+            if let Ok(dir) = app.path().app_config_dir() {
+                return dir.join(p);
+            }
+            PathBuf::from(p)
+        }
+        Some(_) => PathBuf::from(p),
+    }
 }
 
 // -----------------------
@@ -621,7 +425,9 @@ fn is_abs_path(p: &str) -> bool {
 }
 
 fn normalize_saved_path(mut s: String) -> String {
-    if s.is_empty() { return s; }
+    if s.is_empty() {
+        return s;
+    }
     // 不足しているコロンを挿入（バックスラッシュ形式用）例：C\ProgramData -> C:\ProgramData
     if s.len() >= 2 && s.as_bytes()[1] != b':' {
         if (s.as_bytes()[0] as char).is_ascii_alphabetic() && (s.as_bytes()[1] == b'\\' || s.as_bytes()[1] == b'/') {
@@ -650,6 +456,10 @@ fn app_config_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir())
 }
 
+// -----------------------
+// ログ出力
+// -----------------------
+
 // ログファイルに1行書き込み
 fn log_line(app: &tauri::AppHandle, level: &str, msg: &str) {
     use std::fs::{create_dir_all, OpenOptions};
@@ -661,7 +471,8 @@ fn log_line(app: &tauri::AppHandle, level: &str, msg: &str) {
     // タイムスタンプを "YYYY-MM-DD HH:MM:SS.mmm ZZZ" 形式に（例: 2025-09-11 00:32:00.293 JST）
     let now = chrono::Local::now();
     let offset = now.offset().local_minus_utc(); // seconds
-    let zone = if offset == 9 * 3600 { // JST 判定（UTC+09:00）
+    let zone = if offset == 9 * 3600 {
+        // JST 判定（UTC+09:00）
         "JST".to_string()
     } else {
         let sign = if offset >= 0 { '+' } else { '-' };
@@ -679,220 +490,217 @@ fn log_line(app: &tauri::AppHandle, level: &str, msg: &str) {
 }
 
 // ログレベル別のヘルパー関数
-fn log_info(app: &tauri::AppHandle, msg: &str) { log_line(app, "INFO", msg); }
-fn log_error(app: &tauri::AppHandle, msg: &str) { log_line(app, "ERROR", msg); }
+fn log_info(app: &tauri::AppHandle, msg: &str) {
+    log_line(app, "INFO", msg);
+}
+fn log_error(app: &tauri::AppHandle, msg: &str) {
+    log_line(app, "ERROR", msg);
+}
 
-// Tauri コマンド: INFOレベルでログ出力
+// log_cmd: JSから呼び出されるコマンド
 #[tauri::command]
-fn log_info_cmd(app: tauri::AppHandle, msg: String) { log_info(&app, &msg); }
+fn log_cmd(app: tauri::AppHandle, level: String, msg: String) {
+    log_line(&app, &level, &msg);
+}
 
-// Tauri コマンド: ERRORレベルでログ出力
-#[tauri::command]
-fn log_error_cmd(app: tauri::AppHandle, msg: String) { log_error(&app, &msg); }
-
-// app.logファイルの最新max_lines行のみを保持し、古いエントリを削除
-// 起動時に呼ばれて、ログファイルの無制限な成長を防ぐ
-fn prune_app_log(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
+// logファイルの行数を max_lines まで削減
+fn prune_log_file(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
     use std::fs::{create_dir_all, OpenOptions};
     use std::io::{Read, Write};
-    // 起動時フック: settings.json を初期化（初回のみ defaultPaths を追記）し、catalogDir を常に更新
-    {
-        use std::fs::{self, File};
-        use std::path::PathBuf;
-        let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from(""));
-        let exe_str = exe_path.to_string_lossy().replace('/', "\\");
-        let base = app_config_dir(app);
-        let _ = create_dir_all(&base);
-        let path = base.join("settings.json");
-        let first_run = !path.exists();
-        let mut obj = serde_json::json!({});
-        if let Ok(mut f) = File::open(&path) {
-            let mut s = String::new();
-            if f.read_to_string(&mut s).is_ok() {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                    if v.is_object() { obj = v; }
-                }
-            }
-        }
-        if let Some(map) = obj.as_object_mut() {
-            // 初回のみ defaultPaths を付与
-            if first_run {
-                map.entry("appDir").or_insert(serde_json::Value::String(String::from("C:/Program Files/AviUtl2")));
-                map.entry("pluginsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Plugin")));
-                map.entry("scriptsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Script")));
-            }
-            // 常に catalogDir は最新の EXE 絶対パスで上書き
-            map.insert("catalogDir".to_string(), serde_json::Value::String(exe_str.clone()));
-        }
-        if let Ok(mut f) = File::create(&path) {
-            let _ = f.write_all(serde_json::to_string_pretty(&obj).unwrap_or_else(|_| String::from("{}")).as_bytes());
-        }
 
-        // アプリの現在バージョンと前回起動バージョンを比較して、
-        // 初回およびアップデート後に UpdateChecker.aui2 を pluginsDir に配置/更新する
-        // さらに、ファイルが存在しない場合も配置する
-        let current_ver = app.package_info().version.to_string();
-        let prev_ver = obj.get("appVersion").and_then(|v| v.as_str()).unwrap_or("");
-        let need_place_plugin = first_run || prev_ver != current_ver;
-        let plugins_dir = obj
-            .get("pluginsDir")
-            .and_then(|v| v.as_str())
-            .unwrap_or("C:/ProgramData/aviutl2/Plugin");
-        let plugins_dir = plugins_dir.replace('/', "\\");
-        let dst = PathBuf::from(&plugins_dir).join("UpdateChecker.aui2");
-        let parent_dir = dst
-            .parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(&plugins_dir));
-        let _ = fs::create_dir_all(&parent_dir);
-
-        // 配置条件: 初回 or アップデート後 or 先にファイルが存在しない
-        if need_place_plugin || !dst.exists() {
-            // 既存ファイルがある場合は上書きする（アップデート内容を反映）
-            let mut copied = false;
-            // 1) バンドルリソースから
-            if let Ok(resdir) = app.path().resource_dir() {
-                // Windowsでは大文字小文字は区別されないが、念のため両方試す
-                let candidates: Vec<PathBuf> = vec![
-                    resdir.join("UpdateChecker.aui2"),
-                    resdir.join("updateChecker.aui2"),
-                    resdir.join("resources").join("UpdateChecker.aui2"),
-                    resdir.join("resources").join("updateChecker.aui2"),
-                ];
-                for src in candidates.iter() {
-                    if src.exists() {
-                        match fs::copy(&src, &dst) {
-                            Ok(_) => {
-                                copied = true;
-                                log_info(app, &format!(
-                                    "placed UpdateChecker.aui2 to {} (src: {})",
-                                    dst.to_string_lossy(),
-                                    src.to_string_lossy()
-                                ));
-                                break;
-                            }
-                            Err(e) => {
-                                log_error(app, &format!(
-                                    "copy UpdateChecker.aui2 failed from {}: {}",
-                                    src.to_string_lossy(),
-                                    e
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-            // 1.5) 実行ファイルと同階層の resources も候補
-            if !copied {
-                if let Some(exe_dir) = std::env::current_exe()
-                    .ok()
-                    .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-                {
-                    let exe_candidates = [
-                        exe_dir.join("resources").join("UpdateChecker.aui2"),
-                        exe_dir.join("resources").join("updateChecker.aui2"),
-                    ];
-                    for src in exe_candidates.iter() {
-                        if src.exists() {
-                            match fs::copy(&src, &dst) {
-                                Ok(_) => {
-                                    copied = true;
-                                    log_info(app, &format!(
-                                        "placed UpdateChecker.aui2 to {} (src: {})",
-                                        dst.to_string_lossy(),
-                                        src.to_string_lossy()
-                                    ));
-                                    break;
-                                }
-                                Err(e) => {
-                                    log_error(app, &format!(
-                                        "copy UpdateChecker.aui2 failed from {}: {}",
-                                        src.to_string_lossy(),
-                                        e
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // 2) 開発環境の相対パスからのフォールバック
-            if !copied {
-                let dev_candidates = [
-                    PathBuf::from("src-tauri").join("resources").join("UpdateChecker.aui2"),
-                    PathBuf::from("src-tauri").join("resources").join("updateChecker.aui2"),
-                ];
-                for dev_src in dev_candidates.iter() {
-                    if dev_src.exists() {
-                        match fs::copy(&dev_src, &dst) {
-                            Ok(_) => {
-                                copied = true;
-                                log_info(app, &format!(
-                                    "placed UpdateChecker.aui2 (dev) to {} (src: {})",
-                                    dst.to_string_lossy(),
-                                    dev_src.to_string_lossy()
-                                ));
-                                break;
-                            }
-                            Err(e) => {
-                                log_error(app, &format!(
-                                    "copy UpdateChecker.aui2 (dev) failed from {}: {}",
-                                    dev_src.to_string_lossy(),
-                                    e
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-            if !copied {
-                log_error(app, &format!(
-                    "UpdateChecker.aui2 not found in resources; could not place to {}",
-                    dst.to_string_lossy()
-                ));
-            }
-        }
-
-        // 前回起動バージョンを更新して保存
-        if let Some(map) = obj.as_object_mut() {
-            map.insert(
-                "appVersion".to_string(),
-                serde_json::Value::String(current_ver.clone()),
-            );
-            // 保存（appVersion含む）
-            if let Ok(mut f) = File::create(&path) {
-                let _ = f.write_all(
-                    serde_json::to_string_pretty(&obj)
-                        .unwrap_or_else(|_| String::from("{}"))
-                        .as_bytes(),
-                );
-            }
-        }
-    }
     let base = app_config_dir(app);
     let logs = base.join("logs");
     let _ = create_dir_all(&logs);
     let file = logs.join("app.log");
-    if !file.exists() { return Ok(()); }
+    if !file.exists() {
+        return Ok(());
+    }
 
     let mut f = match OpenOptions::new().read(true).open(&file) {
         Ok(x) => x,
         Err(_) => return Ok(()),
     };
     let mut buf = String::new();
-    if let Err(_) = f.read_to_string(&mut buf) { return Ok(()); }
+    if f.read_to_string(&mut buf).is_err() {
+        return Ok(());
+    }
     let lines: Vec<&str> = buf.lines().collect();
-    if lines.len() <= max_lines { return Ok(()); }
+    if lines.len() <= max_lines {
+        return Ok(());
+    }
+
     let start = lines.len().saturating_sub(max_lines);
-    let tail = lines[start..].join("\n");
-    let mut out = tail;
-    if !out.ends_with('\n') { out.push('\n'); }
-    // 削除した内容でファイルを上書き
+    let mut out = lines[start..].join("\n");
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
     if let Ok(mut wf) = OpenOptions::new().write(true).truncate(true).open(&file) {
         let _ = wf.write_all(out.as_bytes());
     }
     Ok(())
 }
+
+
+// ------------------------
+// 初期化処理
+// ------------------------
+
+// アプリ設定の更新やプラグイン配置を行ったあと、アプリのログファイルを最大 max_lines 行に刈り込み（古い行を捨て）ます。
+fn prune_app_log(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
+    update_settings_and_plugin(app)?;
+    prune_log_file(app, max_lines)?;
+    Ok(())
+}
+
+// 設定ファイル settings.json の作成／更新と、UpdateChecker.aui2 プラグインの所定ディレクトリへの配置を行います。
+fn update_settings_and_plugin(app: &tauri::AppHandle) -> Result<(), String> {
+    use std::fs::create_dir_all;
+    use std::path::{Path, PathBuf};
+
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from(""));
+    let exe_str = exe_path.to_string_lossy().replace('/', "\\");
+    let base = app_config_dir(app);
+    let _ = create_dir_all(&base);
+    let path = base.join("settings.json");
+
+    let first_run = !path.exists();
+    let mut settings = read_settings_json(&path);
+    apply_default_paths(&mut settings, first_run);
+    update_catalog_dir_value(&mut settings, &exe_str);
+    write_settings_json(&path, &settings);
+
+    let current_ver = app.package_info().version.to_string();
+    let prev_ver = settings.get("appVersion").and_then(|v| v.as_str()).unwrap_or("");
+    let need_place_plugin = first_run || prev_ver != current_ver;
+
+    let plugins_dir = settings.get("pluginsDir").and_then(|v| v.as_str()).unwrap_or("C:/ProgramData/aviutl2/Plugin").replace('/', "\\");
+    let plugins_dir_path = Path::new(&plugins_dir);
+    ensure_update_checker_plugin(app, plugins_dir_path, need_place_plugin);
+
+    if let Some(map) = settings.as_object_mut() {
+        map.insert("appVersion".to_string(), serde_json::Value::String(current_ver));
+    }
+    write_settings_json(&path, &settings);
+
+    Ok(())
+}
+
+// 設定ファイル settings.json の作成／更新と、UpdateChecker.aui2 プラグインの所定ディレクトリへの配置を行います。
+fn read_settings_json(path: &std::path::Path) -> serde_json::Value {
+    use std::fs::File;
+    use std::io::Read;
+
+    if let Ok(mut f) = File::open(path) {
+        let mut s = String::new();
+        if f.read_to_string(&mut s).is_ok() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                if v.is_object() {
+                    return v;
+                }
+            }
+        }
+    }
+    serde_json::json!({})
+}
+
+// 初回起動時のみ、appDir / pluginsDir / scriptsDir が未設定なら既定値を設定。
+fn apply_default_paths(settings: &mut serde_json::Value, first_run: bool) {
+    if !first_run {
+        return;
+    }
+    if let Some(map) = settings.as_object_mut() {
+        map.entry("appDir").or_insert(serde_json::Value::String(String::from("C:/Program Files/AviUtl2")));
+        map.entry("pluginsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Plugin")));
+        map.entry("scriptsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Script")));
+    }
+}
+
+// 設定内の catalogDir を実行ファイルパス（文字列）で上書きします。
+fn update_catalog_dir_value(settings: &mut serde_json::Value, exe_str: &str) {
+    if let Some(map) = settings.as_object_mut() {
+        map.insert("catalogDir".to_string(), serde_json::Value::String(exe_str.to_string()));
+    }
+}
+
+// 設定オブジェクトを settings.json に Pretty 形式で保存。
+fn write_settings_json(path: &std::path::Path, settings: &serde_json::Value) {
+    use std::fs::File;
+    use std::io::Write;
+
+    if let Ok(mut f) = File::create(path) {
+        let json = serde_json::to_string_pretty(settings).unwrap_or_else(|_| String::from("{}"));
+        let _ = f.write_all(json.as_bytes());
+    }
+}
+
+// UpdateChecker.aui2 を plugins_dir に配置します。すでに存在し、かつ force_copy == false なら何もしません。
+fn ensure_update_checker_plugin(app: &tauri::AppHandle, plugins_dir: &std::path::Path, force_copy: bool) {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let dst = plugins_dir.join("UpdateChecker.aui2");
+    if let Some(parent) = dst.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    if !force_copy && dst.exists() {
+        return;
+    }
+
+    let mut copied = false;
+    if let Ok(resdir) = app.path().resource_dir() {
+        let candidates = [
+            resdir.join("UpdateChecker.aui2"),
+            resdir.join("updateChecker.aui2"),
+            resdir.join("resources").join("UpdateChecker.aui2"),
+            resdir.join("resources").join("updateChecker.aui2"),
+        ];
+        copied = try_copy_candidates(app, &candidates, &dst, "");
+    }
+    if !copied {
+        if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
+            let candidates = [
+                exe_dir.join("resources").join("UpdateChecker.aui2"),
+                exe_dir.join("resources").join("updateChecker.aui2"),
+            ];
+            copied = try_copy_candidates(app, &candidates, &dst, "");
+        }
+    }
+    if !copied {
+        let candidates = [
+            PathBuf::from("src-tauri").join("resources").join("UpdateChecker.aui2"),
+            PathBuf::from("src-tauri").join("resources").join("updateChecker.aui2"),
+        ];
+        copied = try_copy_candidates(app, &candidates, &dst, " (dev)");
+    }
+
+    if !copied {
+        log_error(app, &format!("UpdateChecker.aui2 not found in resources; could not place to {}", dst.to_string_lossy()));
+    }
+}
+
+// 候補パス群 candidates を上から順に存在チェックし、見つかった最初のものを dst にコピー。成功で true、全滅で false。
+fn try_copy_candidates(app: &tauri::AppHandle, candidates: &[std::path::PathBuf], dst: &std::path::Path, label: &str) -> bool {
+    use std::fs;
+
+    for src in candidates {
+        if src.exists() {
+            match fs::copy(src, dst) {
+                Ok(_) => {
+                    log_info(app, &format!("placed UpdateChecker.aui2{} to {} (src: {})", label, dst.to_string_lossy(), src.to_string_lossy()));
+                    return true;
+                }
+                Err(e) => {
+                    log_error(app, &format!("copy UpdateChecker.aui2{} failed from {}: {}", label, src.to_string_lossy(), e));
+                }
+            }
+        }
+    }
+    false
+}
+// -----------------------
+// 設定ファイルの読み書きと保存
+// -----------------------
 
 // アプリケーション設定を読み込み
 fn read_settings(app: &tauri::AppHandle) -> Settings {
@@ -911,8 +719,12 @@ fn read_settings(app: &tauri::AppHandle) -> Settings {
             }
         }
     }
-    if s.app_dir.is_empty() { s.app_dir = String::from("C:/Program Files/AviUtl2"); }
-    if s.plugins_dir.is_empty() { s.plugins_dir = String::from("C:/ProgramData/aviutl2/Plugin"); }
+    if s.app_dir.is_empty() {
+        s.app_dir = String::from("C:/Program Files/AviUtl2");
+    }
+    if s.plugins_dir.is_empty() {
+        s.plugins_dir = String::from("C:/ProgramData/aviutl2/Plugin");
+    }
     s.app_dir = normalize_saved_path(s.app_dir);
     s.plugins_dir = normalize_saved_path(s.plugins_dir);
     s
@@ -920,8 +732,12 @@ fn read_settings(app: &tauri::AppHandle) -> Settings {
 
 // 相対パスを絶対パスに変換（検証用）
 fn to_absolute_for_check(app: &tauri::AppHandle, p: &str) -> String {
-    if p.is_empty() { return String::new(); }
-    if is_abs_path(p) { return p.replace('/', "\\"); }
+    if p.is_empty() {
+        return String::new();
+    }
+    if is_abs_path(p) {
+        return p.replace('/', "\\");
+    }
     let base = app_config_dir(app);
     let joined = base.join(p);
     joined.to_string_lossy().replace('/', "\\")
@@ -946,8 +762,11 @@ fn list_dir_names(p: &str) -> Result<(Vec<String>, Vec<String>), String> {
                 let name = de.file_name().to_string_lossy().to_string();
                 match de.file_type() {
                     Ok(ft) => {
-                        if ft.is_dir() { folders.push(name); }
-                        else { files.push(name); }
+                        if ft.is_dir() {
+                            folders.push(name);
+                        } else {
+                            files.push(name);
+                        }
                     }
                     Err(_) => files.push(name),
                 }
@@ -957,7 +776,6 @@ fn list_dir_names(p: &str) -> Result<(Vec<String>, Vec<String>), String> {
     }
     Ok((folders, files))
 }
-
 
 // ハッシュキャッシュファイルを読み込み
 fn read_hash_cache(app: &tauri::AppHandle) -> std::collections::HashMap<String, serde_json::Value> {
@@ -970,7 +788,9 @@ fn read_hash_cache(app: &tauri::AppHandle) -> std::collections::HashMap<String, 
         if f.read_to_string(&mut s).is_ok() {
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
                 if let Some(obj) = v.as_object() {
-                    for (k, vv) in obj.iter() { map.insert(k.to_lowercase(), vv.clone()); }
+                    for (k, vv) in obj.iter() {
+                        map.insert(k.to_lowercase(), vv.clone());
+                    }
                 }
             }
         }
@@ -1000,91 +820,67 @@ fn stat_file(path: &str) -> Option<(u128, u64)> {
     Some((mtime, size))
 }
 
-// ファイルのXXH3-128ハッシュを計算（リトルエンディアン）
-fn xxh3_file_hex_le(path: &str) -> Result<String, String> {
-    use std::fs::File;
-    use std::io::{Read, BufReader};
-    use xxhash_rust::xxh3::Xxh3;
-    let file = File::open(path).map_err(|e| format!("open error: {}", e))?;
-    let mut reader = BufReader::new(file);
-    let mut hasher = Xxh3::new();
-    let mut buf = [0u8; 8192];
-    loop {
-        let n = reader.read(&mut buf).map_err(|e| format!("read error: {}", e))?;
-        if n == 0 { break; }
-        hasher.update(&buf[..n]);
-    }
-    let digest = hasher.digest128().to_le_bytes();
-    Ok(digest.iter().map(|b| format!("{:02x}", b)).collect::<String>())
-}
+//-----------------------
+// バージョンの確認
+//-----------------------
 
 // インストール済みバージョンの検出処理（Rust高速化版）
-#[tauri::command]
-fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<std::collections::HashMap<String, String>, String> {
-    use std::collections::{HashMap, HashSet};
-    let list = items;
-    log_info(&app, &format!("detect map start count={}", list.len()));
+struct DirectorySnapshot {
+    scanned_path: String,
+    folders: std::collections::HashSet<String>,
+    files: std::collections::HashSet<String>,
+}
 
-    // 設定の読み込みとクイックスキャン
-    let settings = read_settings(&app);
-    let base_app = settings.app_dir.trim().trim_matches('"').trim_end_matches(['/', '\\']).to_string();
-    let candidates_exe = vec![format!("{}\\\\aviutl2.exe", base_app), format!("{}\\\\aviutl.exe", base_app)];
-    let mut has_app_exe = false;
-    for p in &candidates_exe { if exists_file_abs(p) { has_app_exe = true; break; } }
-
-    let mut scanned_plugins_path = String::new();
-    let mut folders_plugins_set: HashSet<String> = HashSet::new();
-    let mut files_plugins_set: HashSet<String> = HashSet::new();
-    let dir = settings.plugins_dir.trim();
-    if !dir.is_empty() {
-        match list_dir_names(dir) {
-            Ok((folders, files)) => {
-                scanned_plugins_path = dir.to_string();
-                for f in folders { folders_plugins_set.insert(f); }
-                for f in files { files_plugins_set.insert(f); }
+// 指定ディレクトリ直下の「フォルダ名」と「ファイル名」を収集して DirectorySnapshot にまとめます
+fn collect_directory_snapshot(app: &tauri::AppHandle, dir: &str) -> DirectorySnapshot {
+    let mut snapshot = DirectorySnapshot {
+        scanned_path: String::new(),
+        folders: std::collections::HashSet::new(),
+        files: std::collections::HashSet::new(),
+    };
+    let trimmed = dir.trim();
+    if trimmed.is_empty() {
+        return snapshot;
+    }
+    match list_dir_names(trimmed) {
+        Ok((folders, files)) => {
+            snapshot.scanned_path = trimmed.to_string();
+            for f in folders {
+                snapshot.folders.insert(f);
             }
-            Err(e) => {
-                log_error(&app, &format!("readDir failed path=\"{}\": {}", dir, e));
+            for f in files {
+                snapshot.files.insert(f);
             }
         }
-    }
-    let mut scanned_scripts_path = String::new();
-    let mut folders_scripts_set: HashSet<String> = HashSet::new();
-    let mut files_scripts_set: HashSet<String> = HashSet::new();
-    let sdir = settings.scripts_dir.trim();
-    if !sdir.is_empty() {
-        match list_dir_names(sdir) {
-            Ok((folders, files)) => {
-                scanned_scripts_path = sdir.to_string();
-                for f in folders { folders_scripts_set.insert(f); }
-                for f in files { files_scripts_set.insert(f); }
-            }
-            Err(e) => {
-                log_error(&app, &format!("readDir failed path=\"{}\": {}", sdir, e));
-            }
+        Err(e) => {
+            log_error(app, &format!("readDir failed path=\"{}\": {}", trimmed, e));
         }
     }
+    snapshot
+}
 
-    let folders_plugins_vec: Vec<String> = folders_plugins_set.iter().cloned().collect();
-    let files_plugins_vec: Vec<String> = files_plugins_set.iter().cloned().collect();
-    let folders_scripts_vec: Vec<String> = folders_scripts_set.iter().cloned().collect();
-    let files_scripts_vec: Vec<String> = files_scripts_set.iter().cloned().collect();
-    log_info(&app, &format!(
-        "scan appExe={} pluginsDir=\"{}\" pFolders=[{}] pFiles=[{}] scriptsDir=\"{}\" sFolders=[{}] sFiles=[{}]",
-        has_app_exe,
-        scanned_plugins_path,
-        folders_plugins_vec.join(","),
-        files_plugins_vec.join(","),
-        scanned_scripts_path,
-        folders_scripts_vec.join(","),
-        files_scripts_vec.join(","),
-    ));
+// aviutl2.exeのファイル名を定義
+pub const AVIUTL_EXE: &str = "aviutl2.exe";
 
-    // ヘルパー：アイテムが候補かどうかを判定
-    let folders_plugins_lower: HashSet<String> = folders_plugins_set.iter().map(|s| s.to_lowercase()).collect();
-    let files_plugins_lower: HashSet<String> = files_plugins_set.iter().map(|s| s.to_lowercase()).collect();
-    let folders_scripts_lower: HashSet<String> = folders_scripts_set.iter().map(|s| s.to_lowercase()).collect();
-    let files_scripts_lower: HashSet<String> = files_scripts_set.iter().map(|s| s.to_lowercase()).collect();
+// {appDir} に aviutl2.exe があるかチェック
+fn has_app_executable(settings: &Settings) -> bool {
+    let base = settings.app_dir.trim().trim_matches('"').trim_end_matches(['/', '\\']);
+    if base.is_empty() {
+        return false;
+    }
+    let path = std::path::Path::new(base).join(AVIUTL_EXE);
+    match path.to_str() {
+        Some(p) => exists_file_abs(p),
+        None => false,
+    }
+}
+
+// アイテム（JSON）ごとに「導入候補か？」を判定します。実在するフォルダ/ファイルやアプリ本体の有無に照らして可能性フィルタをかける段階。
+fn detect_candidate_items(list: &[serde_json::Value], has_app_exe: bool, plugins: &DirectorySnapshot, scripts: &DirectorySnapshot) -> Vec<bool> {
+    let folders_plugins_lower: std::collections::HashSet<String> = plugins.folders.iter().map(|s| s.to_lowercase()).collect();
+    let files_plugins_lower: std::collections::HashSet<String> = plugins.files.iter().map(|s| s.to_lowercase()).collect();
+    let folders_scripts_lower: std::collections::HashSet<String> = scripts.folders.iter().map(|s| s.to_lowercase()).collect();
+    let files_scripts_lower: std::collections::HashSet<String> = scripts.files.iter().map(|s| s.to_lowercase()).collect();
     let mut is_candidate = vec![false; list.len()];
     for (idx, it) in list.iter().enumerate() {
         let mut ok = false;
@@ -1092,23 +888,36 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
         if let Some(arr) = arr_opt {
             'outer: for ver in arr {
                 let files_opt = ver.get("file").and_then(|v| v.as_array());
-                if files_opt.is_none() { continue; }
+                if files_opt.is_none() {
+                    continue;
+                }
                 let files = files_opt.unwrap();
                 for f in files {
                     let p = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                    if p.is_empty() { continue; }
+                    if p.is_empty() {
+                        continue;
+                    }
                     let norm = p.replace('\\', "/");
                     if norm.contains("{appDir}") && norm.rsplit('/').next().map(|s| s.to_lowercase()).unwrap_or_default().ends_with(".exe") {
-                        if has_app_exe { ok = true; break 'outer; }
+                        if has_app_exe {
+                            ok = true;
+                            break 'outer;
+                        }
                     }
                     if let Some(pos) = norm.find("{pluginsDir}") {
                         let rest = &norm[pos + "{pluginsDir}".len()..];
                         let rest = rest.trim_start_matches('/');
                         let seg: Vec<&str> = rest.split('/').collect();
                         if seg.len() >= 2 {
-                            if folders_plugins_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if folders_plugins_lower.contains(&seg[0].to_lowercase()) {
+                                ok = true;
+                                break 'outer;
+                            }
                         } else if seg.len() == 1 && !seg[0].is_empty() {
-                            if files_plugins_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if files_plugins_lower.contains(&seg[0].to_lowercase()) {
+                                ok = true;
+                                break 'outer;
+                            }
                         }
                     }
                     if let Some(pos) = norm.find("{scriptsDir}") {
@@ -1116,9 +925,15 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
                         let rest = rest.trim_start_matches('/');
                         let seg: Vec<&str> = rest.split('/').collect();
                         if seg.len() >= 2 {
-                            if folders_scripts_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if folders_scripts_lower.contains(&seg[0].to_lowercase()) {
+                                ok = true;
+                                break 'outer;
+                            }
                         } else if seg.len() == 1 && !seg[0].is_empty() {
-                            if files_scripts_lower.contains(&seg[0].to_string().to_lowercase()) { ok = true; break 'outer; }
+                            if files_scripts_lower.contains(&seg[0].to_lowercase()) {
+                                ok = true;
+                                break 'outer;
+                            }
                         }
                     }
                 }
@@ -1126,11 +941,27 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
         }
         is_candidate[idx] = ok;
     }
+    is_candidate
+}
+// マクロを変換する関数が必要
+// {PluginDir}{scriptDir}などは一時保存しておく
 
-    // すべてのユニークな絶対パスを収集
-    let mut unique_paths: HashSet<String> = HashSet::new();
+// マクロを保存しておく関数
+// 変数の保存にはLazy + ArcSwapを用いる
+// use std::path::PathBuf;
+
+// struct Config {
+//     input_file: PathBuf,
+//     output_dir: PathBuf,
+// }
+
+// 候補アイテムについて、各バージョンの "file" → "path" をマクロ展開して絶対パスを作り、ハッシュ計算対象のユニーク集合を作る。
+fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value], settings: &Settings, is_candidate: &[bool]) -> std::collections::HashSet<String> {
+    let mut unique_paths = std::collections::HashSet::new();
     for (idx, it) in list.iter().enumerate() {
-        if !is_candidate[idx] { continue; }
+        if !is_candidate[idx] {
+            continue;
+        }
         let arr_opt = it.get("versions").and_then(|v| v.as_array()).or_else(|| it.get("version").and_then(|v| v.as_array()));
         if let Some(arr) = arr_opt {
             for ver in arr {
@@ -1138,24 +969,32 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
                 if let Some(files) = ver.get("file").and_then(|v| v.as_array()) {
                     for f in files {
                         let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                        let ctx = HashMap::from([
-                            ("tmp", ""), ("appDir", settings.app_dir.as_str()), ("pluginsDir", settings.plugins_dir.as_str()),
-                            ("scriptsDir", settings.scripts_dir.as_str()), ("id", it.get("id").and_then(|v| v.as_str()).unwrap_or("")), ("version", ver_str),
-                            ("download", ""), ("PRODUCT_CODE", ""),
+                        let ctx = std::collections::HashMap::from([
+                            ("tmp", ""),
+                            ("appDir", settings.app_dir.as_str()),
+                            ("pluginsDir", settings.plugins_dir.as_str()),
+                            ("scriptsDir", settings.scripts_dir.as_str()),
+                            ("id", it.get("id").and_then(|v| v.as_str()).unwrap_or("")),
+                            ("version", ver_str),
+                            ("download", ""),
+                            ("PRODUCT_CODE", ""),
                         ]);
                         let expanded = expand_macros(raw, &ctx).replace('/', "\\");
-                        let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(&app, &expanded) };
+                        let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(app, &expanded) };
                         unique_paths.insert(abs);
                     }
                 }
             }
         }
     }
+    unique_paths
+}
 
-    // ディスクキャッシュを読み込んで再利用
-    let mut disk_cache = read_hash_cache(&app);
-    let mut file_hash_cache: HashMap<String, String> = HashMap::new();
-    let mut to_hash: Vec<String> = Vec::new();
+// ユニークなパス群に対して**ハッシュ（XXH3_128）**を用意する。ローカルディスクのキャッシュ（mtimeMs と size が一致するか）を優先利用し、必要なものだけ再計算。
+fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections::HashSet<String>) -> std::collections::HashMap<String, String> {
+    let mut disk_cache = read_hash_cache(app);
+    let mut file_hash_cache = std::collections::HashMap::new();
+    let mut to_hash = Vec::new();
     for p in unique_paths.iter() {
         let key = p.to_lowercase();
         if let Some((mtime_ms, size)) = stat_file(p) {
@@ -1171,76 +1010,135 @@ fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> 
             to_hash.push(p.clone());
         }
     }
-
-    // 残りのファイルをハッシュ計算
     for p in to_hash.iter() {
-        match xxh3_file_hex_le(p) {
-            Ok(hex) => { file_hash_cache.insert(p.to_lowercase(), hex); },
-            Err(e) => { log_error(&app, &format!("hash error path=\"{}\": {}", p, e)); },
+        match xxh3_128_hex(p) {
+            Ok(hex) => {
+                file_hash_cache.insert(p.to_lowercase(), hex);
+            }
+            Err(e) => {
+                log_error(app, &format!("hash error path=\"{}\": {}", p, e));
+            }
         }
     }
-    // ディスクキャッシュを更新
     for (k, hex) in file_hash_cache.iter() {
         if let Some((mtime_ms, size)) = stat_file(k) {
             disk_cache.insert(k.clone(), serde_json::json!({"hex": hex, "mtimeMs": mtime_ms, "size": size}));
         }
     }
-    write_hash_cache(&app, &disk_cache);
+    write_hash_cache(app, &disk_cache);
+    file_hash_cache
+}
 
-    // アイテムごとのバージョンを決定
-    let mut out: HashMap<String, String> = HashMap::new();
+// 各アイテムについて、どのバージョンに一致するかをハッシュ照合で決定します。最新優先で後ろから（降順）チェック。
+fn determine_versions(
+    app: &tauri::AppHandle,
+    list: &[serde_json::Value],
+    settings: &Settings,
+    is_candidate: &[bool],
+    file_hash_cache: &std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
     for (idx, it) in list.iter().enumerate() {
         let id = it.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        if id.is_empty() { continue; }
+        if id.is_empty() {
+            continue;
+        }
         if !is_candidate[idx] {
             out.insert(id.clone(), String::new());
-            log_info(&app, &format!("detect item done id={} matched=false reason=not-candidate", id));
+            log_info(app, &format!("detect item done id={} matched=false reason=not-candidate", id));
             continue;
         }
         let mut detected = String::new();
-        let mut any_present = false;   // 探索対象ファイルが実在したか
-        let mut any_mismatch = false;  // 実在したがハッシュ不一致が発生したか
+        let mut any_present = false;
+        let mut any_mismatch = false;
         let arr_opt = it.get("versions").and_then(|v| v.as_array()).or_else(|| it.get("version").and_then(|v| v.as_array()));
         if let Some(arr) = arr_opt {
             for i in (0..arr.len()).rev() {
                 let ver = &arr[i];
                 let ver_str = ver.get("version").and_then(|v| v.as_str()).unwrap_or("");
                 let files_opt = ver.get("file").and_then(|v| v.as_array());
-                if files_opt.is_none() { continue; }
+                if files_opt.is_none() {
+                    continue;
+                }
                 let files = files_opt.unwrap();
                 let mut ok = true;
                 for f in files {
                     let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                    let ctx = HashMap::from([
-                        ("tmp", ""), ("appDir", settings.app_dir.as_str()), ("pluginsDir", settings.plugins_dir.as_str()),
-                        ("scriptsDir", settings.scripts_dir.as_str()), ("id", id.as_str()), ("version", ver_str),
-                        ("download", ""), ("PRODUCT_CODE", ""),
+                    let ctx = std::collections::HashMap::from([
+                        ("tmp", ""),
+                        ("appDir", settings.app_dir.as_str()),
+                        ("pluginsDir", settings.plugins_dir.as_str()),
+                        ("scriptsDir", settings.scripts_dir.as_str()),
+                        ("id", id.as_str()),
+                        ("version", ver_str),
+                        ("download", ""),
+                        ("PRODUCT_CODE", ""),
                     ]);
                     let expanded = expand_macros(raw, &ctx).replace('/', "\\");
-                    let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(&app, &expanded) };
+                    let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(app, &expanded) };
                     let key = abs.to_lowercase();
                     let hex = file_hash_cache.get(&key).cloned().unwrap_or_default();
                     let want = f.get("XXH3_128").or_else(|| f.get("xxh3_128")).and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
-                    let flipped = if hex.len() == 32 {
-                        // バイト単位でリバース
-                        hex.as_bytes()
-                            .chunks(2)
-                            .rev()
-                            .map(|ch| std::str::from_utf8(ch).unwrap_or("")).collect::<String>()
-                    } else { hex.clone() };
-                    if !hex.is_empty() { any_present = true; }
-                    if !hex.is_empty() && !want.is_empty() && (hex != want && flipped != want) { any_mismatch = true; }
-                    if want.is_empty() || (hex != want && flipped != want) { ok = false; break; }
+                    let flipped = if hex.len() == 32 { hex.as_bytes().chunks(2).rev().map(|ch| std::str::from_utf8(ch).unwrap_or("")).collect::<String>() } else { hex.clone() };
+                    if !hex.is_empty() {
+                        any_present = true;
+                    }
+                    if !hex.is_empty() && !want.is_empty() && (hex != want && flipped != want) {
+                        any_mismatch = true;
+                    }
+                    if want.is_empty() || (hex != want && flipped != want) {
+                        ok = false;
+                        break;
+                    }
                 }
-                if ok { detected = ver_str.to_string(); break; }
+                if ok {
+                    detected = ver_str.to_string();
+                    break;
+                }
             }
         }
         if detected.is_empty() && (any_present || any_mismatch) {
             detected = String::from("???");
         }
         out.insert(id.clone(), detected.clone());
-        log_info(&app, &format!("detect item done id={} matched={} version={}", id, if detected.is_empty() {"false"} else {"true"}, detected));
+        log_info(app, &format!("detect item done id={} matched={} version={}", id, if detected.is_empty() { "false" } else { "true" }, detected));
     }
+    out
+}
+
+// 上記すべてをまとめて実行し、「各 id のインストール検出バージョン」を返すエントリポイント。
+#[tauri::command]
+fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<std::collections::HashMap<String, String>, String> {
+    let list = items;
+    log_info(&app, &format!("detect map start count={}", list.len()));
+
+    let settings = read_settings(&app);
+    let has_app_exe = has_app_executable(&settings);
+    let plugins_snapshot = collect_directory_snapshot(&app, settings.plugins_dir.as_str());
+    let scripts_snapshot = collect_directory_snapshot(&app, settings.scripts_dir.as_str());
+
+    let folders_plugins_vec: Vec<String> = plugins_snapshot.folders.iter().cloned().collect();
+    let files_plugins_vec: Vec<String> = plugins_snapshot.files.iter().cloned().collect();
+    let folders_scripts_vec: Vec<String> = scripts_snapshot.folders.iter().cloned().collect();
+    let files_scripts_vec: Vec<String> = scripts_snapshot.files.iter().cloned().collect();
+    log_info(
+        &app,
+        &format!(
+            "scan appExe={} pluginsDir=\"{}\" pFolders=[{}] pFiles=[{}] scriptsDir=\"{}\" sFolders=[{}] sFiles=[{}]",
+            has_app_exe,
+            plugins_snapshot.scanned_path,
+            folders_plugins_vec.join(","),
+            files_plugins_vec.join(","),
+            scripts_snapshot.scanned_path,
+            folders_scripts_vec.join(","),
+            files_scripts_vec.join(","),
+        ),
+    );
+
+    let is_candidate = detect_candidate_items(&list, has_app_exe, &plugins_snapshot, &scripts_snapshot);
+    let unique_paths = collect_unique_paths(&app, &list, &settings, &is_candidate);
+    let file_hash_cache = build_file_hash_cache(&app, &unique_paths);
+    let out = determine_versions(&app, &list, &settings, &is_candidate, &file_hash_cache);
 
     Ok(out)
 }
@@ -1313,104 +1211,37 @@ fn remove_installed_id_cmd(app: tauri::AppHandle, id: String) -> Result<std::col
     Ok(map)
 }
 
+// -----------------------
+// Tauriアプリケーションのセットアップと起動
+// -----------------------
+
 // Tauriアプリケーションのメインエントリーポイント
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // フロントエンドで使用されるTauri v2プラグインを登録
+        // フロントエンドで使用される Tauri v2 プラグインを登録
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-  .plugin(tauri_plugin_http::init())
-  .plugin(tauri_plugin_shell::init())
-  .plugin(tauri_plugin_process::init())
-  .setup(|app| {
-      // 起動時にapp.logを最新1000行に削減
-      let _ = prune_app_log(&app.handle(), 1000);
-      // アップデータープラグイン（デスクトップ）
-      #[cfg(desktop)]
-      {
-          app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
-      }
-      Ok(())
-  })
-  .invoke_handler(tauri::generate_handler![
-            xxh3_128_hex,
-            xxh3_file_hex,
-            xxh3_many,
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            // 起動時に app.log を最新 1000 行に削減
+            let _ = prune_app_log(&app.handle(), 1000);
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
             set_catalog_index,
             query_catalog_index,
             extract_zip,
             detect_versions_map,
-            log_info_cmd,
-            log_error_cmd,
+            log_cmd,
             get_installed_map_cmd,
             add_installed_id_cmd,
             remove_installed_id_cmd,
-            list_installed_plugins,
             drive_download_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
-// -----------------------
-// インストール済みプラグイン/スクリプトファイルのリスト表示（再帰的）
-
-
-#[tauri::command]
-fn list_installed_plugins(app: tauri::AppHandle) -> Result<Vec<String>, String> {
-    use std::collections::BTreeSet;
-    use std::ffi::OsStr;
-    use std::fs;
-    use std::path::{Path, PathBuf};
-
-    let settings = read_settings(&app);
-    let mut roots: Vec<String> = Vec::new();
-    if !settings.plugins_dir.is_empty() { roots.push(settings.plugins_dir.clone()); }
-    if !settings.scripts_dir.is_empty() { roots.push(settings.scripts_dir.clone()); }
-    if roots.is_empty() { return Ok(Vec::new()); }
-
-    // ファイル拡張子をチェックする関数
-    fn has_ext(p: &Path, exts: &[&str]) -> bool {
-        match p.extension().and_then(OsStr::to_str) {
-            Some(ext) => {
-                let lower = ext.to_lowercase();
-                exts.iter().any(|e| *e == format!(".{lower}"))
-            }
-            None => false,
-        }
-    }
-
-    // 再帰的にディレクトリを探索してファイルを収集
-    fn list_recursive(dir: &Path, out: &mut Vec<PathBuf>) {
-        if let Ok(read) = fs::read_dir(dir) {
-            for ent in read.flatten() {
-                let path = ent.path();
-                if let Ok(ft) = ent.file_type() {
-                    if ft.is_dir() {
-                        list_recursive(&path, out);
-                    } else if has_ext(&path, &[".auf", ".aui", ".dll", ".lua", ".anm"]) {
-                        out.push(path);
-                    }
-                }
-            }
-        }
-    }
-
-    // 重複を排除するためのBTreeSetを使用
-    let mut set = BTreeSet::<String>::new();
-    for r in roots {
-        let path = PathBuf::from(&r);
-        let mut files = Vec::new();
-        list_recursive(&path, &mut files);
-        for f in files {
-            let name = f.file_name().and_then(OsStr::to_str).unwrap_or("").to_string();
-            let parent = f.parent().and_then(|p| p.file_name()).and_then(OsStr::to_str).unwrap_or("").to_string();
-            if !name.is_empty() {
-                let label = if parent.is_empty() { name } else { format!("{} / {}", parent, name) };
-                set.insert(label);
-            }
-        }
-    }
-    Ok(set.into_iter().collect())
-}

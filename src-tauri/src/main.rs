@@ -2,6 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-   // メイン処理をライブラリ側の run 関数に委譲する
+    // メイン処理をライブラリ側の run 関数に委譲する
     aviutl2_catalog::run();
 }

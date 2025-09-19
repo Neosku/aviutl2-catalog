@@ -4,7 +4,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import Icon from '../components/Icon.jsx';
 
 // 遅延読み込み（Code Splitting）でページコンポーネントを定義
-const Home = lazy(() => import('../pages/Home.jsx'));
+// const Home = lazy(() => import('../pages/Home.jsx'));
+import Home from '../pages/Home.jsx';
 const Package = lazy(() => import('../pages/Package.jsx'));
 const Submit = lazy(() => import('../pages/Submit.jsx'));
 
@@ -38,4 +39,3 @@ function FloatingHomeButtonInline() {
     </Link>
   );
 }
-

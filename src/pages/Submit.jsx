@@ -371,7 +371,6 @@ export default function Submit() {
                 <div className="sidebar__header">デバイス情報</div>
                 {loadingDiag ? <div>収集中…</div> : (
                   <div className="sidebar__group">
-                    <div>アプリのバージョン: {appVersion || '取得中…'}</div>
                     <label className="switch">
                       <input type="checkbox" name="includeDevice" checked={bug.includeDevice} onChange={onBugChange} />
                       <span className="switch__slider" aria-hidden></span>
@@ -380,10 +379,6 @@ export default function Submit() {
                     <div>OS: {device?.os?.name || ''} {device?.os?.version || ''} ({device?.os?.arch || ''})</div>
                     <div>CPU: {device?.cpu?.model || ''} / 論理コア: {device?.cpu?.cores || ''}</div>
                     <div>GPU: {device?.gpu?.vendor || ''} {device?.gpu?.renderer || ''} {device?.gpu?.driver || ''}</div>
-                    <div>
-                      インストール済みプラグイン一覧
-                      <pre className="modal__pre pre--wrap pre--scroll">{pluginsPreview || '取得できませんでした'}</pre>
-                    </div>
                   </div>
                 )}
               </div>

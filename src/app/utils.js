@@ -94,40 +94,24 @@ export function getSorter(key = 'newest', dir = 'desc') {
 // スキーマ: { [id: string]: string /* version */ }
 const INSTALLED_FILE = 'installed.json';
 
-// installed.jsonからインストールパッケージ一覧を読み込み（JS版）
-async function readInstalledMap() {
-  const fs = await import('@tauri-apps/plugin-fs');
-  try {
-    const exists = await fs.exists(INSTALLED_FILE, { baseDir: fs.BaseDirectory.AppConfig });
-    if (!exists) return {};
-    const raw = await fs.readTextFile(INSTALLED_FILE, { baseDir: fs.BaseDirectory.AppConfig });
-    const data = JSON.parse(raw || '{}');
-    return (data && typeof data === 'object') ? data : {};
-  } catch (e) {
-    try { await logError(`[readInstalledMap] failed: ${e?.message || e}`); } catch (_) {}
-    return {};
-  }
-}
-
 // installed.jsonからインストールパッケージ一覧を読み込み（RustとJSを統合）
 export async function loadInstalledMap() {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     return await invoke('get_installed_map_cmd');
   } catch (e) {
-    try { await logError(`[loadInstalledMap] invoke fallback: ${e?.message || e}`); } catch (_) {}
-    return await readInstalledMap();
+    await logError(`[loadInstalledMap] invoke fallback: ${e?.message || e}`);
   }
 }
 
-// installed.jsonにインストールパッケージ一覧を書き込み
+// installed.jsonにインストールパッケージ一覧を書き込み(廃止予定)
 async function writeInstalledMap(map) {
   const fs = await import('@tauri-apps/plugin-fs');
   try {
     await fs.writeTextFile(INSTALLED_FILE, JSON.stringify(map, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
   } catch (e) {
     console.error('Failed to write installed map:', e);
-    try { await logError(`[writeInstalledMap] failed: ${e?.message || e}`); } catch (_) {}
+    try { await logError(`[writeInstalledMap] failed: ${e?.message || e}`); } catch (_) { }
   }
   return map;
 }
@@ -138,10 +122,7 @@ async function addInstalledId(id, version = '') {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('add_installed_id_cmd', { id, version: String(version || '') });
   } catch (e) {
-    try { await logError(`[addInstalledId] invoke failed, fallback to file: ${e?.message || e}`); } catch (_) {}
-    const map = await readInstalledMap();
-    map[id] = String(version || '');
-    await writeInstalledMap(map);
+    try { await logError(`[addInstalledId] invoke failed, fallback to file: ${e?.message || e}`); } catch (_) { }
   }
 }
 
@@ -151,10 +132,7 @@ export async function removeInstalledId(id) {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('remove_installed_id_cmd', { id });
   } catch (e) {
-    try { await logError(`[removeInstalledId] invoke failed, fallback to file: ${e?.message || e}`); } catch (_) {}
-    const map = await readInstalledMap();
-    delete map[id];
-    await writeInstalledMap(map);
+    try { await logError(`[removeInstalledId] invoke failed, fallback to file: ${e?.message || e}`); } catch (_) { }
   }
 }
 
@@ -181,10 +159,11 @@ export function latestVersionOf(item) {
   return last?.version || '';
 }
 
-
 // -------------------------
 // settings.jsonの読み書き
 // -------------------------
+
+// settings.jsonの読み書きはjsのみで
 
 // 設定の永続化（AviUtl2 ルートと主要サブディレクトリなど）
 const SETTINGS_FILE = 'settings.json';
@@ -199,7 +178,7 @@ async function readSettings() {
     const raw = await fs.readTextFile(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
     const data = JSON.parse(raw || '{}');
     return (data && typeof data === 'object') ? data : {};
-  } catch (e) { try { await logError(`[readSettings] failed: ${e?.message || e}`); } catch (_) {} return {}; }
+  } catch (e) { try { await logError(`[readSettings] failed: ${e?.message || e}`); } catch (_) { } return {}; }
 }
 
 // 設定をsettings.jsonに保存
@@ -227,14 +206,14 @@ async function moveUpdateCheckerIfNeeded(oldDir, newDir) {
     const dst = toWin(`${newDir}\\UpdateChecker.aui2`);
     const exists = await fs.exists(src);
     if (!exists) return false;
-    try { await fs.mkdir(dstDir, { recursive: true }); } catch (_) {}
+    try { await fs.mkdir(dstDir, { recursive: true }); } catch (_) { }
     const buf = await fs.readFile(src);
     await fs.writeFile(dst, buf);
-    try { await fs.remove(src); } catch (_) {}
-    try { await logInfo(`[settings] moved UpdateChecker.aui2: ${src} -> ${dst}`); } catch (_) {}
+    try { await fs.remove(src); } catch (_) { }
+    try { await logInfo(`[settings] moved UpdateChecker.aui2: ${src} -> ${dst}`); } catch (_) { }
     return true;
   } catch (e) {
-    try { await logError(`[settings] moveUpdateCheckerIfNeeded failed: ${e?.message || e}`); } catch (_) {}
+    try { await logError(`[settings] moveUpdateCheckerIfNeeded failed: ${e?.message || e}`); } catch (_) { }
     return false;
   }
 }
@@ -252,7 +231,7 @@ export async function setSettings(partial) {
     if (oldDir && newDir && oldDir !== newDir) {
       await moveUpdateCheckerIfNeeded(oldDir, newDir);
     }
-  } catch (e) { try { await logError(`[settings] pluginsDir move hook failed: ${e?.message || e}`); } catch (_) {} }
+  } catch (e) { try { await logError(`[settings] pluginsDir move hook failed: ${e?.message || e}`); } catch (_) { } }
   return await writeSettings(next);
 }
 
@@ -276,7 +255,7 @@ async function recordInstalledOutputs(id, outputs) {
     try { const raw = await fs.readTextFile(file, { baseDir: fs.BaseDirectory.AppConfig }); prev = JSON.parse(raw || '[]'); } catch (_) { }
     const set = new Set([...(Array.isArray(prev) ? prev : []), ...(outputs || [])]);
     await fs.writeTextFile(file, JSON.stringify(Array.from(set), null, 2), { baseDir: fs.BaseDirectory.AppConfig });
-  } catch (e) { try { await logError(`[recordInstalledOutputs] failed: ${e?.message || e}`); } catch (_) {} }
+  } catch (e) { try { await logError(`[recordInstalledOutputs] failed: ${e?.message || e}`); } catch (_) { } }
 }
 
 // installed-files/<id>.jsonから読み込み
@@ -287,7 +266,7 @@ async function readInstalledOutputs(id) {
     const raw = await fs.readTextFile(file, { baseDir: fs.BaseDirectory.AppConfig });
     const arr = JSON.parse(raw || '[]');
     return Array.isArray(arr) ? arr : [];
-  } catch (e) { try { await logError(`[readInstalledOutputs] failed: ${e?.message || e}`); } catch (_) {} return []; }
+  } catch (e) { try { await logError(`[readInstalledOutputs] failed: ${e?.message || e}`); } catch (_) { } return []; }
 }
 
 // installed-files/<id>.jsonを削除
@@ -297,52 +276,20 @@ async function removeInstalledOutputsRecord(id) {
 }
 
 // -------------------------
-// ログ出力
+// ログ出力　OK
 // -------------------------
 
-// ログを出力する　level: 'INFO' | 'ERROR', msg: string
+// ログを出力する
+export function logInfo(msg) { return logLine('INFO', msg); }
+export function logError(msg) { return logLine('ERROR', msg); }
+
+// Rust側の log_cmd を呼び出す
 async function logLine(level, msg) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    if (String(level).toUpperCase() === 'ERROR') await invoke('log_error_cmd', { msg: String(msg) });
-    else await invoke('log_info_cmd', { msg: String(msg) });
-  } catch (_) {
-    try {
-      const fs = await import('@tauri-apps/plugin-fs');
-      const now = new Date();
-      // ローカル時刻を "YYYY-MM-DD HH:mm:ss.SSS ZZZ" 形式（例: 2025-09-11 00:32:00.293 JST）で整形
-      const pad2 = (n) => String(n).padStart(2, '0');
-      const pad3 = (n) => String(n).padStart(3, '0');
-      const y = now.getFullYear();
-      const M = pad2(now.getMonth() + 1);
-      const d = pad2(now.getDate());
-      const H = pad2(now.getHours());
-      const m = pad2(now.getMinutes());
-      const s = pad2(now.getSeconds());
-      const ms = pad3(now.getMilliseconds());
-      const offMin = now.getTimezoneOffset();
-      let zone = '';
-      if (offMin === -540) {
-        zone = 'JST';
-      } else {
-        const sign = offMin <= 0 ? '+' : '-';
-        const abs = Math.abs(offMin);
-        const hh = pad2(Math.floor(abs / 60));
-        const mm = pad2(abs % 60);
-        zone = `UTC${sign}${hh}:${mm}`;
-      }
-      const ts = `${y}-${M}-${d} ${H}:${m}:${s}.${ms} ${zone}`;
-      const line = `[${ts}] [${level}] ${msg}\n`;
-      try { await fs.mkdir('logs', { baseDir: fs.BaseDirectory.AppConfig, recursive: true }); } catch (_) { }
-      let prev = '';
-      try { prev = await fs.readTextFile(LOG_FILE, { baseDir: fs.BaseDirectory.AppConfig }); } catch (_) { }
-      await fs.writeTextFile(LOG_FILE, prev + line, { baseDir: fs.BaseDirectory.AppConfig });
-    } catch (_) { /* ignore logging errors */ }
-  }
+    await invoke('log_cmd', { level: String(level), msg: String(msg) });
+  } catch (_) {}
 }
-// INFO/ERROR のショートカット
-export function logInfo(msg) { return logLine('INFO', msg); }
-export function logError(msg) { return logLine('ERROR', msg); }
 
 // -------------------------
 // 診断（OS/GPU/インストール済みアプリ、app.log）
@@ -365,7 +312,7 @@ export async function collectDeviceInfo() {
       try { const obj = JSON.parse(out.stdout); info.os = { name: obj.Platform || 'Windows', version: obj.Version || '', arch: obj.Arch || '' }; }
       catch { info.os = { name: 'Windows', version: '', arch: '' }; }
     } else { info.os = { name: 'Windows', version: '', arch: '' }; }
-  } catch (e) { try { await logError(`[collectDeviceInfo] OS query failed: ${e?.message || e}`); } catch (_) {} }
+  } catch (e) { try { await logError(`[collectDeviceInfo] OS query failed: ${e?.message || e}`); } catch (_) { } }
 
   // CPU情報を取得
   try {
@@ -387,7 +334,7 @@ export async function collectDeviceInfo() {
       };
     }
 
-  } catch (e) { try { await logError(`[collectDeviceInfo] CPU query failed: ${e?.message || e}`); } catch (_) {} }
+  } catch (e) { try { await logError(`[collectDeviceInfo] CPU query failed: ${e?.message || e}`); } catch (_) { } }
 
   // GPU情報を取得
   const shell = await import('@tauri-apps/plugin-shell');
@@ -410,15 +357,6 @@ export async function collectDeviceInfo() {
       processor: preferred?.VideoProcessor || '',
     };
   }
-
-  // インストール済みアプリ/プラグイン一覧を取得
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const list = await invoke('list_installed_plugins');
-    if (Array.isArray(list)) info.installedPlugins = list;
-  } catch (_) {
-    try { info.installedPlugins = await listInstalledPlugins(); } catch { info.installedPlugins = []; }
-  }
   return info;
 }
 
@@ -430,90 +368,11 @@ export async function readAppLog() {
     if (!exists) return '';
     const text = await fs.readTextFile(LOG_FILE, { baseDir: fs.BaseDirectory.AppConfig });
     return text || '';
-  } catch (e) { try { await logError(`[readAppLog] failed: ${e?.message || e}`); } catch (_) {} return ''; }
+  } catch (e) { try { await logError(`[readAppLog] failed: ${e?.message || e}`); } catch (_) { } return ''; }
 }
-
-// 設定されたディレクトリからプラグイン/スクリプトのファイル一覧を取得
-async function listInstalledPlugins() {
-  try {
-    // 調べるディレクトリ設定を取得
-    const fs = await import('@tauri-apps/plugin-fs');
-    const settings = await getSettings().catch(() => ({}));
-    const pluginsDir = String(settings?.pluginsDir || '').trim();
-    const scriptsDir = String(settings?.scriptsDir || '').trim();
-    const roots = [pluginsDir, scriptsDir].filter(Boolean);
-    if (!roots.length) return [];
-    // 指定ディレクトリを再帰的に列挙する関数
-    async function listRecursive(root) {
-      try {
-        const entries = await fs.readDir(root, { recursive: true });
-        const stack = Array.isArray(entries) ? entries.slice() : [];
-        const out = [];
-        while (stack.length) {
-          const e = stack.shift();
-          if (!e) continue;
-          if (e.children && Array.isArray(e.children)) { stack.push(...e.children); continue; }
-          const p = String(e.path || '');
-          out.push(p);
-        }
-        return out;
-      } catch (e) { try { await logError(`[listInstalledPlugins] listRecursive failed: ${e?.message || e}`); } catch (_) {} return []; }
-    }
-    // すべてのルートディレクトリを再帰的に列挙
-    const lists = await Promise.all(roots.map(r => listRecursive(r)));
-    const all = lists.flat();
-    // 成形して見やすくする
-    const pathApi = await import('@tauri-apps/api/path');
-    const names = await Promise.all(all.map(async p => {
-      try {
-        const base = await pathApi.basename(p);
-        const dir = await pathApi.dirname(p);
-        const folder = await pathApi.basename(dir);
-        return `${folder} / ${base}`;
-      } catch (_) { return p; }
-    }));
-    // 重複削除とソート
-    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
-  } catch (e) { try { await logError(`[listInstalledPlugins] failed: ${e?.message || e}`); } catch (_) {} return []; }
-}
-
 // -------------------------
 // ハッシュ計算・インストール済みバージョン検出
 // -------------------------
-
-// 指定ファイルの XXH3-128を計算
-async function xxh3_128_hex(absPath) {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const hex = await invoke('xxh3_file_hex', { path: absPath });
-    return String(hex || '').toLowerCase();
-  } catch (e) {
-    await logError(`Failed to compute xxh3_128: ${e?.message || e}`);
-  }
-}
-
-// 複数ファイルのハッシュをまとめて計算してキャッシュに格納
-async function hashMany(paths = []) {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const res = await invoke('xxh3_many', { paths });
-    // 結果は { path, hex, error } の配列
-    const arr = Array.isArray(res) ? res : [];
-    for (const r of arr) {
-      const p = String(r.path || '');
-      const hex = String(r.hex || '').toLowerCase();
-      const key = p.toLowerCase();
-      if (hex) fileHashCache.set(key, hex);
-      else if (r.error) { try { await logError(`hashMany error path="${p}": ${r.error}`); } catch (_) { } }
-    }
-  } catch (e) {
-    // フォールバック: 1 件ずつ計算
-    for (const p of (paths || [])) {
-      try { const hex = await xxh3_128_hex(p); fileHashCache.set(String(p).toLowerCase(), hex); }
-      catch (e2) { try { await logError(`hashMany fallback error path="${p}": ${e2?.message || e2}`); } catch (_) { } }
-    }
-  }
-}
 
 // 指定パッケージのインストール済みバージョンを検出（Rust実装を使用）
 export async function detectInstalledVersionsMap(items) {
@@ -616,7 +475,7 @@ async function toAbsoluteExecPath(p, ctx) {
     const joined = await pathApi.join(base, p.replace(/^\.\//, ''));
     // PowerShell 用に Windows のバックスラッシュに正規化
     return joined.replace(/\//g, '\\');
-  } catch (e) { try { await logError(`[toAbsoluteExecPath] failed: ${e?.message || e}`); } catch (_) {} return p; }
+  } catch (e) { try { await logError(`[toAbsoluteExecPath] failed: ${e?.message || e}`); } catch (_) { } return p; }
 }
 
 // 実行ファイルをウィンドウ非表示で実行する関数
@@ -680,7 +539,7 @@ async function resolveSource(item) {
         if (m) asset = m;
       }
       if (asset?.browser_download_url) return asset.browser_download_url;
-    } catch (e) { try { await logError(`[resolveSource] github fetch failed: ${e?.message || e}`); } catch (_) {} }
+    } catch (e) { try { await logError(`[resolveSource] github fetch failed: ${e?.message || e}`); } catch (_) { } }
   }
   return '';
 }
@@ -753,7 +612,7 @@ async function extractZip(zipPath, destPath, baseDir) {
     // Tauri 側の引数名に合わせて camelCase を使用
     await invoke('extract_zip', { zipPath, destPath, base });
     return;
-  } catch (e) { try { await logError(`[extractZip] failed: ${e?.message || e}`); } catch (_) {} }
+  } catch (e) { try { await logError(`[extractZip] failed: ${e?.message || e}`); } catch (_) { } }
 }
 
 // ルート配下を再帰的に走査してファイル一覧（相対パス）を返す
@@ -813,12 +672,12 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
     root = base.endsWith('/') ? base.slice(0, -1) : (base || '.');
   }
   let files = [];
-  try { files = await listFilesRecursive(root, baseDir); } catch (e) { try { await logError(`[copyPattern] listFilesRecursive failed (root=${root}): ${e?.message || e}`); } catch (_) {} files = []; }
+  try { files = await listFilesRecursive(root, baseDir); } catch (e) { try { await logError(`[copyPattern] listFilesRecursive failed (root=${root}): ${e?.message || e}`); } catch (_) { } files = []; }
   // フォールバック: 再帰パターンで見つからない場合は 1 つ上のディレクトリを root として試す
   if ((!files || files.length === 0) && /\*\*/.test(effective)) {
     const up = root.includes('/') ? root.split('/').slice(0, -1).join('/') : '.';
     if (up && up !== root) {
-      try { files = await listFilesRecursive(up, baseDir); root = up; } catch (e) { try { await logError(`[copyPattern] up one level failed (up=${up}): ${e?.message || e}`); } catch (_) {} }
+      try { files = await listFilesRecursive(up, baseDir); root = up; } catch (e) { try { await logError(`[copyPattern] up one level failed (up=${up}): ${e?.message || e}`); } catch (_) { } }
     }
   }
   let matched = files.filter(p => simpleGlobMatch(effective, p));
@@ -844,7 +703,7 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
         // 相対パスが Plugin/ 配下になるよう root を調整
         root = pluginRoot;
       }
-    } catch (e) { try { await logError(`[copyPattern] probing Plugin root failed: ${e?.message || e}`); } catch (_) {} }
+    } catch (e) { try { await logError(`[copyPattern] probing Plugin root failed: ${e?.message || e}`); } catch (_) { } }
   }
   if (isAbsPath(toDir)) await fs.mkdir(toDir, { recursive: true });
   else await fs.mkdir(toDir, { baseDir, recursive: true });
@@ -1068,15 +927,6 @@ export async function runInstallerForItem(item, dispatch) {
             await extractZip(fromRel, toRel, tmp.baseDir);
             break;
           }
-          case 'ensureDirs': {
-            const fs = await import('@tauri-apps/plugin-fs');
-            const paths = (step.paths || []).map(p => expandMacros(p, ctx));
-            for (const p of paths) {
-              if (isAbsPath(p)) await fs.mkdir(p, { recursive: true });
-              else await fs.mkdir(p, { baseDir: tmp.baseDir, recursive: true });
-            }
-            break;
-          }
           case 'copy': {
             const from = expandMacros(step.from, ctx);
             const to = expandMacros(step.to, ctx);
@@ -1086,14 +936,6 @@ export async function runInstallerForItem(item, dispatch) {
               throw new Error(`copy matched 0 files (from=${from} to=${to})`);
             }
             try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
-            break;
-          }
-          case 'move': {
-            const fs = await import('@tauri-apps/plugin-fs');
-            const from = expandMacros(step.from, ctx);
-            const to = expandMacros(step.to, ctx);
-            try { await fs.rename(from, to, { baseDir: tmp.baseDir }); }
-            catch (e) { throw new Error(`move failed: ${e.message || e}`); }
             break;
           }
           case 'delete': {
@@ -1187,7 +1029,7 @@ export async function runUninstallerForItem(item, dispatch) {
           `${root}/${id}`,
           last ? `${root}/${last}` : null,
         ].filter(Boolean)));
-        for (const c of candidates) { try { await fs.remove(c, { recursive: true }); removedAny = true; } catch (_) {} }
+        for (const c of candidates) { try { await fs.remove(c, { recursive: true }); removedAny = true; } catch (_) { } }
       } catch (_) { }
     }
 
