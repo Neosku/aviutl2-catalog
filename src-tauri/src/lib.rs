@@ -1,9 +1,11 @@
+// use crate::paths::Dir;
 use once_cell::sync::Lazy;
-use std::path::PathBuf;
+use std::path::{self, PathBuf};
 use std::sync::RwLock;
 use tauri::{Emitter, Manager};
 
 mod api_key;
+mod paths;
 
 // -----------------------
 // Google Drive ダウンロード
@@ -61,32 +63,23 @@ fn sanitize_filename(name: &str) -> String {
 
 async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::Response, DriveError> {
     let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
-    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
     let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
-
-    if !res.status().is_success() {
-        // try read error body and include
-        let status = res.status();
-        match res.text().await {
-            Ok(text) => {
-                // Try to extract JSON error message
-                let msg = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-                    v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or_else(|| text.chars().take(500).collect())
-                } else {
-                    text.chars().take(500).collect()
-                };
-                Err(DriveError::Http(format!("{} {}", status, msg)))
-            }
-            Err(_) => Err(DriveError::Http(format!("{}", status))),
-        }
-    } else {
-        Ok(res)
+    if res.status().is_success() {
+        return Ok(res);
     }
+    let status = res.status();
+    let text = res.text().await.unwrap_or_default();
+    let msg = serde_json::from_str::<serde_json::Value>(&text)
+        .ok()
+        .and_then(|v| v.get("error")?.get("message")?.as_str().map(|s| s.to_string()))
+        .unwrap_or_else(|| text.chars().take(500).collect());
+    Err(DriveError::Http(format!("{} {}", status, msg)))
 }
 
 async fn drive_fetch_name_reqwest(file_id: &str, api_key: &str) -> Result<String, DriveError> {
     let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
-    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
     let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
     let status = res.status();
     let text = res.text().await.map_err(|e| DriveError::Net(e.to_string()))?;
@@ -147,34 +140,6 @@ async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_pat
             while let Some(chunk) = res.chunk().await.map_err(|e| DriveError::Net(e.to_string()))? {
                 f.write_all(&chunk).map_err(|e| DriveError::Io(e.to_string()))?;
                 read += chunk.len() as u64;
-                let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
-            }
-            let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
-            Ok(())
-        }
-        Err(DriveError::Net(msg)) if msg.contains("client build failed") || msg.contains("builder error") => {
-            // Fallback to blocking reqwest
-            use std::io::Read;
-            let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
-            let client = reqwest::blocking::Client::builder().user_agent("AviUtl2Catalog/0.1").build().map_err(|e| DriveError::Net(e.to_string()))?;
-            let mut resp = client.get(url).header("x-goog-api-key", api_key).send().map_err(|e| DriveError::Net(e.to_string()))?;
-            let status = resp.status();
-            if !status.is_success() {
-                let mut s = String::new();
-                let _ = resp.read_to_string(&mut s);
-                return Err(DriveError::Http(format!("{} {}", status, if s.is_empty() { String::from("(no body)") } else { s })));
-            }
-            let total_opt = resp.content_length();
-            let mut read: u64 = 0;
-            let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(&final_dest).map_err(|e| DriveError::Io(e.to_string()))?;
-            let mut buf = [0u8; 64 * 1024];
-            loop {
-                let n = resp.read(&mut buf).map_err(|e| DriveError::Net(e.to_string()))?;
-                if n == 0 {
-                    break;
-                }
-                f.write_all(&buf[..n]).map_err(|e| DriveError::Io(e.to_string()))?;
-                read += n as u64;
                 let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
             }
             let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
@@ -408,8 +373,7 @@ fn resolve_base(app: &tauri::AppHandle, p: &str, base: &Option<String>) -> PathB
 }
 
 // -----------------------
-// 高速インストール済みバージョン検出処理（Rustで実装）
-// JavaScript版のdetectInstalledVersionsMapの処理を高速化しながら出力形式は保持
+// インストール済みバージョン検出
 // -----------------------
 
 #[derive(Default, Clone)]
@@ -460,29 +424,15 @@ fn app_config_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
 // ログ出力
 // -----------------------
 
-// ログファイルに1行書き込み
+// // ログファイルに1行書き込み
 fn log_line(app: &tauri::AppHandle, level: &str, msg: &str) {
+    use chrono::Local;
     use std::fs::{create_dir_all, OpenOptions};
     use std::io::Write;
-    let base = app_config_dir(app);
-    let logs = base.join("logs");
-    let _ = create_dir_all(&logs);
-    let file = logs.join("app.log");
-    // タイムスタンプを "YYYY-MM-DD HH:MM:SS.mmm ZZZ" 形式に（例: 2025-09-11 00:32:00.293 JST）
-    let now = chrono::Local::now();
-    let offset = now.offset().local_minus_utc(); // seconds
-    let zone = if offset == 9 * 3600 {
-        // JST 判定（UTC+09:00）
-        "JST".to_string()
-    } else {
-        let sign = if offset >= 0 { '+' } else { '-' };
-        let abs = offset.abs();
-        let hh = abs / 3600;
-        let mm = (abs % 3600) / 60;
-        format!("UTC{}{:02}:{:02}", sign, hh, mm)
-    };
-    let ts_core = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-    let ts = format!("{} {}", ts_core, zone);
+    let file = app_config_dir(app).join("logs/app.log");
+    let _ = create_dir_all(file.parent().unwrap());
+    // タイムスタンプ： "YYYY-MM-DD HH:MM:SS.mmm"
+    let ts = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
     let line = format!("[{}] [{}] {}\n", ts, level, msg);
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(file) {
         let _ = f.write_all(line.as_bytes());
@@ -540,52 +490,92 @@ fn prune_log_file(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String
     Ok(())
 }
 
-
 // ------------------------
 // 初期化処理
 // ------------------------
 
-// アプリ設定の更新やプラグイン配置を行ったあと、アプリのログファイルを最大 max_lines 行に刈り込み（古い行を捨て）ます。
-fn prune_app_log(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
-    update_settings_and_plugin(app)?;
-    prune_log_file(app, max_lines)?;
-    Ok(())
-}
+// first_launch_setup
+// setup_first_time
+// setup_every_launch
 
-// 設定ファイル settings.json の作成／更新と、UpdateChecker.aui2 プラグインの所定ディレクトリへの配置を行います。
-fn update_settings_and_plugin(app: &tauri::AppHandle) -> Result<(), String> {
+// 起動時に初期化を行う
+// 流れ　setting.jsonがあるか確認→なければ初期設定ボタンを表示して入力してもらう→保存→setting.jsonを読み込み変数に埋め込む→UpdateCheckeraui2を所定ディレクトリに配置→setting.jsonにexeのパスを追加
+// とりあえず　setting.jsonがあるか確認→初期値を入れる(ディレクトリの作成なども)→保存→setting.jsonを読み込み変数に埋め込む→UpdateCheckeraui2を所定ディレクトリに配置→setting.jsonにexeのパスを追加
+fn init_app(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
     use std::fs::create_dir_all;
     use std::path::{Path, PathBuf};
 
-    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from(""));
-    let exe_str = exe_path.to_string_lossy().replace('/', "\\");
-    let base = app_config_dir(app);
+    // setting.jsonがあるか確認
+    // アプリ用の設定ディレクトリ（ベースパス）を取得
+    let base = app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir());
+    // そのディレクトリを必要なら作成
     let _ = create_dir_all(&base);
+    // 設定ファイル settings.json のフルパスを作ります。
     let path = base.join("settings.json");
-
+    // settings.json が存在しなければ初回起動とみなすフラグを立てます。
     let first_run = !path.exists();
+
+    // 初回起動時のみ以下の関数を実行（今回はとりあえずsetting.jsonの作成と基本ダウンロード）
+    if first_run {
+        // 本来なら初期設定ボタンを表示して入力してもらう
+        // ここでapp_dirなどは入力済みとする。
+        init_app_first(app, &path)?;
+    }
+
+    // パス関係処理をpaths.rsに全部丸投げ
+    // paths::init_settings(app);
+
+    // それぞれのパスを取得
+
+    // 実行ファイルのフルパスを取得し、失敗したら空の PathBuf を使います（※失敗時は「空パス」になる）。
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from(""));
+    // 実行ファイルのパスを文字列化し、スラッシュ / をバックスラッシュ \ に置換して Windows 風の区切りに揃えます。
+    log_info(app, &format!("Executable path: {}", exe_path.display()));
+    let exe_str = exe_path.to_string_lossy().replace('/', "\\");
+    log_info(app, &format!("Executable path: {}", exe_str));
+    // アプリ用の設定ディレクトリ（ベースパス）を取得します（このヘルパーは別定義想定）。
+    // let base = app_config_dir(app);
+
+    // 既存の settings.json を読み込んで JSON 値として取得します（無ければデフォルト扱い想定）。
     let mut settings = read_settings_json(&path);
+    // 初回起動かどうかを考慮して、必要なパス系のデフォルト値を settings に埋め込みます。
     apply_default_paths(&mut settings, first_run);
+    // 実行ファイルパスを元に、settings 内のカタログディレクトリ的な設定値を更新します。
     update_catalog_dir_value(&mut settings, &exe_str);
+    // ここまで反映した settings を settings.json に書き出します。
     write_settings_json(&path, &settings);
-
+    // 現在のアプリのバージョン文字列（例: 1.2.3）を取得します。
     let current_ver = app.package_info().version.to_string();
+    // settings に保存済みのアプリバージョン文字列を取り出し、無ければ空文字にします。
     let prev_ver = settings.get("appVersion").and_then(|v| v.as_str()).unwrap_or("");
+    // 初回起動またはバージョンが変わった場合は、プラグインを配置（更新）すべきだと判断するフラグです。
     let need_place_plugin = first_run || prev_ver != current_ver;
-
+    // プラグイン設置先ディレクトリを設定から取得し、無ければデフォルトのパスを使い、/ を \ に置換して整形します。
     let plugins_dir = settings.get("pluginsDir").and_then(|v| v.as_str()).unwrap_or("C:/ProgramData/aviutl2/Plugin").replace('/', "\\");
+    // そのディレクトリ文字列から Path 参照を作ります。
     let plugins_dir_path = Path::new(&plugins_dir);
+    // need_place_plugin が真なら、UpdateChecker.aui2 を plugins_dir_path に配置（コピー/更新）する処理を呼び出します。
     ensure_update_checker_plugin(app, plugins_dir_path, need_place_plugin);
-
+    // settings がオブジェクト（JSON の {}）なら可変参照を取得し、
     if let Some(map) = settings.as_object_mut() {
+        // appVersion キーに現在のアプリバージョンを保存（上書き）します/
         map.insert("appVersion".to_string(), serde_json::Value::String(current_ver));
     }
+    // バージョンを書き込んだ最新の settings をもう一度 settings.json に保存します。
     write_settings_json(&path, &settings);
-
+    prune_log_file(app, max_lines)?;
+    // log_info(app, format!("appDirは{}です。", paths::path(Dir::App).to_string_lossy()).as_str());
+    // Ok(())
+    log_info(app, format!("appDirは{}です。by paths", paths::dirs().catalog_config_dir.to_string_lossy()).as_str());
     Ok(())
 }
 
-// 設定ファイル settings.json の作成／更新と、UpdateChecker.aui2 プラグインの所定ディレクトリへの配置を行います。
+// 初回起動時に（setting.jsonがない場合）実行する関数
+fn init_app_first(app: &tauri::AppHandle, path: &std::path::Path) -> Result<(), String> {
+    Ok(())
+}
+
+// settings.json を読み込む関数
 fn read_settings_json(path: &std::path::Path) -> serde_json::Value {
     use std::fs::File;
     use std::io::Read;
@@ -633,71 +623,29 @@ fn write_settings_json(path: &std::path::Path, settings: &serde_json::Value) {
     }
 }
 
-// UpdateChecker.aui2 を plugins_dir に配置します。すでに存在し、かつ force_copy == false なら何もしません。
+// UpdateChecker.aui2 プラグインを所定ディレクトリに配置（コピー/更新）します。
 fn ensure_update_checker_plugin(app: &tauri::AppHandle, plugins_dir: &std::path::Path, force_copy: bool) {
     use std::fs;
-    use std::path::PathBuf;
-
     let dst = plugins_dir.join("UpdateChecker.aui2");
-    if let Some(parent) = dst.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-
     if !force_copy && dst.exists() {
         return;
     }
-
-    let mut copied = false;
-    if let Ok(resdir) = app.path().resource_dir() {
-        let candidates = [
-            resdir.join("UpdateChecker.aui2"),
-            resdir.join("updateChecker.aui2"),
-            resdir.join("resources").join("UpdateChecker.aui2"),
-            resdir.join("resources").join("updateChecker.aui2"),
-        ];
-        copied = try_copy_candidates(app, &candidates, &dst, "");
-    }
-    if !copied {
-        if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
-            let candidates = [
-                exe_dir.join("resources").join("UpdateChecker.aui2"),
-                exe_dir.join("resources").join("updateChecker.aui2"),
-            ];
-            copied = try_copy_candidates(app, &candidates, &dst, "");
-        }
-    }
-    if !copied {
-        let candidates = [
-            PathBuf::from("src-tauri").join("resources").join("UpdateChecker.aui2"),
-            PathBuf::from("src-tauri").join("resources").join("updateChecker.aui2"),
-        ];
-        copied = try_copy_candidates(app, &candidates, &dst, " (dev)");
-    }
-
-    if !copied {
-        log_error(app, &format!("UpdateChecker.aui2 not found in resources; could not place to {}", dst.to_string_lossy()));
-    }
-}
-
-// 候補パス群 candidates を上から順に存在チェックし、見つかった最初のものを dst にコピー。成功で true、全滅で false。
-fn try_copy_candidates(app: &tauri::AppHandle, candidates: &[std::path::PathBuf], dst: &std::path::Path, label: &str) -> bool {
-    use std::fs;
-
-    for src in candidates {
+    if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
+        let src = exe_dir.join("resources").join("updateChecker.aui2");
         if src.exists() {
-            match fs::copy(src, dst) {
-                Ok(_) => {
-                    log_info(app, &format!("placed UpdateChecker.aui2{} to {} (src: {})", label, dst.to_string_lossy(), src.to_string_lossy()));
-                    return true;
-                }
-                Err(e) => {
-                    log_error(app, &format!("copy UpdateChecker.aui2{} failed from {}: {}", label, src.to_string_lossy(), e));
-                }
+            if let Some(parent) = dst.parent() {
+                let _ = fs::create_dir_all(parent);
             }
+            match fs::copy(&src, &dst) {
+                Ok(_) => log_info(app, &format!("Placed UpdateChecker.aui2 to {}", dst.display())),
+                Err(e) => log_error(app, &format!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)),
+            }
+        } else {
+            log_error(app, &format!("Source file not found: {}", src.display()));
         }
     }
-    false
 }
+
 // -----------------------
 // 設定ファイルの読み書きと保存
 // -----------------------
@@ -943,17 +891,6 @@ fn detect_candidate_items(list: &[serde_json::Value], has_app_exe: bool, plugins
     }
     is_candidate
 }
-// マクロを変換する関数が必要
-// {PluginDir}{scriptDir}などは一時保存しておく
-
-// マクロを保存しておく関数
-// 変数の保存にはLazy + ArcSwapを用いる
-// use std::path::PathBuf;
-
-// struct Config {
-//     input_file: PathBuf,
-//     output_dir: PathBuf,
-// }
 
 // 候補アイテムについて、各バージョンの "file" → "path" をマクロ展開して絶対パスを作り、ハッシュ計算対象のユニーク集合を作る。
 fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value], settings: &Settings, is_candidate: &[bool]) -> std::collections::HashSet<String> {
@@ -1224,10 +1161,20 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // 起動時に app.log を最新 1000 行に削減
-            let _ = prune_app_log(&app.handle(), 1000);
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            paths::init_settings(&app.handle())?;
+            let _ = init_app(&app.handle(), 1000);
+            // paths::init_settings(&app.handle())?;
+            // init_app()
+            // // 重い処理は起動後にバックグラウンドへ
+            // let handle = app.handle().clone();
+            // tauri::async_runtime::spawn(async move {
+            //     if let Err(e) = prune_app_log_async(&handle, 1000).await {
+            //         log::warn!("prune_app_log failed: {e}");
+            //     }
+            // });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1244,4 +1191,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

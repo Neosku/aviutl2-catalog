@@ -27,6 +27,8 @@ sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["native-tls", "gzip", "deflate", "blocking"] }
 url = "2"
 thiserror = "1"
+arc-swap = "1"
+dirs-next = "2"
 
 [features]
 default = ["custom-protocol"]

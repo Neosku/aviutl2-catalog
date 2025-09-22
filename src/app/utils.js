@@ -163,7 +163,6 @@ export function latestVersionOf(item) {
 // settings.jsonの読み書き
 // -------------------------
 
-// settings.jsonの読み書きはjsのみで
 
 // 設定の永続化（AviUtl2 ルートと主要サブディレクトリなど）
 const SETTINGS_FILE = 'settings.json';
@@ -239,7 +238,6 @@ export async function setSettings(partial) {
 // インストール済みファイル記録
 // -------------------------
 
-const LOG_FILE = 'logs/app.log';
 const HASH_CACHE_FILE = 'hash-cache.json';
 const DETECT_VERBOSE = false; // 詳細なファイル単位ログを有効化する場合は true
 const fileHashCache = new Map(); // absPath(小文字) -> hex
@@ -288,12 +286,15 @@ async function logLine(level, msg) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('log_cmd', { level: String(level), msg: String(msg) });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // -------------------------
 // 診断（OS/GPU/インストール済みアプリ、app.log）
+// 診断時のみ実行するためこのままでOK（後回し）
 // -------------------------
+
+const LOG_FILE = 'logs/app.log';
 
 // OS/CPU/GPU/プラグインなどの環境情報を収集
 export async function collectDeviceInfo() {
@@ -370,6 +371,7 @@ export async function readAppLog() {
     return text || '';
   } catch (e) { try { await logError(`[readAppLog] failed: ${e?.message || e}`); } catch (_) { } return ''; }
 }
+
 // -------------------------
 // ハッシュ計算・インストール済みバージョン検出
 // -------------------------
@@ -449,7 +451,7 @@ async function ensureTmpDir(idVersion) {
   };
 }
 
-// URL から推定ファイル名を取得
+// ダウンロードURLからファイル名を決定
 function fileNameFromUrl(url) {
   try {
     if (typeof url === 'string') {
@@ -609,7 +611,6 @@ async function extractZip(zipPath, destPath, baseDir) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const base = (!isAbsPath(zipPath) && !isAbsPath(destPath)) ? 'AppConfig' : null;
-    // Tauri 側の引数名に合わせて camelCase を使用
     await invoke('extract_zip', { zipPath, destPath, base });
     return;
   } catch (e) { try { await logError(`[extractZip] failed: ${e?.message || e}`); } catch (_) { } }
@@ -859,13 +860,18 @@ export function hasInstaller(item) {
   return !!(item && item.installer && (typeof item.installer === 'string' || Array.isArray(item.installer.install)));
 }
 
-// インストールを実行
+// -------------------------
+// インストーラー&アンインストーラーの実行
+// -------------------------
+
+
+// インストールの実行
 export async function runInstallerForItem(item, dispatch) {
   // 実行用コンテキストを構築
   const version = latestVersionOf(item);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
   const tmp = await ensureTmpDir(idVersion);
-  const settings = await ensurePaths(['appDir', 'pluginsDir']);
+  const settings = await ensurePaths(['appDir', 'pluginsDir']); // 不必要？
 
   const ctx = {
     id: item.id,
@@ -938,16 +944,16 @@ export async function runInstallerForItem(item, dispatch) {
             try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
             break;
           }
-          case 'delete': {
-            const path = expandMacros(step.path, ctx);
-            if (/\*/.test(path)) {
-              const n = await deletePattern(path, tmp.baseDir);
-              if (n === 0) throw new Error(`delete matched 0 files (pattern=${path})`);
-            } else {
-              await deletePath(path, tmp.baseDir);
-            }
-            break;
-          }
+          // case 'delete': {
+          //   const path = expandMacros(step.path, ctx);
+          //   if (/\*/.test(path)) {
+          //     const n = await deletePattern(path, tmp.baseDir);
+          //     if (n === 0) throw new Error(`delete matched 0 files (pattern=${path})`);
+          //   } else {
+          //     await deletePath(path, tmp.baseDir);
+          //   }
+          //   break;
+          // }
           case 'run': {
             const pRaw = expandMacros(step.path, ctx);
             const args = (step.args || []).map(a => expandMacros(String(a), ctx));
