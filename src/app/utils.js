@@ -235,45 +235,6 @@ export async function setSettings(partial) {
 }
 
 // -------------------------
-// インストール済みファイル記録
-// -------------------------
-
-const HASH_CACHE_FILE = 'hash-cache.json';
-const DETECT_VERBOSE = false; // 詳細なファイル単位ログを有効化する場合は true
-const fileHashCache = new Map(); // absPath(小文字) -> hex
-const INSTALLED_OUTPUTS_DIR = 'installed-files';
-
-// installed-files/<id>.jsonにインストール時に実際に配置した出力ファイル群を記録
-async function recordInstalledOutputs(id, outputs) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  try {
-    await fs.mkdir(INSTALLED_OUTPUTS_DIR, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-    const file = `${INSTALLED_OUTPUTS_DIR}/${encodeURIComponent(id)}.json`;
-    let prev = [];
-    try { const raw = await fs.readTextFile(file, { baseDir: fs.BaseDirectory.AppConfig }); prev = JSON.parse(raw || '[]'); } catch (_) { }
-    const set = new Set([...(Array.isArray(prev) ? prev : []), ...(outputs || [])]);
-    await fs.writeTextFile(file, JSON.stringify(Array.from(set), null, 2), { baseDir: fs.BaseDirectory.AppConfig });
-  } catch (e) { try { await logError(`[recordInstalledOutputs] failed: ${e?.message || e}`); } catch (_) { } }
-}
-
-// installed-files/<id>.jsonから読み込み
-async function readInstalledOutputs(id) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  try {
-    const file = `${INSTALLED_OUTPUTS_DIR}/${encodeURIComponent(id)}.json`;
-    const raw = await fs.readTextFile(file, { baseDir: fs.BaseDirectory.AppConfig });
-    const arr = JSON.parse(raw || '[]');
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) { try { await logError(`[readInstalledOutputs] failed: ${e?.message || e}`); } catch (_) { } return []; }
-}
-
-// installed-files/<id>.jsonを削除
-async function removeInstalledOutputsRecord(id) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  try { await fs.remove(`${INSTALLED_OUTPUTS_DIR}/${encodeURIComponent(id)}.json`, { baseDir: fs.BaseDirectory.AppConfig }); } catch (_) { }
-}
-
-// -------------------------
 // ログ出力　OK
 // -------------------------
 
@@ -771,59 +732,6 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
   return { count: matched.length, outputs };
 }
 
-//  単一のファイル/ディレクトリを削除
-async function deletePath(relPath, baseDir) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  try {
-    const stat = isAbsPath(relPath) ? await fs.stat(relPath) : await fs.stat(relPath, { baseDir });
-    if (stat.isDirectory) {
-      if (isAbsPath(relPath)) await fs.remove(relPath, { recursive: true });
-      else await fs.remove(relPath, { baseDir, recursive: true });
-    } else {
-      if (isAbsPath(relPath)) await fs.remove(relPath);
-      else await fs.remove(relPath, { baseDir });
-    }
-  } catch (_) { }
-}
-
-// パターンに一致する複数ファイルを削除
-async function deletePattern(pattern, baseDir) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const norm = String(pattern || '').replace(/\\/g, '/');
-  const effective = norm.replace(/\/\*$/, '/**/*');
-  // copyPattern と同様に root を決定
-  const starIdx = effective.search(/\*/);
-  let root = '.';
-  if (starIdx === -1) {
-    root = effective.includes('/') ? effective.split('/').slice(0, -1).join('/') : '.';
-  } else {
-    const base = effective.slice(0, starIdx);
-    root = base.endsWith('/') ? base.slice(0, -1) : (base || '.');
-  }
-  let files = [];
-  try { files = await listFilesRecursive(root, baseDir); } catch (_) { files = []; }
-  // 見つからない場合は 1 つ上の階層へ広げて探索
-  if ((!files || !files.length) && /\*\*/.test(effective)) {
-    const up = root.includes('/') ? root.split('/').slice(0, -1).join('/') : '.';
-    if (up && up !== root) {
-      try { files = await listFilesRecursive(up, baseDir); root = up; } catch (_) { }
-    }
-  }
-  let matched = files.filter(p => simpleGlobMatch(effective, p));
-  if (matched.length === 0) throw new Error(`delete matched 0 files (pattern=${pattern})`);
-  // 深いパスから順に削除（対象はファイルのみ）
-  matched.sort((a, b) => b.length - a.length);
-  for (const rel of matched) {
-    try { await fs.remove(rel, { baseDir }); } catch (_) {
-      // フォールバック: stat で種別を見て分岐
-      try {
-        const st = await fs.stat(rel, { baseDir });
-        if (st.isDirectory) await fs.remove(rel, { baseDir, recursive: true });
-        else await fs.remove(rel, { baseDir });
-      } catch (_) { }
-    }
-  }
-}
 
 // 外部コマンドを実行（PowerShell）
 async function runCommand(path, args = [], elevate = false) {
@@ -941,7 +849,7 @@ export async function runInstallerForItem(item, dispatch) {
             if (n === 0) {
               throw new Error(`copy matched 0 files (from=${from} to=${to})`);
             }
-            try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
+            // try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
             break;
           }
           // case 'delete': {
@@ -998,57 +906,6 @@ export async function runInstallerForItem(item, dispatch) {
 
 // アンインストールを実行
 export async function runUninstallerForItem(item, dispatch) {
-  const has = Array.isArray(item?.installer?.uninstall) && item.installer.uninstall.length;
-  if (!has) {
-    // フォールバックのアンインストール：記録済みの出力を削除。なければ versions の既知パスを削除
-    const fs = await import('@tauri-apps/plugin-fs');
-    let removedAny = false;
-    try {
-      const outputs = await readInstalledOutputs(item.id);
-      for (const p of outputs) {
-        try {
-          if (isAbsPath(p)) await fs.remove(p);
-          else await fs.remove(p, { baseDir: fs.BaseDirectory.AppConfig });
-          removedAny = true;
-        } catch (_) { }
-      }
-      await removeInstalledOutputsRecord(item.id);
-    } catch (_) { }
-
-    if (!removedAny) {
-      const settings = await ensurePaths(['appDir', 'pluginsDir', 'scriptsDir']);
-      const ctxBase = { tmpDir: '', appDir: settings.appDir || '', pluginsDir: settings.pluginsDir || '', scriptsDir: settings.scriptsDir || '', id: item.id, version: '', downloadPath: '', productCode: '' };
-      const arr = Array.isArray(item.versions) ? item.versions : (Array.isArray(item.version) ? item.version : []);
-      for (const ver of arr) {
-        const files = Array.isArray(ver.file) ? ver.file : [];
-        for (const f of files) {
-          const expanded = expandMacros(String(f.path || ''), { ...ctxBase, version: ver.version || '' }).replace(/\\/g, '/');
-          try { if (isAbsPath(expanded)) await fs.remove(expanded); else await fs.remove(expanded, { baseDir: fs.BaseDirectory.AppConfig }); removedAny = true; } catch (_) { }
-        }
-      }
-      // ベストエフォート: 代表的な残骸フォルダを片付け（プラグインIDに基づく候補）
-      try {
-        const root = String(settings.pluginsDir || '').replace(/\\/g, '/');
-        const id = String(item.id || '');
-        const last = id.split(/[./\\:]/).pop();
-        const candidates = Array.from(new Set([
-          `${root}/${id}`,
-          last ? `${root}/${last}` : null,
-        ].filter(Boolean)));
-        for (const c of candidates) { try { await fs.remove(c, { recursive: true }); removedAny = true; } catch (_) { } }
-      } catch (_) { }
-    }
-
-    const ids = await removeInstalledId(item.id);
-    if (dispatch) {
-      dispatch({ type: 'SET_INSTALLED_IDS', payload: ids });
-      const map = await detectInstalledVersionsMap([item]);
-      const detected = String((map && map[item.id]) || '');
-      dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
-    }
-    return;
-  }
-
   const version = latestVersionOf(item);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
   const tmp = await ensureTmpDir(idVersion);
@@ -1073,59 +930,43 @@ export async function runUninstallerForItem(item, dispatch) {
       s = s.replace(/[\\/]+$/, '');
       return s;
     }
-    async function deleteWithVariants(absPath, pluginsDirAbs) {
+    async function deletePath(absPath) {
       const fs = await import('@tauri-apps/plugin-fs');
-      const variants = new Set();
-      const add = (q) => { if (q) variants.add(q); };
-      const norm = normalizeAbsWindowsPath(absPath);
-      const back = norm.replace(/\//g, '\\');
-      const fwd = norm.replace(/\\/g, '/');
-      add(back); add(fwd);
-      // パス中の Plugin/Plugins の揺らぎに対応
-      add(back.replace(/\\Plugins\\/i, '\\Plugin\\')); add(back.replace(/\\Plugin\\/i, '\\Plugins\\'));
-      add(fwd.replace(/\/Plugins\//i, '/Plugin/')); add(fwd.replace(/\/Plugin\//i, '/Plugins/'));
-      // ディレクトリ表記の揺らぎも明示的に追加
-      add(back + '\\'); add(fwd + '/');
-      let ok = false; let lastErr = null; let existedAny = false;
-      for (const v of variants) {
+      let ok = false;
+      let lastErr = null;
+      try {
+        // 存在確認
+        const exists = await fs.exists(absPath);
+        if (!exists) {
+          return false; // 存在しない場合
+        }
+        // 削除を試みる（ディレクトリも含め再帰的に）
         try {
-          const target = v;
-          // 安全性: pluginsDir の配下であることを確認
-          const root = normalizeAbsWindowsPath(String(pluginsDirAbs || '')).toLowerCase().replace(/\\/g, '/');
-          const tgt = normalizeAbsWindowsPath(target).toLowerCase().replace(/\\/g, '/');
-          if (root && !tgt.startsWith(root)) continue;
-          // If target doesn't exist, skip silently
+          await fs.remove(absPath, { recursive: true });
+          ok = true;
+        } catch (e1) {
+          // 一度失敗したら stat で種類を確認して削除をやり直す
           try {
-            const exists = await fs.exists(target);
-            if (!exists) { continue; }
-            existedAny = true;
-          } catch (_) { /* ignore exists probe errors */ }
-          try { await fs.remove(target, { recursive: true }); ok = true; }
-          catch (e1) {
-            try { const st = await fs.stat(target); if (st.isDirectory) await fs.remove(target, { recursive: true }); else await fs.remove(target); ok = true; }
-            catch (e2) { lastErr = e2; }
+            const st = await fs.stat(absPath);
+            if (st.isDirectory) {
+              await fs.remove(absPath, { recursive: true });
+            } else {
+              await fs.remove(absPath);
+            }
+            ok = true;
+          } catch (e2) {
+            lastErr = e2;
           }
-          if (ok) { return true; }
-        } catch (e) { lastErr = e; }
+        }
+        if (ok) return true;
+      } catch (e) {
+        lastErr = e;
       }
-      if (!existedAny) return false;
+      // 削除できなかった場合はエラーを投げる
       if (!ok) throw lastErr || new Error('remove failed');
       return ok;
     }
-    // 複数の許可ルート（pluginsDir, scriptsDir 等）に対して順に試行
-    async function deleteWithVariantsAnyRoot(absPath, allowedRoots = []) {
-      let lastErr = null;
-      const roots = Array.isArray(allowedRoots) ? allowedRoots.filter(Boolean) : [];
-      if (!roots.length) return await deleteWithVariants(absPath, '');
-      for (const r of roots) {
-        try {
-          const ok = await deleteWithVariants(absPath, r);
-          if (ok) return true;
-        } catch (e) { lastErr = e; }
-      }
-      if (lastErr) throw lastErr;
-      return false;
-    }
+    // アンインストール手順を順に実行
     for (let i = 0; i < item.installer.uninstall.length; i++) {
       const step = item.installer.uninstall[i];
       try {
@@ -1135,7 +976,7 @@ export async function runUninstallerForItem(item, dispatch) {
             try {
               const allowedRoots = [ctx.pluginsDir, ctx.scriptsDir].filter(Boolean);
               const abs = isAbsPath(p) ? p : p; // アンインストールのパスは原則絶対パス。相対ならそのまま扱う
-              const ok = await deleteWithVariantsAnyRoot(abs, allowedRoots);
+              const ok = await deletePath(abs);
               if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
               else await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
             } catch (e) {

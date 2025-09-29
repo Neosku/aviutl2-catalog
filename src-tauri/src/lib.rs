@@ -383,11 +383,6 @@ struct Settings {
     scripts_dir: String,
 }
 
-fn is_abs_path(p: &str) -> bool {
-    let s = p.replace('\\', "/");
-    s.starts_with('/') || (s.len() >= 3 && s.as_bytes()[1] == b':' && (s.as_bytes()[2] == b'/' || s.as_bytes()[2] == b'\\'))
-}
-
 fn normalize_saved_path(mut s: String) -> String {
     if s.is_empty() {
         return s;
@@ -403,16 +398,6 @@ fn normalize_saved_path(mut s: String) -> String {
         }
     }
     s
-}
-
-// マクロ展開処理（{appDir}、{pluginsDir}などのプレースホルダーを実際のパスに置換）
-fn expand_macros(s: &str, ctx: &std::collections::HashMap<&str, &str>) -> String {
-    let mut out = s.to_string();
-    for (k, v) in ctx.iter() {
-        let pat = format!("{{{}}}", k);
-        out = out.replace(&pat, v);
-    }
-    out
 }
 
 // アプリケーション設定ディレクトリのパスを取得
@@ -455,38 +440,21 @@ fn log_cmd(app: tauri::AppHandle, level: String, msg: String) {
 
 // logファイルの行数を max_lines まで削減
 fn prune_log_file(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
-    use std::fs::{create_dir_all, OpenOptions};
-    use std::io::{Read, Write};
-
-    let base = app_config_dir(app);
-    let logs = base.join("logs");
-    let _ = create_dir_all(&logs);
-    let file = logs.join("app.log");
+    use std::fs;
+    let file = app_config_dir(app).join("logs/app.log");
     if !file.exists() {
         return Ok(());
     }
-
-    let mut f = match OpenOptions::new().read(true).open(&file) {
-        Ok(x) => x,
-        Err(_) => return Ok(()),
+    let text = match fs::read_to_string(&file) {
+        Ok(t) => t,
+        Err(_) => return Ok(()), // 読めなければ何もしない
     };
-    let mut buf = String::new();
-    if f.read_to_string(&mut buf).is_err() {
-        return Ok(());
-    }
-    let lines: Vec<&str> = buf.lines().collect();
+    let lines: Vec<&str> = text.lines().collect();
     if lines.len() <= max_lines {
         return Ok(());
     }
-
-    let start = lines.len().saturating_sub(max_lines);
-    let mut out = lines[start..].join("\n");
-    if !out.ends_with('\n') {
-        out.push('\n');
-    }
-    if let Ok(mut wf) = OpenOptions::new().write(true).truncate(true).open(&file) {
-        let _ = wf.write_all(out.as_bytes());
-    }
+    let start = lines.len() - max_lines;
+    let _ = fs::write(&file, lines[start..].join("\n") + "\n");
     Ok(())
 }
 
@@ -494,236 +462,48 @@ fn prune_log_file(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String
 // 初期化処理
 // ------------------------
 
-// first_launch_setup
-// setup_first_time
-// setup_every_launch
-
-// 起動時に初期化を行う
+// 起動時に初期化を行う(すでに移行済み)
 // 流れ　setting.jsonがあるか確認→なければ初期設定ボタンを表示して入力してもらう→保存→setting.jsonを読み込み変数に埋め込む→UpdateCheckeraui2を所定ディレクトリに配置→setting.jsonにexeのパスを追加
 // とりあえず　setting.jsonがあるか確認→初期値を入れる(ディレクトリの作成なども)→保存→setting.jsonを読み込み変数に埋め込む→UpdateCheckeraui2を所定ディレクトリに配置→setting.jsonにexeのパスを追加
-fn init_app(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
-    use std::fs::create_dir_all;
-    use std::path::{Path, PathBuf};
+fn init_app(app: &tauri::AppHandle) -> Result<(), String> {
+    let max_lines = 1000; // ログファイルの最大行数
+                          // use std::fs::create_dir_all;
+                          // use std::path::{Path, PathBuf};
 
-    // setting.jsonがあるか確認
-    // アプリ用の設定ディレクトリ（ベースパス）を取得
-    let base = app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir());
-    // そのディレクトリを必要なら作成
-    let _ = create_dir_all(&base);
-    // 設定ファイル settings.json のフルパスを作ります。
-    let path = base.join("settings.json");
-    // settings.json が存在しなければ初回起動とみなすフラグを立てます。
-    let first_run = !path.exists();
-
-    // 初回起動時のみ以下の関数を実行（今回はとりあえずsetting.jsonの作成と基本ダウンロード）
-    if first_run {
-        // 本来なら初期設定ボタンを表示して入力してもらう
-        // ここでapp_dirなどは入力済みとする。
-        init_app_first(app, &path)?;
-    }
-
-    // パス関係処理をpaths.rsに全部丸投げ
-    // paths::init_settings(app);
-
-    // それぞれのパスを取得
-
-    // 実行ファイルのフルパスを取得し、失敗したら空の PathBuf を使います（※失敗時は「空パス」になる）。
-    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from(""));
-    // 実行ファイルのパスを文字列化し、スラッシュ / をバックスラッシュ \ に置換して Windows 風の区切りに揃えます。
-    log_info(app, &format!("Executable path: {}", exe_path.display()));
-    let exe_str = exe_path.to_string_lossy().replace('/', "\\");
-    log_info(app, &format!("Executable path: {}", exe_str));
-    // アプリ用の設定ディレクトリ（ベースパス）を取得します（このヘルパーは別定義想定）。
-    // let base = app_config_dir(app);
-
-    // 既存の settings.json を読み込んで JSON 値として取得します（無ければデフォルト扱い想定）。
-    let mut settings = read_settings_json(&path);
-    // 初回起動かどうかを考慮して、必要なパス系のデフォルト値を settings に埋め込みます。
-    apply_default_paths(&mut settings, first_run);
-    // 実行ファイルパスを元に、settings 内のカタログディレクトリ的な設定値を更新します。
-    update_catalog_dir_value(&mut settings, &exe_str);
-    // ここまで反映した settings を settings.json に書き出します。
-    write_settings_json(&path, &settings);
-    // 現在のアプリのバージョン文字列（例: 1.2.3）を取得します。
-    let current_ver = app.package_info().version.to_string();
-    // settings に保存済みのアプリバージョン文字列を取り出し、無ければ空文字にします。
-    let prev_ver = settings.get("appVersion").and_then(|v| v.as_str()).unwrap_or("");
-    // 初回起動またはバージョンが変わった場合は、プラグインを配置（更新）すべきだと判断するフラグです。
-    let need_place_plugin = first_run || prev_ver != current_ver;
-    // プラグイン設置先ディレクトリを設定から取得し、無ければデフォルトのパスを使い、/ を \ に置換して整形します。
-    let plugins_dir = settings.get("pluginsDir").and_then(|v| v.as_str()).unwrap_or("C:/ProgramData/aviutl2/Plugin").replace('/', "\\");
-    // そのディレクトリ文字列から Path 参照を作ります。
-    let plugins_dir_path = Path::new(&plugins_dir);
-    // need_place_plugin が真なら、UpdateChecker.aui2 を plugins_dir_path に配置（コピー/更新）する処理を呼び出します。
-    ensure_update_checker_plugin(app, plugins_dir_path, need_place_plugin);
-    // settings がオブジェクト（JSON の {}）なら可変参照を取得し、
-    if let Some(map) = settings.as_object_mut() {
-        // appVersion キーに現在のアプリバージョンを保存（上書き）します/
-        map.insert("appVersion".to_string(), serde_json::Value::String(current_ver));
-    }
-    // バージョンを書き込んだ最新の settings をもう一度 settings.json に保存します。
-    write_settings_json(&path, &settings);
+    // 起動時初期化(これを最初にうつしたほうがいいかも)
+    // 流れ：setting.jsonからファイルを読み込み→app_dirがない場合は初期設定→パスを登録→現在のバージョンを取得し比較→updateCheckerの移動の可否を決定
+    // paths::init_settings(&app).unwrap_or_else(|e| {
+    //     log_error(app, &format!("Failed to initialize settings: {}", e));
+    // });
     prune_log_file(app, max_lines)?;
-    // log_info(app, format!("appDirは{}です。", paths::path(Dir::App).to_string_lossy()).as_str());
-    // Ok(())
-    log_info(app, format!("appDirは{}です。by paths", paths::dirs().catalog_config_dir.to_string_lossy()).as_str());
     Ok(())
 }
 
-// 初回起動時に（setting.jsonがない場合）実行する関数
-fn init_app_first(app: &tauri::AppHandle, path: &std::path::Path) -> Result<(), String> {
-    Ok(())
-}
-
-// settings.json を読み込む関数
-fn read_settings_json(path: &std::path::Path) -> serde_json::Value {
-    use std::fs::File;
-    use std::io::Read;
-
-    if let Ok(mut f) = File::open(path) {
-        let mut s = String::new();
-        if f.read_to_string(&mut s).is_ok() {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                if v.is_object() {
-                    return v;
-                }
-            }
-        }
-    }
-    serde_json::json!({})
-}
-
-// 初回起動時のみ、appDir / pluginsDir / scriptsDir が未設定なら既定値を設定。
-fn apply_default_paths(settings: &mut serde_json::Value, first_run: bool) {
-    if !first_run {
-        return;
-    }
-    if let Some(map) = settings.as_object_mut() {
-        map.entry("appDir").or_insert(serde_json::Value::String(String::from("C:/Program Files/AviUtl2")));
-        map.entry("pluginsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Plugin")));
-        map.entry("scriptsDir").or_insert(serde_json::Value::String(String::from("C:/ProgramData/aviutl2/Script")));
-    }
-}
-
-// 設定内の catalogDir を実行ファイルパス（文字列）で上書きします。
-fn update_catalog_dir_value(settings: &mut serde_json::Value, exe_str: &str) {
-    if let Some(map) = settings.as_object_mut() {
-        map.insert("catalogDir".to_string(), serde_json::Value::String(exe_str.to_string()));
-    }
-}
-
-// 設定オブジェクトを settings.json に Pretty 形式で保存。
-fn write_settings_json(path: &std::path::Path, settings: &serde_json::Value) {
-    use std::fs::File;
-    use std::io::Write;
-
-    if let Ok(mut f) = File::create(path) {
-        let json = serde_json::to_string_pretty(settings).unwrap_or_else(|_| String::from("{}"));
-        let _ = f.write_all(json.as_bytes());
-    }
-}
-
-// UpdateChecker.aui2 プラグインを所定ディレクトリに配置（コピー/更新）します。
-fn ensure_update_checker_plugin(app: &tauri::AppHandle, plugins_dir: &std::path::Path, force_copy: bool) {
+// UpdateChecker.aui2 プラグインをplugin_dirに配置
+fn install_update_checker_plugin(app: &tauri::AppHandle, plugin_dir: &std::path::Path, force_copy: bool) {
     use std::fs;
-    let dst = plugins_dir.join("UpdateChecker.aui2");
+    let dst = plugin_dir.join("UpdateChecker.aui2");
     if !force_copy && dst.exists() {
         return;
     }
-    if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())) {
-        let src = exe_dir.join("resources").join("updateChecker.aui2");
-        if src.exists() {
-            if let Some(parent) = dst.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-            match fs::copy(&src, &dst) {
-                Ok(_) => log_info(app, &format!("Placed UpdateChecker.aui2 to {}", dst.display())),
-                Err(e) => log_error(app, &format!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)),
-            }
-        } else {
-            log_error(app, &format!("Source file not found: {}", src.display()));
+    let src = paths::dirs().catalog_exe_dir.join("resources").join("updateChecker.aui2");
+    if src.exists() {
+        // 親ディレクトリを作成
+        if let Some(parent) = dst.parent() {
+            let _ = fs::create_dir_all(parent);
         }
+        match fs::copy(&src, &dst) {
+            Ok(_) => log_info(app, &format!("Placed UpdateChecker.aui2 to {}", dst.display())),
+            Err(e) => log_error(app, &format!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)),
+        }
+    } else {
+        log_error(app, &format!("Source file not found: {}", src.display()));
     }
 }
 
 // -----------------------
 // 設定ファイルの読み書きと保存
 // -----------------------
-
-// アプリケーション設定を読み込み
-fn read_settings(app: &tauri::AppHandle) -> Settings {
-    use std::fs::File;
-    use std::io::Read;
-    let mut s = Settings::default();
-    let base = app_config_dir(app);
-    let path = base.join("settings.json");
-    if let Ok(mut f) = File::open(&path) {
-        let mut buf = String::new();
-        if f.read_to_string(&mut buf).is_ok() {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&buf) {
-                s.app_dir = v.get("appDir").and_then(|x| x.as_str()).unwrap_or("").to_string();
-                s.plugins_dir = v.get("pluginsDir").and_then(|x| x.as_str()).unwrap_or("").to_string();
-                s.scripts_dir = v.get("scriptsDir").and_then(|x| x.as_str()).unwrap_or("").to_string();
-            }
-        }
-    }
-    if s.app_dir.is_empty() {
-        s.app_dir = String::from("C:/Program Files/AviUtl2");
-    }
-    if s.plugins_dir.is_empty() {
-        s.plugins_dir = String::from("C:/ProgramData/aviutl2/Plugin");
-    }
-    s.app_dir = normalize_saved_path(s.app_dir);
-    s.plugins_dir = normalize_saved_path(s.plugins_dir);
-    s
-}
-
-// 相対パスを絶対パスに変換（検証用）
-fn to_absolute_for_check(app: &tauri::AppHandle, p: &str) -> String {
-    if p.is_empty() {
-        return String::new();
-    }
-    if is_abs_path(p) {
-        return p.replace('/', "\\");
-    }
-    let base = app_config_dir(app);
-    let joined = base.join(p);
-    joined.to_string_lossy().replace('/', "\\")
-}
-
-// ファイルが存在するかチェック
-fn exists_file_abs(p: &str) -> bool {
-    match std::fs::metadata(p) {
-        Ok(m) => m.is_file(),
-        Err(_) => false,
-    }
-}
-
-// ディレクトリ内のフォルダとファイルをリストアップ
-fn list_dir_names(p: &str) -> Result<(Vec<String>, Vec<String>), String> {
-    use std::fs::read_dir;
-    let mut folders = Vec::new();
-    let mut files = Vec::new();
-    for ent in read_dir(p).map_err(|e| e.to_string())? {
-        match ent {
-            Ok(de) => {
-                let name = de.file_name().to_string_lossy().to_string();
-                match de.file_type() {
-                    Ok(ft) => {
-                        if ft.is_dir() {
-                            folders.push(name);
-                        } else {
-                            files.push(name);
-                        }
-                    }
-                    Err(_) => files.push(name),
-                }
-            }
-            Err(_) => {}
-        }
-    }
-    Ok((folders, files))
-}
 
 // ハッシュキャッシュファイルを読み込み
 fn read_hash_cache(app: &tauri::AppHandle) -> std::collections::HashMap<String, serde_json::Value> {
@@ -769,174 +549,60 @@ fn stat_file(path: &str) -> Option<(u128, u64)> {
 }
 
 //-----------------------
-// バージョンの確認
+// バージョン検証
 //-----------------------
 
-// インストール済みバージョンの検出処理（Rust高速化版）
-struct DirectorySnapshot {
-    scanned_path: String,
-    folders: std::collections::HashSet<String>,
-    files: std::collections::HashSet<String>,
+// マクロ展開処理（{appDir}、{pluginsDir}などのプレースホルダーを実際のパスに置換）
+#[tauri::command]
+fn expand_macros(raw_path: &str) -> String {
+    let dirs = paths::dirs();
+    let replacements = [
+        ("{appDir}", dirs.aviutl2_root.to_string_lossy()),
+        ("{pluginsDir}", dirs.plugin_dir.to_string_lossy()),
+        ("{scriptsDir}", dirs.script_dir.to_string_lossy()),
+    ];
+
+    let mut out = raw_path.to_owned();
+    for (key, val) in replacements {
+        out = out.replace(key, &val);
+    }
+    out
 }
 
-// 指定ディレクトリ直下の「フォルダ名」と「ファイル名」を収集して DirectorySnapshot にまとめます
-fn collect_directory_snapshot(app: &tauri::AppHandle, dir: &str) -> DirectorySnapshot {
-    let mut snapshot = DirectorySnapshot {
-        scanned_path: String::new(),
-        folders: std::collections::HashSet::new(),
-        files: std::collections::HashSet::new(),
-    };
-    let trimmed = dir.trim();
-    if trimmed.is_empty() {
-        return snapshot;
-    }
-    match list_dir_names(trimmed) {
-        Ok((folders, files)) => {
-            snapshot.scanned_path = trimmed.to_string();
-            for f in folders {
-                snapshot.folders.insert(f);
-            }
-            for f in files {
-                snapshot.files.insert(f);
-            }
-        }
-        Err(e) => {
-            log_error(app, &format!("readDir failed path=\"{}\": {}", trimmed, e));
-        }
-    }
-    snapshot
-}
-
-// aviutl2.exeのファイル名を定義
-pub const AVIUTL_EXE: &str = "aviutl2.exe";
-
-// {appDir} に aviutl2.exe があるかチェック
-fn has_app_executable(settings: &Settings) -> bool {
-    let base = settings.app_dir.trim().trim_matches('"').trim_end_matches(['/', '\\']);
-    if base.is_empty() {
-        return false;
-    }
-    let path = std::path::Path::new(base).join(AVIUTL_EXE);
-    match path.to_str() {
-        Some(p) => exists_file_abs(p),
-        None => false,
-    }
-}
-
-// アイテム（JSON）ごとに「導入候補か？」を判定します。実在するフォルダ/ファイルやアプリ本体の有無に照らして可能性フィルタをかける段階。
-fn detect_candidate_items(list: &[serde_json::Value], has_app_exe: bool, plugins: &DirectorySnapshot, scripts: &DirectorySnapshot) -> Vec<bool> {
-    let folders_plugins_lower: std::collections::HashSet<String> = plugins.folders.iter().map(|s| s.to_lowercase()).collect();
-    let files_plugins_lower: std::collections::HashSet<String> = plugins.files.iter().map(|s| s.to_lowercase()).collect();
-    let folders_scripts_lower: std::collections::HashSet<String> = scripts.folders.iter().map(|s| s.to_lowercase()).collect();
-    let files_scripts_lower: std::collections::HashSet<String> = scripts.files.iter().map(|s| s.to_lowercase()).collect();
-    let mut is_candidate = vec![false; list.len()];
-    for (idx, it) in list.iter().enumerate() {
-        let mut ok = false;
-        let arr_opt = it.get("versions").and_then(|v| v.as_array()).or_else(|| it.get("version").and_then(|v| v.as_array()));
-        if let Some(arr) = arr_opt {
-            'outer: for ver in arr {
-                let files_opt = ver.get("file").and_then(|v| v.as_array());
-                if files_opt.is_none() {
-                    continue;
-                }
-                let files = files_opt.unwrap();
-                for f in files {
-                    let p = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                    if p.is_empty() {
-                        continue;
-                    }
-                    let norm = p.replace('\\', "/");
-                    if norm.contains("{appDir}") && norm.rsplit('/').next().map(|s| s.to_lowercase()).unwrap_or_default().ends_with(".exe") {
-                        if has_app_exe {
-                            ok = true;
-                            break 'outer;
-                        }
-                    }
-                    if let Some(pos) = norm.find("{pluginsDir}") {
-                        let rest = &norm[pos + "{pluginsDir}".len()..];
-                        let rest = rest.trim_start_matches('/');
-                        let seg: Vec<&str> = rest.split('/').collect();
-                        if seg.len() >= 2 {
-                            if folders_plugins_lower.contains(&seg[0].to_lowercase()) {
-                                ok = true;
-                                break 'outer;
-                            }
-                        } else if seg.len() == 1 && !seg[0].is_empty() {
-                            if files_plugins_lower.contains(&seg[0].to_lowercase()) {
-                                ok = true;
-                                break 'outer;
-                            }
-                        }
-                    }
-                    if let Some(pos) = norm.find("{scriptsDir}") {
-                        let rest = &norm[pos + "{scriptsDir}".len()..];
-                        let rest = rest.trim_start_matches('/');
-                        let seg: Vec<&str> = rest.split('/').collect();
-                        if seg.len() >= 2 {
-                            if folders_scripts_lower.contains(&seg[0].to_lowercase()) {
-                                ok = true;
-                                break 'outer;
-                            }
-                        } else if seg.len() == 1 && !seg[0].is_empty() {
-                            if files_scripts_lower.contains(&seg[0].to_lowercase()) {
-                                ok = true;
-                                break 'outer;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        is_candidate[idx] = ok;
-    }
-    is_candidate
-}
-
-// 候補アイテムについて、各バージョンの "file" → "path" をマクロ展開して絶対パスを作り、ハッシュ計算対象のユニーク集合を作る。
-fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value], settings: &Settings, is_candidate: &[bool]) -> std::collections::HashSet<String> {
+// index.jsonの各アイテムから、パッケージのパスの集合を作成
+fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> std::collections::HashSet<String> {
+    log_info(app, "Collecting unique paths for version check...");
     let mut unique_paths = std::collections::HashSet::new();
-    for (idx, it) in list.iter().enumerate() {
-        if !is_candidate[idx] {
-            continue;
-        }
+    for it in list.iter() {
         let arr_opt = it.get("versions").and_then(|v| v.as_array()).or_else(|| it.get("version").and_then(|v| v.as_array()));
         if let Some(arr) = arr_opt {
             for ver in arr {
-                let ver_str = ver.get("version").and_then(|v| v.as_str()).unwrap_or("");
                 if let Some(files) = ver.get("file").and_then(|v| v.as_array()) {
                     for f in files {
                         let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                        let ctx = std::collections::HashMap::from([
-                            ("tmp", ""),
-                            ("appDir", settings.app_dir.as_str()),
-                            ("pluginsDir", settings.plugins_dir.as_str()),
-                            ("scriptsDir", settings.scripts_dir.as_str()),
-                            ("id", it.get("id").and_then(|v| v.as_str()).unwrap_or("")),
-                            ("version", ver_str),
-                            ("download", ""),
-                            ("PRODUCT_CODE", ""),
-                        ]);
-                        let expanded = expand_macros(raw, &ctx).replace('/', "\\");
-                        let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(app, &expanded) };
-                        unique_paths.insert(abs);
+                        let expanded = expand_macros(raw).replace('/', "\\");
+                        unique_paths.insert(expanded);
                     }
                 }
             }
         }
     }
+    log_info(app, &format!("Collected {} unique paths for version check.", unique_paths.len()));
+    // log_info(app, &format!("Collected {} unique paths for version check: {:?}", unique_paths.len(), unique_paths));
     unique_paths
 }
 
-// ユニークなパス群に対して**ハッシュ（XXH3_128）**を用意する。ローカルディスクのキャッシュ（mtimeMs と size が一致するか）を優先利用し、必要なものだけ再計算。
+// パス群に対してXXH3-128ハッシュを計算する。hash-cache.jsonを利用して、mtimeMsとsizeが一致する場合はキャッシュを利用し、そうでない場合は再計算する。
 fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections::HashSet<String>) -> std::collections::HashMap<String, String> {
+    log_info(app, "Building file hash cache..."); // ログ(検証用)
     let mut disk_cache = read_hash_cache(app);
     let mut file_hash_cache = std::collections::HashMap::new();
-    let mut to_hash = Vec::new();
-    for p in unique_paths.iter() {
-        let key = p.to_lowercase();
-        if let Some((mtime_ms, size)) = stat_file(p) {
+    let mut to_hash = Vec::new(); // 再計算が必要なパスのリスト
+    for path in unique_paths.iter() {
+        let key = path.to_lowercase();
+        if let Some((mtime_ms, size)) = stat_file(path) {
             if let Some(v) = disk_cache.get(&key) {
-                let hex = v.get("hex").and_then(|x| x.as_str()).unwrap_or("");
+                let hex = v.get("xxh3_128").and_then(|x| x.as_str()).unwrap_or("");
                 let m = v.get("mtimeMs").and_then(|x| x.as_u64()).or_else(|| v.get("mtimeMs").and_then(|x| x.as_i64().map(|y| y as u64))).unwrap_or(0) as u128;
                 let sz = v.get("size").and_then(|x| x.as_u64()).unwrap_or(0);
                 if !hex.is_empty() && m == mtime_ms && sz == size {
@@ -944,25 +610,28 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections
                     continue;
                 }
             }
-            to_hash.push(p.clone());
+            to_hash.push(path.clone());
         }
     }
-    for p in to_hash.iter() {
-        match xxh3_128_hex(p) {
+    // 再計算が必要なパスについてハッシュを計算
+    for path_hash in to_hash.iter() {
+        match xxh3_128_hex(path_hash) {
             Ok(hex) => {
-                file_hash_cache.insert(p.to_lowercase(), hex);
+                file_hash_cache.insert(path_hash.to_lowercase(), hex);
             }
             Err(e) => {
-                log_error(app, &format!("hash error path=\"{}\": {}", p, e));
+                log_error(app, &format!("hash error path=\"{}\": {}", path_hash, e));
             }
         }
     }
+    // キャッシュを更新して保存(hash-cache.json用)
     for (k, hex) in file_hash_cache.iter() {
         if let Some((mtime_ms, size)) = stat_file(k) {
             disk_cache.insert(k.clone(), serde_json::json!({"hex": hex, "mtimeMs": mtime_ms, "size": size}));
         }
     }
     write_hash_cache(app, &disk_cache);
+    log_info(app, &format!("Built file hash cache with {} entries.", file_hash_cache.len())); // ログ(検証用)
     file_hash_cache
 }
 
@@ -970,19 +639,13 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections
 fn determine_versions(
     app: &tauri::AppHandle,
     list: &[serde_json::Value],
-    settings: &Settings,
-    is_candidate: &[bool],
     file_hash_cache: &std::collections::HashMap<String, String>,
 ) -> std::collections::HashMap<String, String> {
     let mut out = std::collections::HashMap::new();
-    for (idx, it) in list.iter().enumerate() {
+    log_info(app, "Detecting installed versions...");
+    for it in list.iter() {
         let id = it.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
         if id.is_empty() {
-            continue;
-        }
-        if !is_candidate[idx] {
-            out.insert(id.clone(), String::new());
-            log_info(app, &format!("detect item done id={} matched=false reason=not-candidate", id));
             continue;
         }
         let mut detected = String::new();
@@ -1001,19 +664,9 @@ fn determine_versions(
                 let mut ok = true;
                 for f in files {
                     let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                    let ctx = std::collections::HashMap::from([
-                        ("tmp", ""),
-                        ("appDir", settings.app_dir.as_str()),
-                        ("pluginsDir", settings.plugins_dir.as_str()),
-                        ("scriptsDir", settings.scripts_dir.as_str()),
-                        ("id", id.as_str()),
-                        ("version", ver_str),
-                        ("download", ""),
-                        ("PRODUCT_CODE", ""),
-                    ]);
-                    let expanded = expand_macros(raw, &ctx).replace('/', "\\");
-                    let abs = if is_abs_path(&expanded) { expanded } else { to_absolute_for_check(app, &expanded) };
-                    let key = abs.to_lowercase();
+                    let expanded = expand_macros(raw).replace('/', "\\");
+                    // log_info(app, &format!("Expanded path for {}: {}", id, expanded));
+                    let key = expanded.to_lowercase();
                     let hex = file_hash_cache.get(&key).cloned().unwrap_or_default();
                     let want = f.get("XXH3_128").or_else(|| f.get("xxh3_128")).and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
                     let flipped = if hex.len() == 32 { hex.as_bytes().chunks(2).rev().map(|ch| std::str::from_utf8(ch).unwrap_or("")).collect::<String>() } else { hex.clone() };
@@ -1038,8 +691,9 @@ fn determine_versions(
             detected = String::from("???");
         }
         out.insert(id.clone(), detected.clone());
-        log_info(app, &format!("detect item done id={} matched={} version={}", id, if detected.is_empty() { "false" } else { "true" }, detected));
+        // log_info(app, &format!("detect item done id={} matched={} version={}", id, if detected.is_empty() { "false" } else { "true" }, detected));
     }
+    log_info(app, &format!("detect all done count={},files={:?}", list.len(), out));
     out
 }
 
@@ -1048,35 +702,9 @@ fn determine_versions(
 fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<std::collections::HashMap<String, String>, String> {
     let list = items;
     log_info(&app, &format!("detect map start count={}", list.len()));
-
-    let settings = read_settings(&app);
-    let has_app_exe = has_app_executable(&settings);
-    let plugins_snapshot = collect_directory_snapshot(&app, settings.plugins_dir.as_str());
-    let scripts_snapshot = collect_directory_snapshot(&app, settings.scripts_dir.as_str());
-
-    let folders_plugins_vec: Vec<String> = plugins_snapshot.folders.iter().cloned().collect();
-    let files_plugins_vec: Vec<String> = plugins_snapshot.files.iter().cloned().collect();
-    let folders_scripts_vec: Vec<String> = scripts_snapshot.folders.iter().cloned().collect();
-    let files_scripts_vec: Vec<String> = scripts_snapshot.files.iter().cloned().collect();
-    log_info(
-        &app,
-        &format!(
-            "scan appExe={} pluginsDir=\"{}\" pFolders=[{}] pFiles=[{}] scriptsDir=\"{}\" sFolders=[{}] sFiles=[{}]",
-            has_app_exe,
-            plugins_snapshot.scanned_path,
-            folders_plugins_vec.join(","),
-            files_plugins_vec.join(","),
-            scripts_snapshot.scanned_path,
-            folders_scripts_vec.join(","),
-            files_scripts_vec.join(","),
-        ),
-    );
-
-    let is_candidate = detect_candidate_items(&list, has_app_exe, &plugins_snapshot, &scripts_snapshot);
-    let unique_paths = collect_unique_paths(&app, &list, &settings, &is_candidate);
+    let unique_paths = collect_unique_paths(&app, &list);
     let file_hash_cache = build_file_hash_cache(&app, &unique_paths);
-    let out = determine_versions(&app, &list, &settings, &is_candidate, &file_hash_cache);
-
+    let out = determine_versions(&app, &list, &file_hash_cache);
     Ok(out)
 }
 
@@ -1165,7 +793,7 @@ pub fn run() {
         .setup(|app| {
             // 起動時に app.log を最新 1000 行に削減
             paths::init_settings(&app.handle())?;
-            let _ = init_app(&app.handle(), 1000);
+            let _ = init_app(&app.handle());
             // paths::init_settings(&app.handle())?;
             // init_app()
             // // 重い処理は起動後にバックグラウンドへ
@@ -1187,6 +815,7 @@ pub fn run() {
             add_installed_id_cmd,
             remove_installed_id_cmd,
             drive_download_to_file,
+            expand_macros,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
