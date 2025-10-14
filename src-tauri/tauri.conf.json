@@ -13,12 +13,24 @@
   "bundle": {
     "active": true,
     "externalBin": [],
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
     "createUpdaterArtifacts": true,
     "windows": {
       "certificateThumbprint": null,
-      "timestampUrl": null
+      "timestampUrl": null,
+      "nsis": {
+        "languages": [
+          "Japanese",
+          "English"
+        ],
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico"
+      }
     },
     "resources": [
       "resources/UpdateChecker.aui2"

@@ -1,6 +1,6 @@
 // use crate::paths::Dir;
 use once_cell::sync::Lazy;
-use std::path::{self, PathBuf};
+use std::path::{PathBuf};
 use std::sync::RwLock;
 use tauri::{Emitter, Manager};
 

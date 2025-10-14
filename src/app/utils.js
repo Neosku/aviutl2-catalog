@@ -425,8 +425,9 @@ async function runExecutableQuietWindows(exeAbsPath, args = [], elevate = false,
   await fs.writeTextFile(scriptRel, body, { baseDir });
   const base = await pathApi.appConfigDir();
   const scriptAbs = await pathApi.join(base, scriptRel);
-  const argsPs = ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptAbs];
-  const cmd = shell.Command.create('powershell', argsPs);
+  const argsPs = ['-ExecutionPolicy', 'Bypass','-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptAbs];
+  // const cmd = shell.Command.create('powershell', argsPs);
+  const cmd = shell.Command.create('powershell', argsPs, { encoding: 'windows-31j' });
   const res = await cmd.execute();
   if (res.code !== 0) {
     throw new Error(`runExecutableQuietWindows failed (exe=${exeAbsPath}, args=${JSON.stringify(args)}, elevate=${!!elevate}) exit=${res.code}, stderr=${(res.stderr || '').slice(0, 500)}`);
@@ -701,36 +702,6 @@ async function copyPattern(fromPattern, toDirRel, baseDir) {
   return { count: matched.length, outputs };
 }
 
-
-// 外部コマンドを実行（PowerShell）
-async function runCommand(path, args = [], elevate = false) {
-  const shell = await import('@tauri-apps/plugin-shell');
-  const os = navigator.userAgent.includes('Windows');
-  if (os) {
-    function psEscape(s) { return String(s).replace(/'/g, "''"); }
-    const argsList = (args || []).map(a => `'${psEscape(a)}'`).join(', ');
-    const psPath = psEscape(path);
-    const script = `& { $ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); $p = Start-Process -FilePath '${psPath}' -ArgumentList @(${argsList})${elevate ? ' -Verb RunAs' : ''} -WindowStyle Hidden -Wait -PassThru; exit ($p.ExitCode) } *> $null`;
-    const psArgs = [
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy', 'Bypass',
-      '-Command', script
-    ];
-    const cmd = shell.Command.create('powershell', psArgs);
-    const res = await cmd.execute();
-    if (res.code !== 0) {
-      throw new Error(`runCommand failed (path=${path}, args=${JSON.stringify(args)}, elevate=${!!elevate}) exit=${res.code}, stderr=${(res.stderr || '').slice(0, 500)}`);
-    }
-    return res;
-  } else {
-    const cmd = shell.Command.create(path, args);
-    const res = await cmd.execute();
-    if (res.code !== 0) throw new Error(`runCommand failed (path=${path}, args=${JSON.stringify(args)}) exit=${res.code}, stderr=${(res.stderr || '').slice(0, 500)}`);
-    return res;
-  }
-}
-
 // インストーラの存在を判定
 export function hasInstaller(item) {
   // 文字列ショートハンド形式の installer も有効とみなす
@@ -819,24 +790,25 @@ export async function runInstallerForItem(item, dispatch) {
           }
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
-            const args = (step.args || []).map(async a => await expandMacros(String(a), ctx));
+            logInfo(`step.args (raw): ${JSON.stringify(step.args || [])}`);
+            const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
+            logInfo(`args expanded: ${JSON.stringify(args)}`);
             const pAbs = await toAbsoluteExecPath(pRaw, ctx);
-            if (navigator.userAgent.includes('Windows')) {
-              await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
-            } else {
-              await runCommand(pAbs, args, !!step.elevate);
-            }
+            logInfo(`ここまできたよ1`);
+            await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
+            logInfo(`ここまできたよ2`);
             break;
           }
           default:
             throw new Error(`unsupported action: ${String(step.action)}`);
         }
       } catch (e) {
-        const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
-        const msg = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed: ${detail}`;
-        try { await logError(msg); } catch (_) { }
-        throw new Error(msg);
+        const err = e instanceof Error ? e : new Error(String(e));
+        const prefix = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed`;
+        try { await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`); } catch { }
+        throw new Error(prefix, { cause: err }); // 原因を保持
       }
+
     }
 
     // インストール済みとして記録し、最新判定のために検出結果を更新
@@ -937,13 +909,9 @@ export async function runUninstallerForItem(item, dispatch) {
           }
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
-            const args = (step.args || []).map(async a => await expandMacros(String(a), ctx));
+            const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
             const pAbs = await toAbsoluteExecPath(pRaw, ctx);
-            if (navigator.userAgent.includes('Windows')) {
-              await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
-            } else {
-              await runCommand(pAbs, args, !!step.elevate);
-            }
+            await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
             await logInfo(`[uninstall ${item.id}] run ok path="${pAbs}" args=${JSON.stringify(args)}`);
             break;
           }
