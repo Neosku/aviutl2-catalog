@@ -2,30 +2,48 @@
 import React, { useEffect, useState } from 'react';
 import { getSettings, setSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
+import { invoke } from '@tauri-apps/api/core';
 
-// 設定ダイアログコンポーネント
-// アプリの各種パス設定やテーマ設定を管理
 export default function SettingsDialog({ open, onClose }) {
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
-  // フォーム状態管理（各設定項目の値）
-  const [form, setForm] = useState({ appDir: '', pluginsDir: '', scriptsDir: '', theme: 'noir' });
-  // UI状態管理
+
+  // 入力は aviutl2Root / isPortableMode / theme のみ
+  const [form, setForm] = useState({
+    aviutl2Root: '',
+    isPortableMode: false,
+    theme: 'darkmode',
+  });
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [appVersion, setAppVersion] = useState('');
 
-  // ダイアログが開かれた時に現在の設定を読み込み
   useEffect(() => {
     let mounted = true;
     if (open) {
       (async () => {
         setError('');
+
+        // 1) フロント側設定（テーマ）
         try {
           const cur = await getSettings();
-          if (mounted) setForm({ appDir: cur.appDir || '', pluginsDir: cur.pluginsDir || '', scriptsDir: cur.scriptsDir || '', theme: cur.theme || 'noir' });
+          if (mounted) {
+            const theme = String(cur?.theme || 'darkmode');
+            setForm(prev => ({ ...prev, theme }));
+            try { document.documentElement.setAttribute('data-theme', theme); } catch (_) {}
+          }
         } catch (e) { try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) {} }
-        // アプリのバージョン取得
+
+        // 2) Rust 側の現在の aviutl2_root を取得して初期表示に反映
+        try {
+          const map = /** @type {Record<string,string>} */ (await invoke('get_app_dirs')) || {};
+          if (mounted && map.aviutl2_root) {
+            setForm(prev => ({ ...prev, aviutl2Root: map.aviutl2_root }));
+          }
+        } catch (e) { try { await logError(`[settings] get_app_dirs failed: ${e?.message || e}`); } catch (_) {} }
+
+        // 3) アプリのバージョン
         try {
           const app = await import('@tauri-apps/api/app');
           const v = (app?.getVersion) ? await app.getVersion() : '';
@@ -36,17 +54,15 @@ export default function SettingsDialog({ open, onClose }) {
     return () => { mounted = false; };
   }, [open]);
 
-  // フォーム入力値の変更処理
   function onChange(e) {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    // テーマ変更時はリアルタイムでプレビュー適用
+    const { name, value, type, checked } = e.target;
+    const v = (type === 'checkbox') ? !!checked : value;
+    setForm(prev => ({ ...prev, [name]: v }));
     if (name === 'theme') {
-      try { document.documentElement.setAttribute('data-theme', String(value || 'noir')); } catch (_) {}
+      try { document.documentElement.setAttribute('data-theme', String(v || 'darkmode')); } catch (_) {}
     }
   }
 
-  // ディレクトリ選択ダイアログを開く
   async function pickDir(field, title) {
     try {
       const dialog = await import('@tauri-apps/plugin-dialog');
@@ -55,26 +71,40 @@ export default function SettingsDialog({ open, onClose }) {
     } catch (e) { setError('ディレクトリ選択に失敗しました'); }
   }
 
-  // 設定保存処理
   async function onSave() {
     setSaving(true);
     setError('');
     try {
-      await setSettings({ appDir: form.appDir.trim(), pluginsDir: form.pluginsDir.trim(), scriptsDir: form.scriptsDir.trim() || undefined, theme: (form.theme || 'noir').trim() });
-      try { document.documentElement.setAttribute('data-theme', (form.theme || 'noir').trim()); } catch (_) {}
-      // 新しいパスを使って再検出処理を実行
+      // 1) 入力パスの解決
+      const resolved = await invoke('resolve_aviutl2_root', { raw: String(form.aviutl2Root || '') });
+      const aviutl2Root = String(resolved || '').trim();
+      if (!aviutl2Root) throw new Error('AviUtl2 のフォルダを指定してください。');
+
+      // 2) Rust 側へ保存＆ APP_DIR 更新（settings.json も更新）
+      await invoke('finalize_aviutl2_path', {
+        aviutl2Root,
+        isPortableMode: !!form.isPortableMode,
+      });
+
+      // 3) テーマはフロント設定として保存
+      await setSettings({ theme: (form.theme || 'darkmode').trim() });
+      try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) {}
+
+      // 4) 再検出（UI 反映）
       try {
         const detected = await detectInstalledVersionsMap(items || []);
         dispatch({ type: 'SET_DETECTED_MAP', payload: detected });
-      } catch (_) {  }
+      } catch (_) {}
+
       onClose?.();
     } catch (e) {
-      setError('保存に失敗しました。権限やパスをご確認ください。');
+      setError(e?.message ? String(e.message) : '保存に失敗しました。権限やパスをご確認ください。');
+      try { await logError(`[settings] save failed: ${e?.message || e}`); } catch (_) {}
     } finally {
       setSaving(false);
     }
   }
-  // ダイアログが閉じている場合は何も表示しない
+
   if (!open) return null;
 
   return (
@@ -85,56 +115,48 @@ export default function SettingsDialog({ open, onClose }) {
           <h3 id="settings-title" className="modal__title">設定</h3>
         </div>
         <div className="modal__body">
-          {/* エラーメッセージ表示 */}
           {error && <div className="error" role="alert">{error}</div>}
+
           <div className="form" style={{ gap: 10 }}>
-            {/* アプリ本体フォルダ設定 */}
-            <label>アプリ本体フォルダ（appDir）
+            {/* AviUtl2 ルート */}
+            <label>AviUtl2 ルート（aviutl2.exeのあるフォルダを選択してください）
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                <input name="appDir" value={form.appDir} onChange={onChange} />
-                <button className="btn" type="button" onClick={() => pickDir('appDir', 'AviUtl2 のルートフォルダ')}>参照</button>
+                <input
+                  name="aviutl2Root"
+                  value={form.aviutl2Root}
+                  onChange={onChange}
+                  placeholder="例: C:\Program Files\AviUtl2"
+                />
+                <button className="btn" type="button" onClick={() => pickDir('aviutl2Root', 'AviUtl2 のルートフォルダ')}>参照</button>
               </div>
-              <small className="form__help">AviUtl2 の実行ファイル（aviutl2.exe）があるフォルダです。例: C:\\Program Files\\AviUtl2</small>
+              {/* <small className="form__help">aviutl2.exeがあるフォルダを指定してください</small> */}
             </label>
-            {/* プラグインフォルダ設定 */}
-            <label>プラグインフォルダ（pluginsDir）
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                <input name="pluginsDir" value={form.pluginsDir} onChange={onChange} />
-                <button className="btn" type="button" onClick={() => pickDir('pluginsDir', 'Plugins フォルダ')}>参照</button>
-              </div>
-              <small className="form__help">AviUtl2 の plugins フォルダ。プラグインのインストール・更新・削除に使用します。</small>
+
+            {/* ポータブルモード */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" name="isPortableMode" checked={!!form.isPortableMode} onChange={onChange} />
+              ポータブルモードを使用する（プラグインやスクリプトをdataフォルダに保存します）
             </label>
-            {/* スクリプトフォルダ設定 */}
-            <label>スクリプトフォルダ（任意）
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                <input name="scriptsDir" value={form.scriptsDir} onChange={onChange} />
-                <button className="btn" type="button" onClick={() => pickDir('scriptsDir', 'Scripts フォルダ')}>参照</button>
-              </div>
-              <small className="form__help">AviUtl2 の script フォルダ（未設定でも可）。スクリプトの配置や検出に使用されます。</small>
-            </label>
-            {/* テーマ設定 */}
+
+            {/* テーマ */}
             <label>テーマ（Theme）
               <select name="theme" value={form.theme} onChange={onChange}>
                 <option value="darkmode">Dark mode</option>
                 <option value="lightmode">Light mode</option>
-                {/* 非採用のテーマオプション
-                <option value="midnight">Midnight (Blue Dark)</option>
-                <option value="slate">Slate (Neutral Dark)</option>
-                <option value="emerald">Emerald</option>
-                <option value="aubergine">Aubergine</option>
-                <option value="ocean">Ocean</option>
-                <option value="mono">Monochrome</option>
-                <option value="paper">Paper (Warm Light)</option>
-                <option value="snow">Snow (Cool Light)</option>
-                <option value="linen">Linen (Ivory Light)</option> */}
               </select>
             </label>
           </div>
-          <div style={{ marginTop: 8, color: 'var(--muted)' }}>アプリのバージョン: {appVersion || '取得中…'}</div>
+
+          <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+            アプリのバージョン: {appVersion || '取得中…'}
+          </div>
         </div>
+
         <div className="modal__actions">
           <button className="btn" onClick={onClose}>閉じる</button>
-          <button className="btn btn--primary" onClick={onSave} disabled={saving}>{saving ? (<><span className="spinner" aria-hidden></span> 保存中…</>) : '保存'}</button>
+          <button className="btn btn--primary" onClick={onSave} disabled={saving}>
+            {saving ? (<><span className="spinner" aria-hidden></span> 保存中…</>) : '保存'}
+          </button>
         </div>
       </div>
     </div>

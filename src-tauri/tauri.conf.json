@@ -36,14 +36,6 @@
     "security": {
       "csp": "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost 'self' https: http:;"
     },
-    "windows": [
-      {
-        "label": "main",
-        "title": "AviUtl2 \u30AB\u30BF\u30ED\u30B0",
-        "width": 1100,
-        "height": 760,
-        "decorations": false
-      }
-    ]
+    "windows": []
   }
 }

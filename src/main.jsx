@@ -1,10 +1,45 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppRouter from './app/Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './app/store/catalog.jsx';
 import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError } from './app/utils.js';
+import InitSetupApp from './app/init/InitSetupApp.jsx';
 import './app/styles/index.css';
+import { getCurrentWindow } from '@tauri-apps/api/window'
+
+async function showMain() {
+  const win = getCurrentWindow()
+  await win.show()
+  await win.setFocus()
+}
+
+// DOM 準備済みなら即、まだなら once で
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => { showMain() }, { once: true })
+} else {
+  showMain()
+}
+
+async function detectWindowLabel() {
+  try {
+    const mod = await import('@tauri-apps/api/window');
+    const getCurrent = typeof mod.getCurrent === 'function' ? mod.getCurrent : (typeof mod.getCurrentWindow === 'function' ? mod.getCurrentWindow : null);
+    const win = getCurrent ? getCurrent() : (mod.appWindow || null);
+    if (!win) return 'main';
+    if (typeof win.label === 'string') return win.label;
+    if (typeof win.label === 'function') {
+      try {
+        return await win.label();
+      } catch (_) {
+        return 'main';
+      }
+    }
+  } catch (e) {
+    try { await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`); } catch (_) {}
+  }
+  return 'main';
+}
 
 // アプリケーション初期化コンポーネント
 // カタログの読み込み・検出・状態反映を行う起動用コンポーネント
@@ -199,6 +234,27 @@ function App() {
   );
 }
 
+function RootApp() {
+  const [mode, setMode] = useState('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const label = await detectWindowLabel();
+      if (!cancelled) setMode(label === 'init-setup' ? 'init' : 'main');
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (mode === 'loading') {
+    return null;
+  }
+  if (mode === 'init') {
+    return <InitSetupApp />;
+  }
+  return <App />;
+}
+
 // アプリケーションのルート要素を作成し、描画開始
 const root = createRoot(document.getElementById('root'));
-root.render(<App />);
+root.render(<RootApp />);

@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "installer",
   "description": "Permissions for downloads, filesystem and running installers",
-  "windows": ["main"],
+  "windows": ["main", "init-setup"],
   "permissions": [
     {
       "identifier": "http:default",

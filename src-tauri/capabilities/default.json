@@ -4,10 +4,14 @@
   "description": "Capability for the main window",
   "local": true,
   "windows": [
-    "main"
+    "main",
+    "init-setup"
   ],
   "permissions": [
     "core:default",
+    "core:window:default",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
     "core:window:allow-is-maximized",
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",

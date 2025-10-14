@@ -376,30 +376,6 @@ fn resolve_base(app: &tauri::AppHandle, p: &str, base: &Option<String>) -> PathB
 // インストール済みバージョン検出
 // -----------------------
 
-#[derive(Default, Clone)]
-struct Settings {
-    app_dir: String,
-    plugins_dir: String,
-    scripts_dir: String,
-}
-
-fn normalize_saved_path(mut s: String) -> String {
-    if s.is_empty() {
-        return s;
-    }
-    // 不足しているコロンを挿入（バックスラッシュ形式用）例：C\ProgramData -> C:\ProgramData
-    if s.len() >= 2 && s.as_bytes()[1] != b':' {
-        if (s.as_bytes()[0] as char).is_ascii_alphabetic() && (s.as_bytes()[1] == b'\\' || s.as_bytes()[1] == b'/') {
-            let mut out = String::with_capacity(s.len() + 1);
-            out.push(s.as_bytes()[0] as char);
-            out.push(':');
-            out.push_str(&s[1..]);
-            s = out;
-        }
-    }
-    s
-}
-
 // アプリケーション設定ディレクトリのパスを取得
 fn app_config_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir())
@@ -479,7 +455,7 @@ fn init_app(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-// UpdateChecker.aui2 プラグインをplugin_dirに配置
+// UpdateChecker.aui2 プラグインをplugin_dirに配置（権限不足の場合のフォールバック改善必要）
 fn install_update_checker_plugin(app: &tauri::AppHandle, plugin_dir: &std::path::Path, force_copy: bool) {
     use std::fs;
     let dst = plugin_dir.join("UpdateChecker.aui2");
@@ -816,7 +792,13 @@ pub fn run() {
             remove_installed_id_cmd,
             drive_download_to_file,
             expand_macros,
+            paths::complete_initial_setup,
+            paths::finalize_aviutl2_path,
+            paths::default_aviutl2_root,
+            paths::resolve_aviutl2_root,
+            paths::get_app_dirs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

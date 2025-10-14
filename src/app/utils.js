@@ -345,53 +345,17 @@ export async function detectInstalledVersionsMap(items) {
   return (res && typeof res === 'object') ? res : {};
 }
 
-// 設定に必要なパス（フォルダ）を初期化・作成
-async function ensurePaths(requiredKeys = []) {
-  const dialog = await import('@tauri-apps/plugin-dialog');
-  const fs = await import('@tauri-apps/plugin-fs');
-  let settings = await readSettings();
-  let changed = false;
-
-  // 既定の初期設定（Windows のパス）
-  const defaultPaths = {
-    appDir: 'C:\\Program Files\\AviUtl2',
-    pluginsDir: 'C:\\ProgramData\\aviutl2\\Plugin',
-    scriptsDir: 'C:\\ProgramData\\aviutl2\\Script'
-  };
-
-  // ディレクトリ選択ダイアログを表示する関数
-  async function askDir(title) {
-    const p = await dialog.open({ directory: true, multiple: false, title });
-    if (!p) throw new Error('ユーザーがディレクトリ選択をキャンセルしました');
-    return String(p);
-  }
-
-  for (const key of requiredKeys) {
-    if (settings[key]) {
-      // 既に設定がある場合はそのまま使う
-    } else {
-      if (defaultPaths[key]) {
-        // 初回のみプロンプトなしで既定値を適用
-        settings[key] = defaultPaths[key];
-        changed = true;
-      }
-    }
-    // 存在を確保（絶対パス）
-    try { await fs.mkdir(settings[key], { recursive: true }); } catch (_) { /* ignore */ }
-  }
-  if (changed) await writeSettings(settings);
-  return settings;
-}
-
-
 // 文字列内のマクロに実際の値を埋め込み
-function expandMacros(s, ctx) {
+async function expandMacros(s, ctx) {
+  const { invoke } = await import('@tauri-apps/api/core');
+  const dirs = await invoke('get_app_dirs');
+  logInfo(`get_app_dirs: ${JSON.stringify(dirs)}`);
   if (typeof s !== 'string') return s;
   return s
     .replaceAll('{tmp}', ctx.tmpDir)
-    .replaceAll('{appDir}', ctx.appDir || '')
-    .replaceAll('{pluginsDir}', ctx.pluginsDir || '')
-    .replaceAll('{scriptsDir}', ctx.scriptsDir || '')
+    .replaceAll('{appDir}', dirs.aviutl2_root || '')
+    .replaceAll('{pluginsDir}', dirs.plugin_dir || '')
+    .replaceAll('{scriptsDir}', dirs.script_dir || '')
     .replaceAll('{id}', ctx.id || '')
     .replaceAll('{version}', ctx.version || '')
     .replaceAll('{download}', ctx.downloadPath || '')
@@ -516,7 +480,12 @@ function isAbsPath(p) {
 async function downloadTo(url, toPath, toBaseDir) {
   const http = await import('@tauri-apps/plugin-http');
   const fs = await import('@tauri-apps/plugin-fs');
-  const { invoke } = await import('@tauri-apps/api/core');
+  const { invoke, requestPermissions } = await import('@tauri-apps/api/core');
+  try {
+    await requestPermissions('http:default');
+  } catch (_) {
+    // ignore permission request errors; fetch will raise a scoped denial if still blocked
+  }
   // 親ディレクトリの存在を保証
   const dir = toPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '.';
   try {
@@ -779,15 +748,11 @@ export async function runInstallerForItem(item, dispatch) {
   const version = latestVersionOf(item);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
   const tmp = await ensureTmpDir(idVersion);
-  const settings = await ensurePaths(['appDir', 'pluginsDir']); // 不必要？
 
   const ctx = {
     id: item.id,
     version,
     tmpDir: `${tmp.rel}`,
-    appDir: settings.appDir,
-    pluginsDir: settings.pluginsDir,
-    scriptsDir: settings.scriptsDir || '',
     downloadPath: '',
     productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
     baseDir: tmp.baseDir,
@@ -820,7 +785,7 @@ export async function runInstallerForItem(item, dispatch) {
       try {
         switch (step.action) {
           case 'download': {
-            const toRaw = expandMacros(step.to || '', ctx);
+            const toRaw = await expandMacros(step.to || '', ctx);
             const isGDrive = typeof url === 'string' && url.startsWith('gdrive:');
             let toRel = toRaw;
             const looksDir = !toRaw || toRaw === ctx.tmpDir || /[\\\/]$/.test(toRaw);
@@ -829,21 +794,21 @@ export async function runInstallerForItem(item, dispatch) {
             } else if (looksDir) {
               toRel = isGDrive ? toRaw.replace(/[\\\/]$/, '') : `${toRaw.replace(/[\\\/]$/, '')}/${suggested}`;
             }
-            const toPath = expandMacros(toRel, ctx);
+            const toPath = await expandMacros(toRel, ctx);
             await downloadTo(url, toPath, tmp.baseDir);
             // GoogleDrive はディレクトリ基準で扱い、後続の {download} はディレクトリを指す
             ctx.downloadPath = toPath;
             break;
           }
           case 'extract': {
-            const fromRel = expandMacros(step.from || ctx.downloadPath, ctx);
-            const toRel = expandMacros(step.to || `{tmp}/extracted`, ctx);
+            const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
+            const toRel = await expandMacros(step.to || `{tmp}/extracted`, ctx);
             await extractZip(fromRel, toRel, tmp.baseDir);
             break;
           }
           case 'copy': {
-            const from = expandMacros(step.from, ctx);
-            const to = expandMacros(step.to, ctx);
+            const from = await expandMacros(step.from, ctx);
+            const to = await expandMacros(step.to, ctx);
             const res = await copyPattern(from, to, tmp.baseDir);
             const n = res?.count || 0;
             if (n === 0) {
@@ -852,19 +817,9 @@ export async function runInstallerForItem(item, dispatch) {
             // try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
             break;
           }
-          // case 'delete': {
-          //   const path = expandMacros(step.path, ctx);
-          //   if (/\*/.test(path)) {
-          //     const n = await deletePattern(path, tmp.baseDir);
-          //     if (n === 0) throw new Error(`delete matched 0 files (pattern=${path})`);
-          //   } else {
-          //     await deletePath(path, tmp.baseDir);
-          //   }
-          //   break;
-          // }
           case 'run': {
-            const pRaw = expandMacros(step.path, ctx);
-            const args = (step.args || []).map(a => expandMacros(String(a), ctx));
+            const pRaw = await expandMacros(step.path, ctx);
+            const args = (step.args || []).map(async a => await expandMacros(String(a), ctx));
             const pAbs = await toAbsoluteExecPath(pRaw, ctx);
             if (navigator.userAgent.includes('Windows')) {
               await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
@@ -909,14 +864,10 @@ export async function runUninstallerForItem(item, dispatch) {
   const version = latestVersionOf(item);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
   const tmp = await ensureTmpDir(idVersion);
-  const settings = await ensurePaths(['appDir', 'pluginsDir', 'scriptsDir']);
   const ctx = {
     id: item.id,
     version,
     tmpDir: `${tmp.rel}`,
-    appDir: settings.appDir,
-    pluginsDir: settings.pluginsDir,
-    scriptsDir: settings.scriptsDir || '',
     downloadPath: '',
     productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
     baseDir: tmp.baseDir,
@@ -972,7 +923,7 @@ export async function runUninstallerForItem(item, dispatch) {
       try {
         switch (step.action) {
           case 'delete': {
-            const p = expandMacros(step.path, ctx);
+            const p = await expandMacros(step.path, ctx);
             try {
               const allowedRoots = [ctx.pluginsDir, ctx.scriptsDir].filter(Boolean);
               const abs = isAbsPath(p) ? p : p; // アンインストールのパスは原則絶対パス。相対ならそのまま扱う
@@ -985,8 +936,8 @@ export async function runUninstallerForItem(item, dispatch) {
             break;
           }
           case 'run': {
-            const pRaw = expandMacros(step.path, ctx);
-            const args = (step.args || []).map(a => expandMacros(String(a), ctx));
+            const pRaw = await expandMacros(step.path, ctx);
+            const args = (step.args || []).map(async a => await expandMacros(String(a), ctx));
             const pAbs = await toAbsoluteExecPath(pRaw, ctx);
             if (navigator.userAgent.includes('Windows')) {
               await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
