@@ -356,6 +356,7 @@ async function expandMacros(s, ctx) {
     .replaceAll('{appDir}', dirs.aviutl2_root || '')
     .replaceAll('{pluginsDir}', dirs.plugin_dir || '')
     .replaceAll('{scriptsDir}', dirs.script_dir || '')
+    .replaceAll('{dataDir}', dirs.aviutl2_data || '')
     .replaceAll('{id}', ctx.id || '')
     .replaceAll('{version}', ctx.version || '')
     .replaceAll('{download}', ctx.downloadPath || '')

@@ -536,6 +536,7 @@ fn expand_macros(raw_path: &str) -> String {
         ("{appDir}", dirs.aviutl2_root.to_string_lossy()),
         ("{pluginsDir}", dirs.plugin_dir.to_string_lossy()),
         ("{scriptsDir}", dirs.script_dir.to_string_lossy()),
+        ("{dataDir}", dirs.aviutl2_data.to_string_lossy()),
     ];
 
     let mut out = raw_path.to_owned();

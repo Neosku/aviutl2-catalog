@@ -57,7 +57,7 @@ function Bootstrapper() {
     return () => window.removeEventListener('contextmenu', onCtx);
   }, []);
 
-  // Global error handlers to log to app.log
+  // グローバルエラーがをapp.logに記録
   useEffect(() => {
     const onError = async (e) => { try { await logError(`[window.error] ${e?.message || e}`); } catch (_) {} };
     const onRejection = async (e) => {
