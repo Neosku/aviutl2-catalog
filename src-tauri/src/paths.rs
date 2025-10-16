@@ -105,7 +105,7 @@ pub fn get_app_dirs() -> HashMap<String, String> {
 }
 
 // APP_DIR を初期化または更新
-fn store_appdirs(appdirs: AppDirs) -> std::io::Result<()> {
+fn set_appdirs(appdirs: AppDirs) -> std::io::Result<()> {
     let arc = Arc::new(appdirs);
     if let Some(cell) = APP_DIR.get() {
         cell.store(arc);
@@ -141,9 +141,7 @@ fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &P
         log_path: catalog_config_dir.join("logs").join("app.log"),
     };
     crate::log_info(app, &format!("AppDirs: {:?}", appdirs)); // 確認用ログ
-                                                              // APP_DIR を作成・更新
-    store_appdirs(appdirs)?;
-    // 現在のバージョンを取得行
+    set_appdirs(appdirs)?; // APP_DIR を作成・更新
     let current_ver = app.package_info().version.to_string();
     // UpdateCheckerプラグインを移動 (バージョンが異なるなら強制)
     crate::install_update_checker_plugin(app, &aviutl2_data.join("Plugin"), settings.app_version != current_ver);
@@ -206,7 +204,7 @@ pub async fn complete_initial_setup(app: AppHandle) -> Result<(), String> {
 
 // aviutl2_rootを保存し、APP_DIRを更新
 #[tauri::command]
-pub async fn finalize_aviutl2_path(app: AppHandle, aviutl2_root: String, is_portable_mode: bool) -> Result<(), String> {
+pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_mode: bool, theme: String) -> Result<(), String> {
     let trimmed = aviutl2_root.trim();
     if trimmed.is_empty() {
         return Err(String::from("AviUtl2 のフォルダを選択してください。"));
@@ -224,6 +222,7 @@ pub async fn finalize_aviutl2_path(app: AppHandle, aviutl2_root: String, is_port
     let mut settings = Settings::load_from_file(&settings_path);
     settings.aviutl2_root = root_path;
     settings.is_portable_mode = is_portable_mode;
+    settings.theme = theme.to_string();
     finalize_settings(&app, &mut settings, &settings_path, &catalog_config_dir).map_err(|e| e.to_string())
 }
 

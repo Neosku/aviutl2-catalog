@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TitleBar from '../../components/TitleBar.jsx';
 import Icon from '../../components/Icon.jsx';
-import { hasInstaller, logError, runInstallerForItem, setSettings } from '../utils.js';
+import { hasInstaller, logError, runInstallerForItem} from '../utils.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 async function showMain() {
@@ -183,14 +183,10 @@ export default function InitSetupApp() {
     } catch (resolveError) {
       await safeLog('[init-window] resolve aviutl2 root failed', resolveError);
     }
-    await setSettings({
-      aviutl2_root: resolved,
-      is_portable_mode: Boolean(portableMode)
-    });
     try {
-      await core.invoke('finalize_aviutl2_path', { aviutl2Root: resolved, isPortableMode: Boolean(portableMode) });
+      await core.invoke('update_settings', { aviutl2Root: resolved, isPortableMode: Boolean(portableMode), theme: 'dark'});
     } catch (invocationError) {
-      await safeLog('[init-window] finalize_aviutl2_path invoke failed', invocationError);
+      await safeLog('[init-window] update_settings invoke failed', invocationError);
       throw invocationError;
     }
     setAviutlRoot(resolved);

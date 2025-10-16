@@ -1,8 +1,11 @@
 // use crate::paths::Dir;
 use once_cell::sync::Lazy;
-use std::path::{PathBuf};
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use tauri::{Emitter, Manager};
+use walkdir::WalkDir;
 
 mod api_key;
 mod paths;
@@ -154,7 +157,6 @@ async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_pat
 // -------------------------
 
 // ファイルのハッシュ(xxh3-128)を計算
-use std::{fs, path::Path};
 use xxhash_rust::xxh3::xxh3_128;
 
 pub fn xxh3_128_hex<P: AsRef<Path>>(path: P) -> Result<String, String> {
@@ -753,6 +755,60 @@ fn remove_installed_id_cmd(app: tauri::AppHandle, id: String) -> Result<std::col
     Ok(map)
 }
 
+// ---------------------------
+// ダウンロード関連
+// ---------------------------
+
+/// ファイルをコピーする関数
+fn copy_item(src: &Path, dst: &Path) -> io::Result<usize> {
+    let mut count = 0;
+    // ファイル → ディレクトリ
+    if src.is_file() {
+        fs::create_dir_all(dst)?;
+        let file_name = src
+            .file_name()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get file name"))?;
+        let dest_path = dst.join(file_name);
+        fs::copy(src, dest_path)?;
+        count += 1;
+        return Ok(count);
+    }
+    if src.is_dir() {
+        // ディレクトリ→ディレクトリ
+        fs::create_dir_all(dst)?;
+        for entry in WalkDir::new(src) {
+            let entry = entry?;
+            let path = entry.path();
+            let rel = path.strip_prefix(src).map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "Failed to calculate relative path")
+            })?;
+            let dest_path: PathBuf = dst.join(rel);
+            if entry.file_type().is_dir() {
+                fs::create_dir_all(&dest_path)?;
+            } else {
+                if let Some(parent) = dest_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::copy(path, &dest_path)?;
+                count += 1;
+            }
+        }
+        return Ok(count);
+    }
+
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "Source is neither a file nor a directory",
+    ))
+}
+
+#[tauri::command]
+fn copy_item_js(src_str: String, dst_str: String) -> Result<usize, String> {
+    let src = PathBuf::from(src_str);
+    let dst = PathBuf::from(dst_str);
+    copy_item(&src, &dst).map_err(|e| e.to_string())
+}
+
 // -----------------------
 // Tauriアプリケーションのセットアップと起動
 // -----------------------
@@ -793,8 +849,9 @@ pub fn run() {
             remove_installed_id_cmd,
             drive_download_to_file,
             expand_macros,
+            copy_item_js,
             paths::complete_initial_setup,
-            paths::finalize_aviutl2_path,
+            paths::update_settings,
             paths::default_aviutl2_root,
             paths::resolve_aviutl2_root,
             paths::get_app_dirs,
@@ -802,4 +859,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

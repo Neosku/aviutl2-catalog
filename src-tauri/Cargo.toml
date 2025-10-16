@@ -29,6 +29,7 @@ url = "2"
 thiserror = "1"
 arc-swap = "1"
 dirs-next = "2"
+walkdir = "2"
 
 [features]
 default = ["custom-protocol"]

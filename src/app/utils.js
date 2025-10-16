@@ -110,7 +110,6 @@ async function writeInstalledMap(map) {
   try {
     await fs.writeTextFile(INSTALLED_FILE, JSON.stringify(map, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
   } catch (e) {
-    console.error('Failed to write installed map:', e);
     try { await logError(`[writeInstalledMap] failed: ${e?.message || e}`); } catch (_) { }
   }
   return map;
@@ -160,16 +159,15 @@ export function latestVersionOf(item) {
 }
 
 // -------------------------
-// settings.jsonの読み書き
+// settings.jsonの読み込み
 // -------------------------
-
 
 // 設定の永続化（AviUtl2 ルートと主要サブディレクトリなど）
 const SETTINGS_FILE = 'settings.json';
 
+// UI から利用するエクスポート関数
 // settings.jsonに保存されている設定を読み込み
-// とりあえずJavaScript側で実装（Rust実装は未定）
-async function readSettings() {
+export async function getSettings() {
   const fs = await import('@tauri-apps/plugin-fs');
   try {
     const exists = await fs.exists(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
@@ -177,62 +175,14 @@ async function readSettings() {
     const raw = await fs.readTextFile(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
     const data = JSON.parse(raw || '{}');
     return (data && typeof data === 'object') ? data : {};
-  } catch (e) { try { await logError(`[readSettings] failed: ${e?.message || e}`); } catch (_) { } return {}; }
-}
-
-// 設定をsettings.jsonに保存
-// よく使うものでもないのでJavaScriptで実装
-// ブラウザ版はlocalstorageなどに保存するのがベスト
-async function writeSettings(map) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  await fs.writeTextFile(SETTINGS_FILE, JSON.stringify(map, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
-  return map;
-}
-
-// UI から利用するエクスポート関数
-// settings.jsonに保存されている設定を読み込み
-export async function getSettings() { return await readSettings(); }
-
-// setting.jsonの設定を上書き
-// UpdateChecker を pluginsDir 変更時に移動
-async function moveUpdateCheckerIfNeeded(oldDir, newDir) {
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    if (!oldDir || !newDir || oldDir === newDir) return false;
-    const toWin = (p) => String(p || '').replace(/\//g, '\\').replace(/[\\]+$/, '');
-    const src = toWin(`${oldDir}\\UpdateChecker.aui2`);
-    const dstDir = toWin(newDir);
-    const dst = toWin(`${newDir}\\UpdateChecker.aui2`);
-    const exists = await fs.exists(src);
-    if (!exists) return false;
-    try { await fs.mkdir(dstDir, { recursive: true }); } catch (_) { }
-    const buf = await fs.readFile(src);
-    await fs.writeFile(dst, buf);
-    try { await fs.remove(src); } catch (_) { }
-    try { await logInfo(`[settings] moved UpdateChecker.aui2: ${src} -> ${dst}`); } catch (_) { }
-    return true;
   } catch (e) {
-    try { await logError(`[settings] moveUpdateCheckerIfNeeded failed: ${e?.message || e}`); } catch (_) { }
-    return false;
+    try {
+      await logError(`[getSettings] failed: ${e?.message || e}`);
+    } catch (_) { /* ログ失敗時は無視 */ }
+    return {};
   }
 }
 
-export async function setSettings(partial) {
-  const cur = await readSettings();
-  const next = { ...cur, ...partial };
-  // テーマ名のマイグレーション（noir -> darkmode）
-  if (next.theme === 'noir') next.theme = 'darkmode';
-  if (!next.theme) next.theme = 'darkmode';
-  // pluginsDir が変更されたら UpdateChecker.aui2 を移動
-  try {
-    const oldDir = String(cur.pluginsDir || '').trim();
-    const newDir = String(next.pluginsDir || '').trim();
-    if (oldDir && newDir && oldDir !== newDir) {
-      await moveUpdateCheckerIfNeeded(oldDir, newDir);
-    }
-  } catch (e) { try { await logError(`[settings] pluginsDir move hook failed: ${e?.message || e}`); } catch (_) { } }
-  return await writeSettings(next);
-}
 
 // -------------------------
 // ログ出力　OK
@@ -349,7 +299,7 @@ export async function detectInstalledVersionsMap(items) {
 async function expandMacros(s, ctx) {
   const { invoke } = await import('@tauri-apps/api/core');
   const dirs = await invoke('get_app_dirs');
-  logInfo(`get_app_dirs: ${JSON.stringify(dirs)}`);
+  //   logInfo(`get_app_dirs: ${JSON.stringify(dirs)}`);
   if (typeof s !== 'string') return s;
   return s
     .replaceAll('{tmp}', ctx.tmpDir)
@@ -364,18 +314,30 @@ async function expandMacros(s, ctx) {
 }
 
 // インストーラ処理用の一時作業ディレクトリの作成
+// インストーラ処理用の一時作業ディレクトリの作成
 async function ensureTmpDir(idVersion) {
   const fs = await import('@tauri-apps/plugin-fs');
+  const path = await import('@tauri-apps/api/path'); // ✅ 追加
   const base = 'installer-tmp';
+
+  // ベースディレクトリ作成
   await fs.mkdir(base, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+
+  // サブディレクトリ作成
   const sub = `${base}/${idVersion}`;
   await fs.mkdir(sub, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+
+  // 絶対パス取得
+  const basePath = await path.appConfigDir();      // AppConfig の絶対パス
+  const absPath = await path.join(basePath, sub);  // 絶対パスを連結
+
   return {
     baseDir: fs.BaseDirectory.AppConfig,
     rel: sub,
-    abs: sub,
+    abs: absPath,
   };
 }
+
 
 // ダウンロードURLからファイル名を決定
 function fileNameFromUrl(url) {
@@ -426,8 +388,7 @@ async function runExecutableQuietWindows(exeAbsPath, args = [], elevate = false,
   await fs.writeTextFile(scriptRel, body, { baseDir });
   const base = await pathApi.appConfigDir();
   const scriptAbs = await pathApi.join(base, scriptRel);
-  const argsPs = ['-ExecutionPolicy', 'Bypass','-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptAbs];
-  // const cmd = shell.Command.create('powershell', argsPs);
+  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptAbs];
   const cmd = shell.Command.create('powershell', argsPs, { encoding: 'windows-31j' });
   const res = await cmd.execute();
   if (res.code !== 0) {
@@ -548,160 +509,12 @@ async function extractZip(zipPath, destPath, baseDir) {
   } catch (e) { try { await logError(`[extractZip] failed: ${e?.message || e}`); } catch (_) { } }
 }
 
-// ルート配下を再帰的に走査してファイル一覧（相対パス）を返す
-async function listFilesRecursive(rootRel, baseDir) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const out = [];
-  async function walk(rel) {
-    const entries = isAbsPath(rel) ? await fs.readDir(rel) : await fs.readDir(rel, { baseDir });
-    for (const e of entries) {
-      const path = `${rel}/${e.name}`;
-      if (e.isDirectory) await walk(path);
-      else out.push(path);
-    }
-  }
-  await walk(rootRel);
-  return out;
+// ファイルをコピーする関数(Rust)
+async function copyPattern(fromPattern, toDirRel) {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return await invoke('copy_item_js', { srcStr: fromPattern, dstStr: toDirRel });
 }
 
-// 簡易globマッチ
-function simpleGlobMatch(pattern, path) {
-  // サポート: ** は任意の深さ、* は 1 セグメント、Windows 風パスでは大文字小文字を無視
-  let p = String(pattern || '').replace(/\\/g, '/');
-  let x = String(path || '').replace(/\\/g, '/');
-  // マッチングのために小文字へ正規化（Windows）
-  p = p.toLowerCase();
-  x = x.toLowerCase();
-  if (!p.includes('*')) return p === x;
-  const esc = s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'); // '*' はエスケープしない
-  let re = esc(p);
-  // まず ** を .* に置換
-  re = re.replace(/\*\*/g, '.*');
-  // 次に残りの * を [^/]* に置換
-  re = re.replace(/\*/g, '[^/]*');
-  const rx = new RegExp('^' + re + '$');
-  return rx.test(x);
-}
-
-// パターンに一致するファイル/ディレクトリをまとめてコピー
-// Plugin/ ディレクトリが含まれる場合は、その配下構造を維持してコピー 
-// `toDirRel`: 転送先のディレクトリ（相対 or 絶対） `baseDir`: 相対パス時のベース（通常は AppConfig）
-async function copyPattern(fromPattern, toDirRel, baseDir) {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const shell = await import('@tauri-apps/plugin-shell');
-  const pathApi = await import('@tauri-apps/api/path');
-  // toDirRel が未指定/空ならカレント相対にフォールバック
-  let toDir = String(toDirRel || '.');
-  toDir = toDir.replace(/\\/g, '/').replace(/\/+$/, '') || '.';
-  const norm = String(fromPattern || '').replace(/\\/g, '/');
-  // 末尾の "/*" は再帰コピー（"/**/*"）とみなし、サブフォルダも含める
-  const effective = norm.replace(/\/\*$/, '/**/*');
-  const starIdx = effective.search(/\*/);
-  let root = '.';
-  if (starIdx === -1) {
-    root = effective.includes('/') ? effective.split('/').slice(0, -1).join('/') : '.';
-  } else {
-    const base = effective.slice(0, starIdx);
-    root = base.endsWith('/') ? base.slice(0, -1) : (base || '.');
-  }
-  let files = [];
-  try { files = await listFilesRecursive(root, baseDir); } catch (e) { try { await logError(`[copyPattern] listFilesRecursive failed (root=${root}): ${e?.message || e}`); } catch (_) { } files = []; }
-  // フォールバック: 再帰パターンで見つからない場合は 1 つ上のディレクトリを root として試す
-  if ((!files || files.length === 0) && /\*\*/.test(effective)) {
-    const up = root.includes('/') ? root.split('/').slice(0, -1).join('/') : '.';
-    if (up && up !== root) {
-      try { files = await listFilesRecursive(up, baseDir); root = up; } catch (e) { try { await logError(`[copyPattern] up one level failed (up=${up}): ${e?.message || e}`); } catch (_) { } }
-    }
-  }
-  let matched = files.filter(p => simpleGlobMatch(effective, p));
-  // 追加フォールバック: パターンが "/Plugin/" を直接狙うがアーカイブに余分な階層がある場合、任意の深さの Plugin/ を許可
-  if (matched.length === 0 && /\/plugin\//i.test(effective)) {
-    const alt = effective
-      .replace(/\/plugin\/\*\*?\/*$/i, '/**/plugin/**/*')
-      .replace(/\/plugin\/\*$/i, '/**/plugin/**/*');
-    matched = files.filter(p => simpleGlobMatch(alt, p));
-  }
-  // 強いフォールバック: それでも 0 件なら tmp 配下の最初の Plugin フォルダを直接走査
-  if (matched.length === 0 && /\/plugin\//i.test(effective)) {
-    // /Plugin/ まで（直前）を tmp のベースとして決定
-    const idx = effective.toLowerCase().indexOf('/plugin/');
-    const tmpBase = idx > 0 ? effective.slice(0, idx) : root;
-    const pluginRoot = tmpBase.replace(/\/+$/, '') + '/Plugin';
-    // pluginRoot が存在すればそこから走査
-    try {
-      const exists = await fs.readDir(pluginRoot, { baseDir });
-      if (Array.isArray(exists)) {
-        const subFiles = await listFilesRecursive(pluginRoot, baseDir);
-        matched = subFiles;
-        // 相対パスが Plugin/ 配下になるよう root を調整
-        root = pluginRoot;
-      }
-    } catch (e) { try { await logError(`[copyPattern] probing Plugin root failed: ${e?.message || e}`); } catch (_) { } }
-  }
-  if (isAbsPath(toDir)) await fs.mkdir(toDir, { recursive: true });
-  else await fs.mkdir(toDir, { baseDir, recursive: true });
-
-  // 転送先が絶対パスかつ Plugin/ を対象にする場合、PowerShell の一括コピーを優先（権限や UAC に強い）
-  if (matched.length > 0 && isAbsPath(toDir) && /\/plugin\//i.test(effective)) {
-    try {
-      // 絶対ソースの Plugin ルートを決定
-      const first = matched[0];
-      let pRoot = first;
-      const idxP = first.toLowerCase().indexOf('/plugin/');
-      if (idxP >= 0) pRoot = first.slice(0, idxP + '/Plugin'.length);
-      // pRoot は AppConfig 基準の相対なので絶対パスへ変換
-      const baseAbs = await pathApi.appConfigDir();
-      const srcPluginAbs = await pathApi.join(baseAbs, pRoot);
-      // PowerShell コマンドを構築
-      function psEscape(s) { return String(s).replace(/'/g, "''"); }
-      const ps = shell.Command.create('powershell', [
-        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command',
-        `Copy-Item -Path '${psEscape(srcPluginAbs)}\\*' -Destination '${psEscape(toDir)}' -Recurse -Force -ErrorAction Stop`
-      ]);
-      const res = await ps.execute();
-      if (res.code === 0) return {
-        count: matched.length, outputs: matched.map(src => {
-          // 一致したファイルを Plugin/ 以下の構造を保ったまま転送先に対応付け
-          let rel;
-          const idxPlugin2 = src.indexOf('/Plugin/');
-          if (idxPlugin2 >= 0) rel = src.slice(idxPlugin2 + '/Plugin/'.length);
-          else rel = src.startsWith(root + '/') ? src.slice(root.length + 1) : src.split('/').pop();
-          return `${toDir}/${rel}`;
-        })
-      };
-      // 非 0（失敗）ならファイル単位コピーへフォールスルー
-    } catch (_) { /* fall back to file-by-file */ }
-  }
-  const outputs = [];
-  for (const src of matched) {
-    // Plugin/ が含まれる場合はその配下構造を保持。なければ root 配下として配置
-    let rel;
-    const idxPlugin = src.indexOf('/Plugin/');
-    if (idxPlugin >= 0) rel = src.slice(idxPlugin + '/Plugin/'.length);
-    else rel = src.startsWith(root + '/') ? src.slice(root.length + 1) : src.split('/').pop();
-    const dst = `${toDir}/${rel}`;
-    const dstDir = dst.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '.';
-    try {
-      // 転送先のサブディレクトリを作成しておく
-      if (isAbsPath(dstDir)) await fs.mkdir(dstDir, { recursive: true });
-      else await fs.mkdir(dstDir, { baseDir, recursive: true });
-      if (!isAbsPath(dst)) {
-        await fs.copyFile(src, dst, { baseDir });
-      } else {
-        // base を跨ぐコピー
-        const buf = isAbsPath(src) ? await fs.readFile(src) : await fs.readFile(src, { baseDir });
-        await fs.writeFile(dst, buf);
-      }
-    } catch (e) {
-      const buf = isAbsPath(src) ? await fs.readFile(src) : await fs.readFile(src, { baseDir });
-      // ディレクトリ作成後に read/write でリトライ
-      if (isAbsPath(dst)) await fs.writeFile(dst, buf);
-      else await fs.writeFile(dst, buf, { baseDir });
-    }
-    outputs.push(dst);
-  }
-  return { count: matched.length, outputs };
-}
 
 // インストーラの存在を判定
 export function hasInstaller(item) {
@@ -724,7 +537,7 @@ export async function runInstallerForItem(item, dispatch) {
   const ctx = {
     id: item.id,
     version,
-    tmpDir: `${tmp.rel}`,
+    tmpDir: `${tmp.abs}`,
     downloadPath: '',
     productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
     baseDir: tmp.baseDir,
@@ -734,21 +547,7 @@ export async function runInstallerForItem(item, dispatch) {
   const url = await resolveSource(item);
   if (!url) throw new Error('ダウンロード元 URL が見つかりません');
   const suggested = fileNameFromUrl(url);
-  const ext = (suggested.split('.').pop() || '').toLowerCase();
-
-  // 明示的な手順が無い場合は download -> run（またはzipの場合はextract）にフォールバック（ショートハンド対応）
-  const steps = (Array.isArray(item.installer?.install) && item.installer.install.length)
-    ? item.installer.install
-    : (ext === 'zip'
-      ? [
-        { action: 'download', to: `{tmp}/${suggested}` },
-        { action: 'extract', from: `{tmp}/${suggested}`, to: `{pluginsDir}` },
-      ]
-      : [
-        { action: 'download', to: `{tmp}/${suggested}` },
-        { action: 'run', path: '{download}', args: [], elevate: true },
-      ]
-    );
+  const steps = item.installer.install;
 
   try {
     await logInfo(`[installer ${item.id}] start version=${version || ''} steps=${steps.length}`);
@@ -781,23 +580,20 @@ export async function runInstallerForItem(item, dispatch) {
           case 'copy': {
             const from = await expandMacros(step.from, ctx);
             const to = await expandMacros(step.to, ctx);
-            const res = await copyPattern(from, to, tmp.baseDir);
-            const n = res?.count || 0;
-            if (n === 0) {
+            const count = await copyPattern(from, to);
+            logInfo(`[installer ${item.id}] copy matched ${count} files (from=${from} to=${to})`);
+            if (count === 0) {
               throw new Error(`copy matched 0 files (from=${from} to=${to})`);
             }
-            // try { await recordInstalledOutputs(item.id, res.outputs || []); } catch (_) { }
             break;
           }
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
-            logInfo(`step.args (raw): ${JSON.stringify(step.args || [])}`);
+            // logInfo(`step.args (raw): ${JSON.stringify(step.args || [])}`);
             const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
-            logInfo(`args expanded: ${JSON.stringify(args)}`);
+            // logInfo(`args expanded: ${JSON.stringify(args)}`);
             const pAbs = await toAbsoluteExecPath(pRaw, ctx);
-            logInfo(`ここまできたよ1`);
             await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
-            logInfo(`ここまできたよ2`);
             break;
           }
           default:
@@ -821,10 +617,10 @@ export async function runInstallerForItem(item, dispatch) {
     }
     await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
     // 後始末: 一時作業フォルダを削除（成功時のみ）
-    try {
-      const fs = await import('@tauri-apps/plugin-fs');
-      await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-    } catch (_) { /* ignore cleanup errors */ }
+    // try {
+    //   const fs = await import('@tauri-apps/plugin-fs');
+    //   await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+    // } catch (_) { /* ignore cleanup errors */ }
   } catch (e) {
     const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
     try { await logError(`[installer ${item.id}] error: ${detail}`); } catch (_) { }

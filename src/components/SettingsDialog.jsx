@@ -1,6 +1,6 @@
 // 設定ダイアログコンポーネント
 import React, { useEffect, useState } from 'react';
-import { getSettings, setSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
+import { getSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -81,13 +81,13 @@ export default function SettingsDialog({ open, onClose }) {
       if (!aviutl2Root) throw new Error('AviUtl2 のフォルダを指定してください。');
 
       // 2) Rust 側へ保存＆ APP_DIR 更新（settings.json も更新）
-      await invoke('finalize_aviutl2_path', {
+      await invoke('update_settings', {
         aviutl2Root,
         isPortableMode: !!form.isPortableMode,
+        theme: (form.theme || 'dark').trim()
       });
 
       // 3) テーマはフロント設定として保存
-      await setSettings({ theme: (form.theme || 'darkmode').trim() });
       try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) {}
 
       // 4) 再検出（UI 反映）
