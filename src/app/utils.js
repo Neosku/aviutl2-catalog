@@ -317,7 +317,7 @@ async function expandMacros(s, ctx) {
 // インストーラ処理用の一時作業ディレクトリの作成
 async function ensureTmpDir(idVersion) {
   const fs = await import('@tauri-apps/plugin-fs');
-  const path = await import('@tauri-apps/api/path'); // ✅ 追加
+  const path = await import('@tauri-apps/api/path');
   const base = 'installer-tmp';
 
   // ベースディレクトリ作成
@@ -355,40 +355,23 @@ function fileNameFromUrl(url) {
   }
 }
 
-// 相対パスを絶対パスに変換（PowerShell 実行に適した形式）
-async function toAbsoluteExecPath(p, ctx) {
-  if (isAbsPath(p)) return p;
-  // 相対パスの場合のみ処理(AppConfig基準)
-  try {
-    const pathApi = await import('@tauri-apps/api/path');
-    const base = await pathApi.appConfigDir();
-    const joined = await pathApi.join(base, p.replace(/^\.\//, ''));
-    // PowerShell 用に Windows のバックスラッシュに正規化
-    return joined.replace(/\//g, '\\');
-  } catch (e) { try { await logError(`[toAbsoluteExecPath] failed: ${e?.message || e}`); } catch (_) { } return p; }
-}
-
 // 実行ファイルをウィンドウ非表示で実行する関数
-async function runExecutableQuietWindows(exeAbsPath, args = [], elevate = false, tmpRel, baseDir) {
+async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
   const shell = await import('@tauri-apps/plugin-shell');
   const fs = await import('@tauri-apps/plugin-fs');
-  const pathApi = await import('@tauri-apps/api/path');
   function psEscape(s) { return String(s).replace(/'/g, "''"); }
   const argList = (args || []).map(a => `'${psEscape(a)}'`).join(', ');
-  const exe = psEscape(exeAbsPath);
   const argClause = (args && args.length > 0) ? ` -ArgumentList @(${argList})` : '';
   const body = [
     "$ErrorActionPreference='Stop'",
     "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new()",
-    `$p = Start-Process -FilePath '${exe}'${argClause}${elevate ? ' -Verb RunAs' : ''} -WindowStyle Hidden -Wait -PassThru`,
+    `$p = Start-Process -FilePath '${exeAbsPath}'${argClause}${elevate ? ' -Verb RunAs' : ''} -WindowStyle Hidden -Wait -PassThru`,
     "exit ($p.ExitCode)"
   ].join("; ");
   const scriptName = `run-${Date.now()}.ps1`;
-  const scriptRel = `${tmpRel.replace(/\\/g, '/')}/${scriptName}`;
-  await fs.writeTextFile(scriptRel, body, { baseDir });
-  const base = await pathApi.appConfigDir();
-  const scriptAbs = await pathApi.join(base, scriptRel);
-  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptAbs];
+  const scriptRel = `${tmpPath.replace(/\\/g, '/')}/${scriptName}`;
+  await fs.writeTextFile(scriptRel, body);
+  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptRel];
   const cmd = shell.Command.create('powershell', argsPs, { encoding: 'windows-31j' });
   const res = await cmd.execute();
   if (res.code !== 0) {
@@ -589,11 +572,8 @@ export async function runInstallerForItem(item, dispatch) {
           }
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
-            // logInfo(`step.args (raw): ${JSON.stringify(step.args || [])}`);
             const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
-            // logInfo(`args expanded: ${JSON.stringify(args)}`);
-            const pAbs = await toAbsoluteExecPath(pRaw, ctx);
-            await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
+            await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
             break;
           }
           default:
@@ -636,7 +616,7 @@ export async function runUninstallerForItem(item, dispatch) {
   const ctx = {
     id: item.id,
     version,
-    tmpDir: `${tmp.rel}`,
+    tmpDir: `${tmp.abs}`,
     downloadPath: '',
     productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
     baseDir: tmp.baseDir,
@@ -644,12 +624,6 @@ export async function runUninstallerForItem(item, dispatch) {
 
   try {
     await logInfo(`[uninstall ${item.id}] start steps=${item.installer.uninstall.length}`);
-    function normalizeAbsWindowsPath(p) {
-      let s = String(p || '');
-      // 末尾のスラッシュ/バックスラッシュを除去
-      s = s.replace(/[\\/]+$/, '');
-      return s;
-    }
     async function deletePath(absPath) {
       const fs = await import('@tauri-apps/plugin-fs');
       let ok = false;
@@ -707,9 +681,7 @@ export async function runUninstallerForItem(item, dispatch) {
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
             const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
-            const pAbs = await toAbsoluteExecPath(pRaw, ctx);
-            await runExecutableQuietWindows(pAbs, args, !!step.elevate, ctx.tmpDir, tmp.baseDir);
-            await logInfo(`[uninstall ${item.id}] run ok path="${pAbs}" args=${JSON.stringify(args)}`);
+            await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
             break;
           }
           default:
