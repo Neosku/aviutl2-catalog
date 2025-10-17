@@ -307,10 +307,7 @@ async function expandMacros(s, ctx) {
     .replaceAll('{pluginsDir}', dirs.plugin_dir || '')
     .replaceAll('{scriptsDir}', dirs.script_dir || '')
     .replaceAll('{dataDir}', dirs.aviutl2_data || '')
-    .replaceAll('{id}', ctx.id || '')
-    .replaceAll('{version}', ctx.version || '')
     .replaceAll('{download}', ctx.downloadPath || '')
-    .replaceAll('{PRODUCT_CODE}', ctx.productCode || '');
 }
 
 // インストーラ処理用の一時作業ディレクトリの作成
@@ -331,28 +328,7 @@ async function ensureTmpDir(idVersion) {
   const basePath = await path.appConfigDir();      // AppConfig の絶対パス
   const absPath = await path.join(basePath, sub);  // 絶対パスを連結
 
-  return {
-    baseDir: fs.BaseDirectory.AppConfig,
-    rel: sub,
-    abs: absPath,
-  };
-}
-
-
-// ダウンロードURLからファイル名を決定
-function fileNameFromUrl(url) {
-  try {
-    if (typeof url === 'string') {
-      // Google Drive 仮想スキームや非HTTP(S)は既定名にフォールバック
-      if (/^gdrive:/i.test(url)) return 'download.bin';
-    }
-    const u = new URL(url);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'download.bin';
-    const name = u.pathname.split('/').pop() || '';
-    return name || 'download.bin';
-  } catch {
-    return 'download.bin';
-  }
+  return absPath;
 }
 
 // 実行ファイルをウィンドウ非表示で実行する関数
@@ -380,41 +356,24 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
 }
 
 // インストーラーからダウンロードURLを生成
-async function resolveSource(item) {
-  // すでにURLの場合はそのまま返す
-  if (typeof item?.installer === 'string') return item.installer;
-  const src = item?.installer?.source;
-  if (!src) return '';
-  if (typeof src === 'string') return src;
-  if (typeof src.direct === 'string') return src.direct;
-  if (src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
-    // Google Drive は Rust 側のコマンドでのみダウンロードする
-    return `gdrive:${src.GoogleDrive.id}`;
+// GitHub最新リリースのダウンロードURLを取得
+async function fetchGitHubURL(github) {
+  const http = await import('@tauri-apps/plugin-http');
+  const { owner, repo, pattern } = github;
+  const regex = pattern ? new RegExp(pattern) : null;
+
+  try {
+    const res = await http.fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
+    const data = await res.json().catch(() => ({}));
+    const assets = Array.isArray(data.assets) ? data.assets : [];
+    const asset = regex
+      ? assets.find(a => regex.test(a.name || '')) || assets[0]
+      : assets[0];
+    return asset?.browser_download_url || '';
+  } catch (e) {
+    try { await logError(`[fetchGitHubAsset] fetch failed: ${e?.message || e}`); } catch (_) { }
+    return '';
   }
-  if (src.github && src.github.owner && src.github.repo) {
-    // GitHub の最新リリース資産を取得し、パターンに一致するものを選択
-    const http = await import('@tauri-apps/plugin-http');
-    const owner = src.github.owner;
-    const repo = src.github.repo;
-    const pattern = src.github.pattern ? new RegExp(src.github.pattern) : null;
-    const tag = src.github.tag;
-    try {
-      const endpoint = tag
-        ? `https://api.github.com/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(tag)}`
-        : `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
-      const res = await http.fetch(endpoint, { method: 'GET' });
-      let data = {};
-      try { data = await res.json(); } catch (_) { data = {}; }
-      const assets = Array.isArray(data?.assets) ? data.assets : [];
-      let asset = assets[0];
-      if (pattern) {
-        const m = assets.find(a => pattern.test(a.name || ''));
-        if (m) asset = m;
-      }
-      if (asset?.browser_download_url) return asset.browser_download_url;
-    } catch (e) { try { await logError(`[resolveSource] github fetch failed: ${e?.message || e}`); } catch (_) { } }
-  }
-  return '';
 }
 
 // 絶対パスかどうかを判定
@@ -422,68 +381,34 @@ function isAbsPath(p) {
   return /^(?:[a-zA-Z]:[\\\/]|\\\\|\/)/.test(String(p || ''));
 }
 
-// 指定 URL（またはローカルパス）を読み取り、toPath に保存
-async function downloadTo(url, toPath, toBaseDir) {
+// ファイルのダウンロード（直接パス＆GitHub）
+export async function downloadFileFromUrl(url, destPath) {
   const http = await import('@tauri-apps/plugin-http');
   const fs = await import('@tauri-apps/plugin-fs');
-  const { invoke, requestPermissions } = await import('@tauri-apps/api/core');
+  const { requestPermissions } = await import('@tauri-apps/api/core');
+  // HTTPS, destPath チェック
+  if (!/^https:\/\//i.test(url)) throw new Error(`Only https:// is allowed (got: ${url})`);
+  if (typeof destPath !== 'string' || !destPath.trim()) throw new Error('destPath must be an existing directory');
+  try { await requestPermissions('http:default'); } catch { }
+  // ファイル名を決定して保存先パスを構築
+  const name = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || 'download.bin');
+  const sep = destPath.includes('\\') ? '\\' : '/';
+  const finalPath = destPath.replace(/[\\\/]$/, '') + sep + name;
   try {
-    await requestPermissions('http:default');
-  } catch (_) {
-    // ignore permission request errors; fetch will raise a scoped denial if still blocked
-  }
-  // 親ディレクトリの存在を保証
-  const dir = toPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || '.';
-  try {
-    if (isAbsPath(toPath)) await fs.mkdir(dir, { recursive: true });
-    else await fs.mkdir(dir, { baseDir: toBaseDir, recursive: true });
-  } catch (_) { }
-  try {
-    // Google Drive (gdrive:<fileId>) は Rust 側にストリーム保存を委譲
-    if (typeof url === 'string' && url.startsWith('gdrive:')) {
-      const fileId = url.slice('gdrive:'.length);
-      await invoke('drive_download_to_file', { fileId, destPath: toPath });
-      return { path: toPath, baseDir: toBaseDir };
-    }
-    // URL がローカル絶対パスや file:// の場合は、HTTP 経由ではなく直接コピー/読み取り
-    let isLocal = false;
-    let localPath = '';
-    if (typeof url === 'string') {
-      if (/^file:\/\//i.test(url)) {
-        try {
-          const u = new URL(url);
-          let p = decodeURIComponent(u.pathname);
-          if (/^\/[a-zA-Z]:\//.test(p)) p = p.slice(1);
-          localPath = p.replace(/\\/g, '/');
-          isLocal = true;
-        } catch (_) { /* ignore */ }
-      } else if (isAbsPath(url)) {
-        localPath = url;
-        isLocal = true;
-      }
-    }
-
-    if (isLocal) {
-      const buf = await fs.readFile(localPath);
-      if (isAbsPath(toPath)) await fs.writeFile(toPath, buf);
-      else await fs.writeFile(toPath, buf, { baseDir: toBaseDir });
-      return { path: toPath, baseDir: toBaseDir };
-    }
-
+    // ファイルをダウンロードして保存
     const res = await http.fetch(url, { method: 'GET' });
+    if (!('ok' in res) || !res.ok) throw new Error(`HTTP error: ${res.status ?? 'unknown'}`);
     const ab = await res.arrayBuffer();
-    const buf = new Uint8Array(ab);
-    if (isAbsPath(toPath)) await fs.writeFile(toPath, buf);
-    else await fs.writeFile(toPath, buf, { baseDir: toBaseDir });
-    return { path: toPath, baseDir: toBaseDir };
+    await fs.writeFile(finalPath, new Uint8Array(ab));
+    return finalPath;
   } catch (e) {
-    const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
-    throw new Error(`downloadTo failed (src=${url}, dst=${toPath}): ${detail}`);
+    const detail = e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)) || 'unknown error';
+    throw new Error(`downloadFileFromUrl failed (url=${url}, dst=${finalPath}): ${detail}`);
   }
 }
 
-// ZIPファイルを展開します（Rust実装を優先、失敗時はJavaScriptで展開）
-async function extractZip(zipPath, destPath, baseDir) {
+// ZIPファイルを展開（Rust）
+async function extractZip(zipPath, destPath) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const base = (!isAbsPath(zipPath) && !isAbsPath(destPath)) ? 'AppConfig' : null;
@@ -513,23 +438,15 @@ export function hasInstaller(item) {
 // インストールの実行
 export async function runInstallerForItem(item, dispatch) {
   // 実行用コンテキストを構築
-  const version = latestVersionOf(item);
+  const version = item["latest-version"];
+  // logInfo(`item=${JSON.stringify(item)}, version=${version}`);
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
-  const tmp = await ensureTmpDir(idVersion);
+  const tmpDir = await ensureTmpDir(idVersion);
 
   const ctx = {
-    id: item.id,
-    version,
-    tmpDir: `${tmp.abs}`,
-    downloadPath: '',
-    productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
-    baseDir: tmp.baseDir,
+    tmpDir: tmpDir,
+    downloadPath: '',// ダウンロードしたときに設定
   };
-
-  // ダウンロード元 URL を決定
-  const url = await resolveSource(item);
-  if (!url) throw new Error('ダウンロード元 URL が見つかりません');
-  const suggested = fileNameFromUrl(url);
   const steps = item.installer.install;
 
   try {
@@ -539,25 +456,35 @@ export async function runInstallerForItem(item, dispatch) {
       try {
         switch (step.action) {
           case 'download': {
-            const toRaw = await expandMacros(step.to || '', ctx);
-            const isGDrive = typeof url === 'string' && url.startsWith('gdrive:');
-            let toRel = toRaw;
-            const looksDir = !toRaw || toRaw === ctx.tmpDir || /[\\\/]$/.test(toRaw);
-            if (!toRaw) {
-              toRel = isGDrive ? `{tmp}` : `{tmp}/${suggested}`;
-            } else if (looksDir) {
-              toRel = isGDrive ? toRaw.replace(/[\\\/]$/, '') : `${toRaw.replace(/[\\\/]$/, '')}/${suggested}`;
+            const src = item?.installer?.source;
+            if (!src) throw new Error(`Download source is not specified`);
+            // 1. Google Drive ダウンロード
+            if (src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
+              const { invoke } = await import('@tauri-apps/api/core');
+              await invoke('drive_download_to_file', { fileId: src.GoogleDrive.id, destPath: tmpDir });
+              ctx.downloadPath = tmpDir;
+              logInfo(`[installer ${item.id}] downloading from Google Drive fileId=${src.GoogleDrive.id} to ${tmpDir}`);
+              break;
             }
-            const toPath = await expandMacros(toRel, ctx);
-            await downloadTo(url, toPath, tmp.baseDir);
-            // GoogleDrive はディレクトリ基準で扱い、後続の {download} はディレクトリを指す
-            ctx.downloadPath = toPath;
+            let url = "";
+            // 2. GitHubの場合
+            if (src.github && src.github.owner && src.github.repo) {
+              url = await fetchGitHubURL(src.github);
+            }
+            // 3. 直接URLの場合
+            if (typeof src.direct === 'string' && src.direct) {
+              url = src.direct;
+            }
+            if (!url) throw new Error('Download source is not specified');
+            logInfo(`[installer ${item.id}] downloading from ${url} to ${tmpDir}`);
+            ctx.downloadPath = await downloadFileFromUrl(url, tmpDir);
             break;
           }
           case 'extract': {
             const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
             const toRel = await expandMacros(step.to || `{tmp}/extracted`, ctx);
-            await extractZip(fromRel, toRel, tmp.baseDir);
+            logInfo(`[installer ${item.id}] extracting from ${fromRel} to ${toRel}`);
+            await extractZip(fromRel, toRel);
             break;
           }
           case 'copy': {
@@ -610,16 +537,12 @@ export async function runInstallerForItem(item, dispatch) {
 
 // アンインストールを実行
 export async function runUninstallerForItem(item, dispatch) {
-  const version = latestVersionOf(item);
+  const version = item["latest-version"];
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
-  const tmp = await ensureTmpDir(idVersion);
+  const tmpDir = await ensureTmpDir(idVersion);
   const ctx = {
-    id: item.id,
-    version,
-    tmpDir: `${tmp.abs}`,
+    tmpDir: tmpDir,
     downloadPath: '',
-    productCode: item?.installer?.context?.productCode || item?.installer?.productCode || '',
-    baseDir: tmp.baseDir,
   };
 
   try {
@@ -668,7 +591,6 @@ export async function runUninstallerForItem(item, dispatch) {
           case 'delete': {
             const p = await expandMacros(step.path, ctx);
             try {
-              const allowedRoots = [ctx.pluginsDir, ctx.scriptsDir].filter(Boolean);
               const abs = isAbsPath(p) ? p : p; // アンインストールのパスは原則絶対パス。相対ならそのまま扱う
               const ok = await deletePath(abs);
               if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
