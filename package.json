@@ -12,22 +12,20 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
-    "@tauri-apps/plugin-dialog": "^2.3.3",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-fs": "^2.4.2",
     "@tauri-apps/plugin-http": "^2.5.2",
     "@tauri-apps/plugin-process": "^2.3.0",
-    "@tauri-apps/plugin-shell": "^2.4.0",
-    "@tauri-apps/plugin-updater": "^2.4.0",
-    "fflate": "^0.8.2",
-    "marked": "^12.0.2",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.8.2",
-    "xxhash-wasm": "^1.0.2"
+    "@tauri-apps/plugin-shell": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.9.0",
+    "marked": "^16.4.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.8.3",
-    "@vitejs/plugin-react": "^5.0.2",
-    "vite": "^7.1.3"
+    "@tauri-apps/cli": "^2.8.4",
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.10"
   }
 }
