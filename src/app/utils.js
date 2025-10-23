@@ -331,6 +331,10 @@ async function ensureTmpDir(idVersion) {
   return absPath;
 }
 
+// -------------------------
+// exe実行処理
+// -------------------------
+
 // 実行ファイルをウィンドウ非表示で実行する関数
 async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
   const shell = await import('@tauri-apps/plugin-shell');
@@ -354,6 +358,12 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
     throw new Error(`runExecutableQuietWindows failed (exe=${exeAbsPath}, args=${JSON.stringify(args)}, elevate=${!!elevate}) exit=${res.code}, stderr=${(res.stderr || '').slice(0, 500)}`);
   }
 }
+
+// async function runAuoSetup(exeAbsPath, args = [], tmpPath) {
+//   const { invoke } = await import('@tauri-apps/api/core');
+//   await invoke('run_auo_setup', { args });
+// }
+
 
 // インストーラーからダウンロードURLを生成
 // GitHub最新リリースのダウンロードURLを取得
@@ -411,13 +421,22 @@ export async function downloadFileFromUrl(url, destPath) {
 async function extractZip(zipPath, destPath) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const base = (!isAbsPath(zipPath) && !isAbsPath(destPath)) ? 'AppConfig' : null;
-    await invoke('extract_zip', { zipPath, destPath, base });
+    await invoke('extract_zip', { zipPath, destPath });
     return;
   } catch (e) { try { await logError(`[extractZip] failed: ${e?.message || e}`); } catch (_) { } }
 }
 
-// ファイルをコピーする関数(Rust)
+// 7-Zip SFX (self extractor) のデータを展開 (Rust)
+async function extractSevenZipSfx(sfxPath, destPath) {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    // const base = (!isAbsPath(sfxPath) && !isAbsPath(destPath)) ? 'AppConfig' : null;
+    await invoke('extract_7z_sfx', { sfxPath, destPath });
+    return;
+  } catch (e) { try { await logError(`[extractSevenZipSfx] failed: ${e?.message || e}`); } catch (_) { } }
+}
+
+// ファイルのコピー処理関数(Rust)
 async function copyPattern(fromPattern, toDirRel) {
   const { invoke } = await import('@tauri-apps/api/core');
   return await invoke('copy_item_js', { srcStr: fromPattern, dstStr: toDirRel });
@@ -487,6 +506,21 @@ export async function runInstallerForItem(item, dispatch) {
             await extractZip(fromRel, toRel);
             break;
           }
+          case 'extract_sfx': {
+            const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
+            const toRel = await expandMacros(step.to || `{tmp}/extracted`, ctx);
+            logInfo(`[installer ${item.id}] extracting SFX from ${fromRel} to ${toRel}`);
+            await extractSevenZipSfx(fromRel, toRel);
+            break;
+          }
+          case 'run_auo_setup': {
+            const pRaw = await expandMacros(step.path, ctx);
+            const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
+            logInfo(`[installer ${item.id}] running auo setup from ${pRaw}, args=${JSON.stringify(args)}`);
+            // await runInstaller(pRaw, args, false, ctx.tmpDir);
+            await runAuoSetup(pRaw, args, ctx.tmpDir);
+            break;
+          }
           case 'copy': {
             const from = await expandMacros(step.from, ctx);
             const to = await expandMacros(step.to, ctx);
@@ -497,6 +531,7 @@ export async function runInstallerForItem(item, dispatch) {
             }
             break;
           }
+          // aviutl2本体のインストールを対象
           case 'run': {
             const pRaw = await expandMacros(step.path, ctx);
             const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
@@ -512,7 +547,6 @@ export async function runInstallerForItem(item, dispatch) {
         try { await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`); } catch { }
         throw new Error(prefix, { cause: err }); // 原因を保持
       }
-
     }
 
     // インストール済みとして記録し、最新判定のために検出結果を更新

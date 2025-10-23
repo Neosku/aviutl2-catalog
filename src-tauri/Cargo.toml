@@ -30,7 +30,19 @@ thiserror = "2"
 arc-swap = "1"
 dirs-next = "2"
 walkdir = "2"
-
+sevenz-rust2 = "0.19"
+memmap2 = "0.9"
+memchr  = "2"
+encoding_rs = "0.8"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Threading",
+  "Win32_Graphics_Gdi", 
+] }
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

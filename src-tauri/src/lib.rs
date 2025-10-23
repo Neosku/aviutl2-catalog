@@ -1,7 +1,7 @@
 // use crate::paths::Dir;
 use once_cell::sync::Lazy;
 use std::fs;
-use std::io;
+use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use tauri::{Emitter, Manager};
@@ -336,43 +336,272 @@ fn query_catalog_index(q: Option<String>, tags: Option<Vec<String>>, types: Opti
 // -----------------------
 // ZIPファイル解凍
 // -----------------------
-
-#[tauri::command]
-// zip_path: 解凍するZIPファイルのパス（絶対または相対）
-fn extract_zip(app: tauri::AppHandle, zip_path: String, dest_path: String, base: Option<String>) -> Result<(), String> {
-    // 相対/別名ベースを解決して、絶対（に相当する）PathBufへ
-    let zip_abs = resolve_base(&app, &zip_path, &base);
-    let dest_abs = resolve_base(&app, &dest_path, &base);
-
-    // コア処理へ委譲（絶対パス版）
-    extract_zip_abs(&zip_abs, &dest_abs)
-}
-
 use std::fs::File;
 use zip::read::ZipArchive;
-// 絶対パスを受け取って解凍するコア処理
-pub fn extract_zip_abs(zip_abs: &Path, dest_abs: &Path) -> Result<(), String> {
-    let file = File::open(zip_abs).map_err(|e| format!("open zip error: {}", e))?;
+/// ZIPファイルを解凍する
+#[tauri::command]
+fn extract_zip(_app: tauri::AppHandle, zip_path: String, dest_path: String) -> Result<(), String> {
+    let file = File::open(&zip_path).map_err(|e| format!("open zip error: {}", e))?;
     let mut archive = ZipArchive::new(file).map_err(|e| format!("zip open error: {}", e))?;
-    archive.extract(dest_abs).map_err(|e| format!("extract error: {}", e))?;
+    archive.extract(Path::new(&dest_path)).map_err(|e| format!("extract error: {}", e))?;
+    Ok(())
+}
+// -----------------------
+// 7zファイル解凍
+// -----------------------
+use std::{
+    io::Cursor, // trait だけ暗黙に使われることがあるためimport
+};
+
+use memchr::memmem::Finder;
+use memmap2::MmapOptions;
+
+// sevenz_rust2 の「関数」APIを使う
+use sevenz_rust2::{
+    decompress_with_extract_fn_and_password, // パスワード・カスタムextract_fnあり
+    default_entry_extract_fn,
+    Password,
+};
+
+#[tauri::command]
+fn extract_7z_sfx(_app: tauri::AppHandle, sfx_path: String, dest_path: String) -> Result<(), String> {
+    let sfx_abs = Path::new(&sfx_path);
+    let dest_abs = Path::new(&dest_path);
+
+    // EXE を開いてメモリマップ（ゼロコピー）
+    let file = File::open(sfx_abs).map_err(|e| format!("open sfx error: {e}"))?;
+    let mmap = unsafe { MmapOptions::new().map(&file) }.map_err(|e| format!("mmap error: {e}"))?;
+
+    // 7z シグネチャを高速に検索
+    const SIGNATURE: &[u8; 6] = b"\x37\x7A\xBC\xAF\x27\x1C";
+    let finder = Finder::new(SIGNATURE);
+    let Some(offset) = finder.find(&mmap[..]) else {
+        return Err("7z signature not found in SFX binary".into());
+    };
+
+    // 以降を 7z ペイロードとして扱う（ゼロコピー）
+    let payload = &mmap[offset..];
+    if !payload.starts_with(SIGNATURE) {
+        return Err("7z signature mismatch after carving".into());
+    }
+
+    // Read+Seek を満たすカーソルで sevenz_rust2 の関数APIに渡す
+    let cursor = Cursor::new(payload);
+
+    // パスワード不要なら Password::empty() を使う（必要なら Password::from("...")）
+    decompress_with_extract_fn_and_password(cursor, dest_abs, Password::empty(), default_entry_extract_fn).map_err(|e| format!("7z decompress error: {e}"))?;
+
     Ok(())
 }
 
-/// 相対パスを基準ディレクトリから解決する
-fn resolve_base(app: &tauri::AppHandle, p: &str, base: &Option<String>) -> PathBuf {
-    if is_abs(p) {
-        return PathBuf::from(p);
-    }
-    match base.as_deref() {
-        Some("AppConfig") | Some("app_config") | Some("app-config") | None => {
-            if let Ok(dir) = app.path().app_config_dir() {
-                return dir.join(p);
-            }
-            PathBuf::from(p)
-        }
-        Some(_) => PathBuf::from(p),
-    }
-}
+// src/commands/run_auo_setup.rs
+// src/commands/run_auo_setup.rs
+// #![cfg(windows)]
+
+// use anyhow::{Context, Result as AnyResult};
+// use std::{ffi::c_void, sync::mpsc, thread};
+// use tauri::AppHandle;
+// use tokio::process::Command;
+// use windows::{
+//     core::w,
+//     Win32::{
+//         Foundation::{HINSTANCE, HWND, LPARAM, WPARAM},
+//         System::{LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
+//         UI::WindowsAndMessaging::{
+//             CreateWindowExW, DestroyWindow, DispatchMessageW, GetMessageW, GetWindowTextLengthW, GetWindowTextW, PostThreadMessageW, ShowWindow, TranslateMessage, ES_AUTOHSCROLL,
+//             ES_AUTOVSCROLL, ES_MULTILINE, ES_READONLY, HMENU, MSG, SW_HIDE, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_CHILD, WS_HSCROLL, WS_POPUP, WS_VSCROLL,
+//         },
+//     },
+// };
+
+// const EDT_ID: i32 = 100;
+
+// struct HiddenEdit {
+//     thread_id: u32,
+//     hwnd_parent: HWND,
+//     hwnd_edit: HWND,
+// }
+
+// // Window handles are thread-safe to send for this usage (message loop stays on worker thread).
+// unsafe impl Send for HiddenEdit {}
+
+// fn spawn_hidden_edit() -> AnyResult<HiddenEdit> {
+//     let (tx, rx) = mpsc::channel::<AnyResult<(u32, isize, isize)>>();
+
+//     thread::spawn(move || unsafe {
+//         let result: AnyResult<(u32, HWND, HWND)> = (|| {
+//             let hinst = GetModuleHandleW(None).context("GetModuleHandleW failed")?;
+//             let hinstance = HINSTANCE(hinst.0);
+
+//             // 親（不可視のトップレベル）
+//             let hwnd_parent = CreateWindowExW(WINDOW_EX_STYLE::default(), w!("STATIC"), None, WS_POPUP, 0, 0, 0, 0, None, None, Some(hinstance), None)
+//                 .context("CreateWindowExW parent failed")?;
+
+//             let edit_style = WINDOW_STYLE(WS_CHILD.0 | WS_VSCROLL.0 | WS_HSCROLL.0 | ES_READONLY as u32 | ES_MULTILINE as u32 | ES_AUTOVSCROLL as u32 | ES_AUTOHSCROLL as u32);
+
+//             // 子 Edit（ここにインストーラがログを流す）
+//             let hwnd_edit = CreateWindowExW(
+//                 WINDOW_EX_STYLE::default(),
+//                 w!("EDIT"),
+//                 None,
+//                 edit_style,
+//                 0,
+//                 0,
+//                 0,
+//                 0,
+//                 Some(hwnd_parent),
+//                 Some(HMENU(EDT_ID as usize as *mut c_void)),
+//                 Some(hinstance),
+//                 None,
+//             )
+//             .context("CreateWindowExW edit failed")?;
+
+//             ShowWindow(hwnd_parent, SW_HIDE);
+//             let tid = GetCurrentThreadId();
+//             Ok((tid, hwnd_parent, hwnd_edit))
+//         })();
+
+//         let mut handles: Option<(HWND, HWND)> = None;
+//         match result {
+//             Ok((tid, hwnd_parent, hwnd_edit)) => {
+//                 handles = Some((hwnd_parent, hwnd_edit));
+//                 let parent_raw = hwnd_parent.0 as isize;
+//                 let edit_raw = hwnd_edit.0 as isize;
+//                 let _ = tx.send(Ok((tid, parent_raw, edit_raw)));
+//             }
+//             Err(err) => {
+//                 let _ = tx.send(Err(err));
+//             }
+//         }
+
+//         if let Some((hwnd_parent, hwnd_edit)) = handles {
+//             // メッセージループ（他プロセスからの SendMessage を処理させるため必須）
+//             let mut msg = MSG::default();
+//             loop {
+//                 let status = GetMessageW(&mut msg, None, 0, 0);
+//                 if status.0 == -1 || !status.as_bool() {
+//                     break;
+//                 }
+//                 TranslateMessage(&msg);
+//                 DispatchMessageW(&msg);
+//             }
+
+//             // 後片付け
+//             let _ = DestroyWindow(hwnd_edit);
+//             let _ = DestroyWindow(hwnd_parent);
+//         }
+//     });
+
+//     let res = rx.recv().context("failed to create hidden edit")?;
+//     let (thread_id, hwnd_parent_raw, hwnd_edit_raw) = res?;
+//     let hwnd_parent = HWND(hwnd_parent_raw as *mut c_void);
+//     let hwnd_edit = HWND(hwnd_edit_raw as *mut c_void);
+//     Ok(HiddenEdit { thread_id, hwnd_parent, hwnd_edit })
+// }
+
+// fn stop_hidden_edit(loop_thread_id: u32) {
+//     unsafe {
+//         // ループを終了
+//         let _ = PostThreadMessageW(loop_thread_id, WM_QUIT, WPARAM(0), LPARAM(0));
+//     }
+// }
+
+// // UTF-16 安全に全文を取る
+// fn read_all_text(hwnd: HWND) -> String {
+//     unsafe {
+//         let len = GetWindowTextLengthW(hwnd) as usize; // 文字数（UTF-16 code unit）
+//         if len == 0 {
+//             return String::new();
+//         }
+//         let mut buf = vec![0u16; len + 1];
+//         let n = GetWindowTextW(hwnd, &mut buf) as usize;
+//         buf.truncate(n);
+//         String::from_utf16_lossy(&buf)
+//     }
+// }
+
+// // ---- ここが JS から呼ばれるコマンド ----
+
+// async fn run_auo_setup_impl(app: AppHandle, args: Option<Vec<String>>) -> Result<i32, String> {
+//     // 1) 隠し Edit を用意
+//     println!("[auo] spawn_hidden_edit..."); // ← NEW
+//     let edit = spawn_hidden_edit().map_err(|e| e.to_string())?;
+//     println!("[auo] hidden edit hwnd={:?} (thread_id={})", edit.hwnd_edit, edit.thread_id); // ← NEW
+
+//     // 2) 引数整形
+//     let exe_path = r"C:\Users\okuno\AppData\Roaming\aviutl2-catalog\installer-tmp\rigaya.x264guiEx-4.06\Plugin\exe_files\auo_setup2.exe";
+//     let phwnd = format!("0x{:x}", edit.hwnd_edit.0 as usize);
+//     let ppid = format!("0x{:08x}", std::process::id());
+
+//     let mut argv: Vec<String> = vec![
+//         "-ppid".into(),
+//         ppid.clone(),
+//         "-phwnd".into(),
+//         phwnd.clone(),
+//         "-aviutldir-default".into(),
+//     ];
+//     if let Some(extra) = args {
+//         argv.extend(extra);
+//     }
+//     println!("[auo] exe = {}", exe_path); // ← NEW
+//     println!("[auo] args = {:?}", argv); // ← NEW
+
+//     // 3) 起動
+//     let mut child = Command::new(exe_path)
+//         .args(argv.clone())
+//         .stdin(std::process::Stdio::null())
+//         .stdout(std::process::Stdio::null())
+//         .stderr(std::process::Stdio::null())
+//         .spawn()
+//         .map_err(|e| format!("failed to spawn: {e}"))?;
+//     println!("[auo] spawned pid={:?}", child.id()); // ← NEW
+
+//     // 4) ログ監視（差分のみ）
+//     let mut prev = String::new();
+//     println!("[auo] start polling hidden edit..."); // ← NEW
+//     loop {
+//         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
+//             println!("[auo] child exited: {:?}", status); // ← NEW
+
+//             // 最終吸い出し
+//             let now = read_all_text(edit.hwnd_edit);
+//             if now.starts_with(&prev) && now.len() > prev.len() {
+//                 let delta = &now[prev.len()..];
+//                 println!("[auo] final delta:\n{}", delta); // ← NEW
+//                 let _ = app.emit("auo-setup-log", delta.to_string());
+//             } else if !now.is_empty() {
+//                 println!("[auo] final full:\n{}", now); // ← NEW
+//                 let _ = app.emit("auo-setup-log", now.clone());
+//             }
+
+//             stop_hidden_edit(edit.thread_id);
+//             let code = status.code().unwrap_or_default();
+//             println!("[auo] returning exit code {}", code); // ← NEW
+//             return Ok(code);
+//         }
+
+//         // 差分取得
+//         let now = read_all_text(edit.hwnd_edit);
+//         if now.starts_with(&prev) && now.len() > prev.len() {
+//             let delta = &now[prev.len()..];
+//             println!("[auo] log delta:\n{}", delta); // ← NEW
+//             let _ = app.emit("auo-setup-log", delta.to_string());
+//             prev = now;
+//         } else if now != prev {
+//             // まれに全置換された場合
+//             println!("[auo] log replaced (len {} -> {}), sending full", prev.len(), now.len()); // ← NEW
+//             let _ = app.emit("auo-setup-log", now.clone());
+//             prev = now;
+//         }
+
+//         tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+//     }
+// }
+
+// #[tauri::command(rename = "run_auo_setup")]
+// fn run_auo_setup_cmd(app: AppHandle, args: Option<Vec<String>>) -> Result<i32, String> {
+//     tauri::async_runtime::block_on(run_auo_setup_impl(app, args))
+// }
 
 // -----------------------
 // インストール済みバージョン検出
@@ -835,6 +1064,7 @@ pub fn run() {
             set_catalog_index,
             query_catalog_index,
             extract_zip,
+            extract_7z_sfx,
             detect_versions_map,
             log_cmd,
             get_installed_map_cmd,
@@ -843,6 +1073,7 @@ pub fn run() {
             drive_download_to_file,
             expand_macros,
             copy_item_js,
+            // run_auo_setup_cmd,
             paths::complete_initial_setup,
             paths::update_settings,
             paths::default_aviutl2_root,
