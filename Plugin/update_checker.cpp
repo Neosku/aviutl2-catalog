@@ -676,7 +676,7 @@ static int ReadCatalogExePath(std::wstring& outPath) {
     std::string data;
     if (!ReadFileAll(JoinPath(GetAppCatalogRoot(), L"settings.json"), data)) return 1;
     std::string valUtf8;
-    if (!JsonFindString(data, "catalogDir", valUtf8)) return 2;
+    if (!JsonFindString(data, "catalog_exe_path", valUtf8)) return 2;
     outPath = Trim(U82W(valUtf8));
     return 0;
 }
@@ -1089,7 +1089,7 @@ static INPUT_PLUGIN_TABLE s_table = {
     INPUT_PLUGIN_TABLE::FLAG_VIDEO | INPUT_PLUGIN_TABLE::FLAG_AUDIO,
     L"AviUtl2 カタログ",                   // プラグインの名前
     L"*.*",                                // 入力ファイルフィルタ
-    L"AviUtl2 カタログ UpdateChecker v2",  // プラグインの情報
+    L"AviUtl2 カタログ UpdateChecker v3",  // プラグインの情報
 };
 
 // 入力プラグイン構造体を返す関数
