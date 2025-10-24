@@ -724,7 +724,7 @@ fn read_hash_cache(app: &tauri::AppHandle) -> std::collections::HashMap<String, 
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
                 if let Some(obj) = v.as_object() {
                     for (k, vv) in obj.iter() {
-                        map.insert(k.to_lowercase(), vv.clone());
+                        map.insert(k.clone(), vv.clone());
                     }
                 }
             }
@@ -807,7 +807,7 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections
     let mut file_hash_cache = std::collections::HashMap::new();
     let mut to_hash = Vec::new(); // 再計算が必要なパスのリスト
     for path in unique_paths.iter() {
-        let key = path.to_lowercase();
+        let key = path.to_string();
         if let Some((mtime_ms, size)) = stat_file(path) {
             if let Some(v) = disk_cache.get(&key) {
                 let hex = v.get("xxh3_128").and_then(|x| x.as_str()).unwrap_or("");
@@ -835,7 +835,7 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections
     // キャッシュを更新して保存(hash-cache.json用)
     for (k, hex) in file_hash_cache.iter() {
         if let Some((mtime_ms, size)) = stat_file(k) {
-            disk_cache.insert(k.clone(), serde_json::json!({"hex": hex, "mtimeMs": mtime_ms, "size": size}));
+            disk_cache.insert(k.clone(), serde_json::json!({"xxh3_128": hex, "mtimeMs": mtime_ms, "size": size}));
         }
     }
     write_hash_cache(app, &disk_cache);
@@ -865,7 +865,8 @@ fn determine_versions(
                 let ver = &arr[i];
                 let ver_str = ver.get("version").and_then(|v| v.as_str()).unwrap_or("");
                 let files_opt = ver.get("file").and_then(|v| v.as_array());
-                if files_opt.is_none() {
+                if files_opt.is_none() || files_opt.unwrap().is_empty() {
+                    // ファイル指定がないバージョンは検出に使わない
                     continue;
                 }
                 let files = files_opt.unwrap();
