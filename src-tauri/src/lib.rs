@@ -751,7 +751,7 @@ fn stat_file(path: &str) -> Option<(u128, u64)> {
     use std::time::UNIX_EPOCH;
     let md = std::fs::metadata(path).ok()?;
     let size = md.len();
-    let mtime = md.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_millis())?;
+    let mtime = md.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_millis();
     Some((mtime, size))
 }
 
@@ -788,6 +788,7 @@ fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> s
                 if let Some(files) = ver.get("file").and_then(|v| v.as_array()) {
                     for f in files {
                         let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                        // パスの区切りは一旦 Windows 風に合わせるが lowercasing はしない
                         let expanded = expand_macros(raw).replace('/', "\\");
                         unique_paths.insert(expanded);
                     }
@@ -796,7 +797,6 @@ fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> s
         }
     }
     log_info(app, &format!("Collected {} unique paths for version check.", unique_paths.len()));
-    // log_info(app, &format!("Collected {} unique paths for version check: {:?}", unique_paths.len(), unique_paths));
     unique_paths
 }
 
@@ -807,39 +807,45 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &std::collections
     let mut file_hash_cache = std::collections::HashMap::new();
     let mut to_hash = Vec::new(); // 再計算が必要なパスのリスト
     for path in unique_paths.iter() {
-        let key = path.to_string();
+        let key = path.to_string(); // キーは大小保持
         if let Some((mtime_ms, size)) = stat_file(path) {
             if let Some(v) = disk_cache.get(&key) {
                 let hex = v.get("xxh3_128").and_then(|x| x.as_str()).unwrap_or("");
                 let m = v.get("mtimeMs").and_then(|x| x.as_u64()).or_else(|| v.get("mtimeMs").and_then(|x| x.as_i64().map(|y| y as u64))).unwrap_or(0) as u128;
                 let sz = v.get("size").and_then(|x| x.as_u64()).unwrap_or(0);
                 if !hex.is_empty() && m == mtime_ms && sz == size {
-                    file_hash_cache.insert(key.clone(), hex.to_lowercase());
+                    // キャッシュヒット：hex もパスも小文字化せず、そのまま保持
+                    file_hash_cache.insert(key.clone(), hex.to_string());
                     continue;
                 }
             }
-            to_hash.push(path.clone());
+            // ファイルは存在するがキャッシュミス：再計算対象に
+            to_hash.push(key.clone());
         }
+        // stat できない（存在しない等）の場合はスキップ（再計算不要）
     }
+
     // 再計算が必要なパスについてハッシュを計算
-    for path_hash in to_hash.iter() {
-        match xxh3_128_hex(path_hash) {
+    for path_str in to_hash.iter() {
+        match xxh3_128_hex(path_str) {
             Ok(hex) => {
-                file_hash_cache.insert(path_hash.to_lowercase(), hex);
+                file_hash_cache.insert(path_str.clone(), hex);
             }
             Err(e) => {
-                log_error(app, &format!("hash error path=\"{}\": {}", path_hash, e));
+                log_error(app, &format!("hash error path=\"{}\": {}", path_str, e));
             }
         }
     }
     // キャッシュを更新して保存(hash-cache.json用)
     for (k, hex) in file_hash_cache.iter() {
         if let Some((mtime_ms, size)) = stat_file(k) {
-            disk_cache.insert(k.clone(), serde_json::json!({"xxh3_128": hex, "mtimeMs": mtime_ms, "size": size}));
+            // JSON には u64 で保存
+            let mtime_ms_u64 = mtime_ms as u64;
+            disk_cache.insert(k.clone(), serde_json::json!({"xxh3_128": hex, "mtimeMs": mtime_ms_u64, "size": size}));
         }
     }
     write_hash_cache(app, &disk_cache);
-    log_info(app, &format!("Built file hash cache with {} entries.", file_hash_cache.len())); // ログ(検証用)
+    log_info(app, &format!("Built file hash cache with {} entries.", file_hash_cache.len()));
     file_hash_cache
 }
 
@@ -865,8 +871,7 @@ fn determine_versions(
                 let ver = &arr[i];
                 let ver_str = ver.get("version").and_then(|v| v.as_str()).unwrap_or("");
                 let files_opt = ver.get("file").and_then(|v| v.as_array());
-                if files_opt.is_none() || files_opt.unwrap().is_empty() {
-                    // ファイル指定がないバージョンは検出に使わない
+                if files_opt.is_none() || files_opt.as_ref().unwrap().is_empty() {
                     continue;
                 }
                 let files = files_opt.unwrap();
@@ -874,18 +879,16 @@ fn determine_versions(
                 for f in files {
                     let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     let expanded = expand_macros(raw).replace('/', "\\");
-                    // log_info(app, &format!("Expanded path for {}: {}", id, expanded));
-                    let key = expanded.to_lowercase();
-                    let hex = file_hash_cache.get(&key).cloned().unwrap_or_default();
-                    let want = f.get("XXH3_128").or_else(|| f.get("xxh3_128")).and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
-                    let flipped = if hex.len() == 32 { hex.as_bytes().chunks(2).rev().map(|ch| std::str::from_utf8(ch).unwrap_or("")).collect::<String>() } else { hex.clone() };
-                    if !hex.is_empty() {
+                    let key = expanded.clone();
+                    let found_hex = file_hash_cache.get(&key).cloned().unwrap_or_default();
+                    let want_hex = f.get("XXH3_128").or_else(|| f.get("xxh3_128")).and_then(|v| v.as_str()).unwrap_or("");
+                    if !found_hex.is_empty() {
                         any_present = true;
                     }
-                    if !hex.is_empty() && !want.is_empty() && (hex != want && flipped != want) {
+                    if !found_hex.is_empty() && !want_hex.is_empty() && found_hex != want_hex {
                         any_mismatch = true;
                     }
-                    if want.is_empty() || (hex != want && flipped != want) {
+                    if want_hex.is_empty() || found_hex != want_hex {
                         ok = false;
                         break;
                     }
@@ -900,7 +903,6 @@ fn determine_versions(
             detected = String::from("???");
         }
         out.insert(id.clone(), detected.clone());
-        // log_info(app, &format!("detect item done id={} matched={} version={}", id, if detected.is_empty() { "false" } else { "true" }, detected));
     }
     log_info(app, &format!("detect all done count={},files={:?}", list.len(), out));
     out
