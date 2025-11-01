@@ -42,10 +42,10 @@ export default function SettingsDialog({ open, onClose }) {
             }));
 
             // HTML に現在のテーマを即時反映
-            try { document.documentElement.setAttribute('data-theme', theme); } catch (_) {}
+            try { document.documentElement.setAttribute('data-theme', theme); } catch (_) { }
           }
         } catch (e) {
-          try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) {}
+          try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) { }
         }
 
         // 2) アプリのバージョン
@@ -54,7 +54,7 @@ export default function SettingsDialog({ open, onClose }) {
           const v = (app?.getVersion) ? await app.getVersion() : '';
           if (mounted) setAppVersion(String(v || ''));
         } catch (e) {
-          try { await logError(`[settings] getVersion failed: ${e?.message || e}`); } catch (_) {}
+          try { await logError(`[settings] getVersion failed: ${e?.message || e}`); } catch (_) { }
         }
       })();
     }
@@ -66,8 +66,12 @@ export default function SettingsDialog({ open, onClose }) {
     const v = (type === 'checkbox') ? !!checked : value;
     setForm(prev => ({ ...prev, [name]: v }));
     if (name === 'theme') {
-      try { document.documentElement.setAttribute('data-theme', String(v || 'darkmode')); } catch (_) {}
+      try { document.documentElement.setAttribute('data-theme', String(v || 'darkmode')); } catch (_) { }
     }
+  }
+
+  function handlePortableToggle(next) {
+    setForm(prev => ({ ...prev, isPortableMode: !!next }));
   }
 
   async function pickDir(field, title) {
@@ -95,18 +99,18 @@ export default function SettingsDialog({ open, onClose }) {
       });
 
       // 3) テーマはフロント設定として反映
-      try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) {}
+      try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) { }
 
       // 4) 再検出（UI 反映）
       try {
         const detected = await detectInstalledVersionsMap(items || []);
         dispatch({ type: 'SET_DETECTED_MAP', payload: detected });
-      } catch (_) {}
+      } catch (_) { }
 
       onClose?.();
     } catch (e) {
       setError(e?.message ? String(e.message) : '保存に失敗しました。権限やパスをご確認ください。');
-      try { await logError(`[settings] save failed: ${e?.message || e}`); } catch (_) {}
+      try { await logError(`[settings] save failed: ${e?.message || e}`); } catch (_) { }
     } finally {
       setSaving(false);
     }
@@ -139,10 +143,36 @@ export default function SettingsDialog({ open, onClose }) {
             </label>
 
             {/* ポータブルモード */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="checkbox" name="isPortableMode" checked={!!form.isPortableMode} onChange={onChange} />
-              ポータブルモードを使用する（プラグインやスクリプトをdataフォルダに保存します）
-            </label>
+            <div
+              className="settings-toggle"
+              role="group"
+              aria-labelledby="settings-portable-mode"
+            >
+              <div className="settings-toggle__label" id="settings-portable-mode">ポータブルモード</div>
+              <div className="settings-toggle__options">
+                <button
+                  type="button"
+                  className={`btn btn--toggle ${!form.isPortableMode ? 'is-active' : ''}`}
+                  aria-pressed={!form.isPortableMode}
+                  onClick={() => handlePortableToggle(false)}
+                >
+                  オフ
+                  <span className="setup-checkbox__option-badge">推奨</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn--toggle ${form.isPortableMode ? 'is-active' : ''}`}
+                  aria-pressed={!!form.isPortableMode}
+                  onClick={() => handlePortableToggle(true)}
+                >
+                  オン
+                </button>
+              </div>
+              <p className="settings-toggle__description">
+                オフ（推奨）: AviUtl2 の設定やプラグインは ProgramData フォルダに保存されます。<br />
+                オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
+              </p>
+            </div>
 
             {/* テーマ */}
             <label>テーマ（Theme）

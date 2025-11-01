@@ -2128,6 +2128,39 @@ select {
     margin-top: 4px;
 }
 
+.settings-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.settings-toggle__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.settings-toggle__options {
+    display: flex;
+    gap: 8px;
+}
+
+.settings-toggle__options .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-width: 1px;
+}
+
+.settings-toggle__description {
+    margin: 0 !important;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
 .setup-checkbox {
     display: flex;
     flex-direction: column;
