@@ -359,10 +359,15 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
   }
 }
 
-// async function runAuoSetup(exeAbsPath, args = [], tmpPath) {
-//   const { invoke } = await import('@tauri-apps/api/core');
-//   await invoke('run_auo_setup', { args });
-// }
+async function runAuoSetup(exeAbsPath) {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const result = await invoke('run_auo_setup', { exePath: exeAbsPath });
+  } catch (e) {
+    logError(`[runAuoSetup] failed exe=${exeAbsPath}: ${e}`);
+    throw e; // ← 呼び出し元に Rust のエラーを投げる
+  }
+}
 
 
 // インストーラーからダウンロードURLを生成
@@ -513,14 +518,6 @@ export async function runInstallerForItem(item, dispatch) {
             await extractSevenZipSfx(fromRel, toRel);
             break;
           }
-          case 'run_auo_setup': {
-            const pRaw = await expandMacros(step.path, ctx);
-            const args = await Promise.all((step.args || []).map(a => expandMacros(String(a), ctx)));
-            logInfo(`[installer ${item.id}] running auo setup from ${pRaw}, args=${JSON.stringify(args)}`);
-            // await runInstaller(pRaw, args, false, ctx.tmpDir);
-            await runAuoSetup(pRaw, args, ctx.tmpDir);
-            break;
-          }
           case 'copy': {
             const from = await expandMacros(step.from, ctx);
             const to = await expandMacros(step.to, ctx);
@@ -538,6 +535,11 @@ export async function runInstallerForItem(item, dispatch) {
             await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
             break;
           }
+          case 'run_auo_setup': {
+            const pRaw = await expandMacros(step.path, ctx);
+            await runAuoSetup(pRaw);
+            break;
+          }
           default:
             throw new Error(`unsupported action: ${String(step.action)}`);
         }
@@ -545,7 +547,7 @@ export async function runInstallerForItem(item, dispatch) {
         const err = e instanceof Error ? e : new Error(String(e));
         const prefix = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed`;
         try { await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`); } catch { }
-        throw new Error(prefix, { cause: err }); // 原因を保持
+        throw new Error(`${prefix}: ${err.message}`, { cause: err });
       }
     }
 
