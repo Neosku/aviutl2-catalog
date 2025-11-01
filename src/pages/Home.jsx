@@ -5,13 +5,14 @@ import Header from '../components/Header.jsx';
 import SortBar from '../components/SortBar.jsx';
 import PluginCard from '../components/PluginCard.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
-import { useCatalog } from '../app/store/catalog.jsx';
-import { getSorter, filterByTagsAndType, matchQuery, logError } from '../app/utils.js';
+import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
+import { getSorter, filterByTagsAndType, matchQuery, logError, hasInstaller, runInstallerForItem } from '../app/utils.js';
 
 // メインページコンポーネント
 // プラグイン一覧の表示、検索、フィルタリング、ソート機能を提供
 export default function Home() {
   const { items, loading, error } = useCatalog();
+  const dispatch = useCatalogDispatch();
   const location = useLocation();
   const navigate = useNavigate();
   // URLパラメータから検索・フィルタ条件を取得
@@ -23,10 +24,18 @@ export default function Home() {
   const tags = (params.get('tags') || '').split(',').filter(Boolean);
   const types = selectedType ? [selectedType] : [];
   const installedOnly = params.get('installed') === '1';
-  
+
   // Tauri側の検索結果IDリスト
   const [ids, setIds] = useState([]);
-  
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkError, setBulkError] = useState('');
+
+  // 更新対象: インストール済みかつ最新版でないプラグインのみ抽出
+  const updatableItems = useMemo(() => {
+    return items.filter(it => it.installed && !it.isLatest && hasInstaller(it));
+  }, [items]);
+
   // 基本的なフィルタリング処理（検索・タグ・種別）
   const baseList = useMemo(() => {
     if (ids && ids.length) {
@@ -38,12 +47,12 @@ export default function Home() {
     const base = q ? items.filter(it => matchQuery(it, q)) : items;
     return filterByTagsAndType(base, tags, types);
   }, [items, ids.join('|'), q, tags.join(','), types.join(',')]);
-  
+
   // インストール済みのみ表示フィルタ
   const filtered = useMemo(() => {
     return installedOnly ? baseList.filter(it => it.installed) : baseList;
   }, [baseList, installedOnly]);
-  
+
   // ソート処理
   const sorted = useMemo(() => {
     return [...filtered].sort(getSorter(sortKey, dir));
@@ -78,10 +87,52 @@ export default function Home() {
     navigate(`${location.pathname}?${p.toString()}`);
   }
 
+  // 更新があるプラグインをまとめてインストール処理
+  async function handleBulkUpdate() {
+    if (bulkUpdating || !updatableItems.length) return;
+    setBulkUpdating(true);
+    setBulkError('');
+    setBulkStatus('更新を開始します…');
+    const targets = updatableItems.slice();
+    const failed = [];
+    for (let i = 0; i < targets.length; i++) {
+      const item = targets[i];
+      setBulkStatus(`${i + 1}/${targets.length} ${item.name} を更新中…`);
+      try {
+        await runInstallerForItem(item, dispatch);
+      } catch (err) {
+        const msg = err?.message || String(err) || '不明なエラー';
+        failed.push({ item, msg });
+        try { await logError(`[BulkUpdate] ${item.id}: ${msg}`); } catch (_) { /* ignore */ }
+      }
+    }
+
+    if (failed.length) {
+      const example = failed[0];
+      setBulkError(`${failed.length}件のプラグインで更新に失敗しました（例: ${example.item.name}: ${example.msg}）`);
+      const successCount = targets.length - failed.length;
+      setBulkStatus(successCount > 0 ? `一部のプラグイン（${successCount}件）は更新に成功しました。` : '');
+    } else {
+      setBulkStatus(`${targets.length}件のプラグインを更新しました。`);
+    }
+    setBulkUpdating(false);
+  }
+
   return (
     <div>
       <Header />
       <SortBar value={sortKey} />
+      <div className="container" aria-live="polite">
+        <button
+          className="btn btn--primary"
+          onClick={handleBulkUpdate}
+          disabled={bulkUpdating || !updatableItems.length}
+        >
+          {bulkUpdating ? '更新処理中…' : `更新があるプラグインを一括ダウンロード (${updatableItems.length}件)`}
+        </button>
+        {bulkStatus && <div className="bulk-status">{bulkStatus}</div>}
+        {bulkError && <div className="error" role="alert">{bulkError}</div>}
+      </div>
       <div className="container layout-two">
         <aside>
           {/* 検索結果表示エリア */}
@@ -109,7 +160,7 @@ export default function Home() {
           )}
           {/* プラグインカード一覧 */}
           {!loading && sorted.map(it => (
-            <PluginCard key={it.id} item={it}/>
+            <PluginCard key={it.id} item={it} />
           ))}
         </main>
       </div>
