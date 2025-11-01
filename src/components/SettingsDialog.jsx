@@ -25,30 +25,37 @@ export default function SettingsDialog({ open, onClose }) {
       (async () => {
         setError('');
 
-        // 1) フロント側設定（テーマ）
+        // 1) すべての設定を getSettings() から取得（aviutl2_root / is_portable_mode / theme）
         try {
           const cur = await getSettings();
+          console.log('[settings] current settings:', cur);
           if (mounted) {
             const theme = String(cur?.theme || 'darkmode');
-            setForm(prev => ({ ...prev, theme }));
+            const aviutl2Root = String(cur?.aviutl2_root || '');
+            const isPortableMode = !!cur?.is_portable_mode;
+
+            setForm(prev => ({
+              ...prev,
+              theme,
+              aviutl2Root,
+              isPortableMode,
+            }));
+
+            // HTML に現在のテーマを即時反映
             try { document.documentElement.setAttribute('data-theme', theme); } catch (_) {}
           }
-        } catch (e) { try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) {} }
+        } catch (e) {
+          try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) {}
+        }
 
-        // 2) Rust 側の現在の aviutl2_root を取得して初期表示に反映
-        try {
-          const map = /** @type {Record<string,string>} */ (await invoke('get_app_dirs')) || {};
-          if (mounted && map.aviutl2_root) {
-            setForm(prev => ({ ...prev, aviutl2Root: map.aviutl2_root }));
-          }
-        } catch (e) { try { await logError(`[settings] get_app_dirs failed: ${e?.message || e}`); } catch (_) {} }
-
-        // 3) アプリのバージョン
+        // 2) アプリのバージョン
         try {
           const app = await import('@tauri-apps/api/app');
           const v = (app?.getVersion) ? await app.getVersion() : '';
           if (mounted) setAppVersion(String(v || ''));
-        } catch (e) { try { await logError(`[settings] getVersion failed: ${e?.message || e}`); } catch (_) {} }
+        } catch (e) {
+          try { await logError(`[settings] getVersion failed: ${e?.message || e}`); } catch (_) {}
+        }
       })();
     }
     return () => { mounted = false; };
@@ -80,14 +87,14 @@ export default function SettingsDialog({ open, onClose }) {
       const aviutl2Root = String(resolved || '').trim();
       if (!aviutl2Root) throw new Error('AviUtl2 のフォルダを指定してください。');
 
-      // 2) Rust 側へ保存＆ APP_DIR 更新（settings.json も更新）
+      // 2) Rust 側へ保存（settings.json も更新）
       await invoke('update_settings', {
         aviutl2Root,
         isPortableMode: !!form.isPortableMode,
-        theme: (form.theme || 'dark').trim()
+        theme: (form.theme || 'darkmode').trim(),
       });
 
-      // 3) テーマはフロント設定として保存
+      // 3) テーマはフロント設定として反映
       try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) {}
 
       // 4) 再検出（UI 反映）
@@ -125,11 +132,10 @@ export default function SettingsDialog({ open, onClose }) {
                   name="aviutl2Root"
                   value={form.aviutl2Root}
                   onChange={onChange}
-                  placeholder="例: C:\Program Files\AviUtl2"
+                  placeholder="例: C:\\Program Files\\AviUtl2"
                 />
                 <button className="btn" type="button" onClick={() => pickDir('aviutl2Root', 'AviUtl2 のルートフォルダ')}>参照</button>
               </div>
-              {/* <small className="form__help">aviutl2.exeがあるフォルダを指定してください</small> */}
             </label>
 
             {/* ポータブルモード */}
