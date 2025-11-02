@@ -34,6 +34,7 @@ sevenz-rust2 = "0.19"
 memmap2 = "0.9"
 memchr  = "2"
 encoding_rs = "0.8"
+percent-encoding = "2"
 windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_UI_WindowsAndMessaging",

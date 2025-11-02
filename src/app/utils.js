@@ -396,29 +396,48 @@ function isAbsPath(p) {
   return /^(?:[a-zA-Z]:[\\\/]|\\\\|\/)/.test(String(p || ''));
 }
 
-// ファイルのダウンロード（直接パス＆GitHub）
-export async function downloadFileFromUrl(url, destPath) {
-  const http = await import('@tauri-apps/plugin-http');
-  const fs = await import('@tauri-apps/plugin-fs');
-  const { requestPermissions } = await import('@tauri-apps/api/core');
-  // HTTPS, destPath チェック
+// ファイルのダウンロード（Rust経由）
+export async function downloadFileFromUrl(url, destPath, options = {}) {
   if (!/^https:\/\//i.test(url)) throw new Error(`Only https:// is allowed (got: ${url})`);
   if (typeof destPath !== 'string' || !destPath.trim()) throw new Error('destPath must be an existing directory');
-  try { await requestPermissions('http:default'); } catch { }
-  // ファイル名を決定して保存先パスを構築
-  const name = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || 'download.bin');
-  const sep = destPath.includes('\\') ? '\\' : '/';
-  const finalPath = destPath.replace(/[\\\/]$/, '') + sep + name;
+
+  const { invoke } = await import('@tauri-apps/api/core');
+  const { listen } = await import('@tauri-apps/api/event');
+
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const taskId = options.taskId
+    || (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `dl-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const unlisteners = [];
+  const registerListener = async (eventName, handler) => {
+    const unlisten = await listen(eventName, (evt) => {
+      const payload = evt?.payload;
+      if (!payload || payload.taskId !== taskId) return;
+      handler(payload);
+    });
+    unlisteners.push(unlisten);
+  };
+
+  if (onProgress) {
+    await registerListener('download:progress', (payload) => {
+      const read = typeof payload.read === 'number' ? payload.read : 0;
+      const total = typeof payload.total === 'number' ? payload.total : null;
+      onProgress({ read, total });
+    });
+  }
+
   try {
-    // ファイルをダウンロードして保存
-    const res = await http.fetch(url, { method: 'GET' });
-    if (!('ok' in res) || !res.ok) throw new Error(`HTTP error: ${res.status ?? 'unknown'}`);
-    const ab = await res.arrayBuffer();
-    await fs.writeFile(finalPath, new Uint8Array(ab));
+    const finalPath = await invoke('download_file_to_path', { url, destPath, taskId });
     return finalPath;
   } catch (e) {
     const detail = e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)) || 'unknown error';
-    throw new Error(`downloadFileFromUrl failed (url=${url}, dst=${finalPath}): ${detail}`);
+    throw new Error(`downloadFileFromUrl failed (url=${url}): ${detail}`);
+  } finally {
+    for (const unlisten of unlisteners) {
+      try { unlisten(); } catch (_) { }
+    }
   }
 }
 
@@ -458,9 +477,20 @@ export function hasInstaller(item) {
 // インストーラー&アンインストーラーの実行
 // -------------------------
 
+const STEP_PROGRESS_LABELS = {
+  download: 'ダウンロード中…',
+  extract: '展開中…',
+  extract_sfx: '展開中…',
+  copy: 'コピー中…',
+  run: '実行中…',
+  run_auo_setup: '実行中…',
+};
+
+const STEP_PROGRESS_OFFSET = 0;
+
 
 // インストールの実行
-export async function runInstallerForItem(item, dispatch) {
+export async function runInstallerForItem(item, dispatch, onProgress) {
   // 実行用コンテキストを構築
   const version = item["latest-version"];
   // logInfo(`item=${JSON.stringify(item)}, version=${version}`);
@@ -471,12 +501,49 @@ export async function runInstallerForItem(item, dispatch) {
     tmpDir: tmpDir,
     downloadPath: '',// ダウンロードしたときに設定
   };
-  const steps = item.installer.install;
+  const steps = Array.isArray(item?.installer?.install) ? item.installer.install : [];
+  const totalSteps = steps.length;
+
+  const buildProgressPayload = (completedUnits, step, index, phase) => {
+    const safeUnits = Number.isFinite(completedUnits) ? completedUnits : 0;
+    const ratio = totalSteps <= 0
+      ? (phase === 'done' ? 1 : 0)
+      : Math.min(1, Math.max(0, safeUnits / totalSteps));
+    const label = (() => {
+      if (phase === 'done') return '完了';
+      if (phase === 'init') return '準備中…';
+      if (phase === 'error') return 'エラーが発生しました';
+      const action = step?.action;
+      return STEP_PROGRESS_LABELS[action] || '処理中…';
+    })();
+    return {
+      ratio,
+      percent: Math.round(ratio * 100),
+      step: step?.action ?? null,
+      stepIndex: Number.isInteger(index) && index >= 0 ? index : null,
+      totalSteps,
+      label,
+      phase,
+    };
+  };
+
+  const emitProgress = (completedUnits, step, index, phase) => {
+    if (typeof onProgress !== 'function') return;
+    try {
+      onProgress(buildProgressPayload(completedUnits, step, index, phase));
+    } catch (_) {
+      // UI 側の例外は握り潰す
+    }
+  };
+
+  emitProgress(0, null, -1, 'init');
 
   try {
     await logInfo(`[installer ${item.id}] start version=${version || ''} steps=${steps.length}`);
     for (let idx = 0; idx < steps.length; idx++) {
       const step = steps[idx];
+      const runningUnits = idx;
+      emitProgress(runningUnits, step, idx, 'running');
       try {
         switch (step.action) {
           case 'download': {
@@ -484,8 +551,44 @@ export async function runInstallerForItem(item, dispatch) {
             if (!src) throw new Error(`Download source is not specified`);
             // 1. Google Drive ダウンロード
             if (src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
-              const { invoke } = await import('@tauri-apps/api/core');
-              await invoke('drive_download_to_file', { fileId: src.GoogleDrive.id, destPath: tmpDir });
+              const fileId = src.GoogleDrive.id;
+              const stepSpan = 1 - STEP_PROGRESS_OFFSET;
+              const startUnits = runningUnits;
+              const maxUnits = idx + 1 - 0.01;
+              let unknownUnits = startUnits;
+              const unlisteners = [];
+              if (typeof onProgress === 'function') {
+                const { listen } = await import('@tauri-apps/api/event');
+                const register = async (eventName, handler) => {
+                  const unlisten = await listen(eventName, (evt) => {
+                    const payload = evt?.payload;
+                    if (!payload || payload.fileId !== fileId) return;
+                    handler(payload);
+                  });
+                  unlisteners.push(unlisten);
+                };
+                await register('drive:progress', (payload) => {
+                  const read = typeof payload.read === 'number' ? payload.read : 0;
+                  const total = typeof payload.total === 'number' ? payload.total : null;
+                  if (typeof total === 'number' && total > 0) {
+                    const ratio = Math.min(1, Math.max(0, total ? read / total : 0));
+                    const units = startUnits + stepSpan * ratio;
+                    emitProgress(units, step, idx, 'running');
+                  } else if (typeof read === 'number' && read > 0) {
+                    const increment = stepSpan * 0.05;
+                    unknownUnits = Math.min(maxUnits, unknownUnits + increment);
+                    emitProgress(unknownUnits, step, idx, 'running');
+                  }
+                });
+              }
+              try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                await invoke('drive_download_to_file', { fileId, destPath: tmpDir });
+              } finally {
+                for (const unlisten of unlisteners) {
+                  try { unlisten(); } catch (_) { }
+                }
+              }
               ctx.downloadPath = tmpDir;
               logInfo(`[installer ${item.id}] downloading from Google Drive fileId=${src.GoogleDrive.id} to ${tmpDir}`);
               break;
@@ -501,7 +604,23 @@ export async function runInstallerForItem(item, dispatch) {
             }
             if (!url) throw new Error('Download source is not specified');
             logInfo(`[installer ${item.id}] downloading from ${url} to ${tmpDir}`);
-            ctx.downloadPath = await downloadFileFromUrl(url, tmpDir);
+            const stepSpan = 1 - STEP_PROGRESS_OFFSET;
+            const startUnits = runningUnits;
+            const maxUnits = idx + 1 - 0.01;
+            let unknownUnits = startUnits;
+            ctx.downloadPath = await downloadFileFromUrl(url, tmpDir, {
+              onProgress: ({ read, total }) => {
+                if (typeof total === 'number' && total > 0) {
+                  const ratio = Math.min(1, Math.max(0, total ? read / total : 0));
+                  const units = startUnits + stepSpan * ratio;
+                  emitProgress(units, step, idx, 'running');
+                } else if (typeof read === 'number' && read > 0) {
+                  const increment = stepSpan * 0.05;
+                  unknownUnits = Math.min(maxUnits, unknownUnits + increment);
+                  emitProgress(unknownUnits, step, idx, 'running');
+                }
+              },
+            });
             break;
           }
           case 'extract': {
@@ -543,7 +662,9 @@ export async function runInstallerForItem(item, dispatch) {
           default:
             throw new Error(`unsupported action: ${String(step.action)}`);
         }
+        emitProgress(idx + 1, step, idx, 'step-complete');
       } catch (e) {
+        emitProgress(runningUnits, step, idx, 'error');
         const err = e instanceof Error ? e : new Error(String(e));
         const prefix = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed`;
         try { await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`); } catch { }
@@ -559,6 +680,7 @@ export async function runInstallerForItem(item, dispatch) {
       dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
     }
     await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
+    emitProgress(totalSteps, null, null, 'done');
     // 後始末: 一時作業フォルダを削除（成功時のみ）
     // try {
     //   const fs = await import('@tauri-apps/plugin-fs');

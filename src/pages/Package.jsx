@@ -8,6 +8,7 @@ import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, removeInstalledId, latestVersionOf, loadInstalledMap } from '../app/utils.js';
 import { renderMarkdown } from '../app/markdown.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
+import ProgressCircle from '../components/ProgressCircle.jsx';
 
 // パスがmdファイルパスかどうか判定
 function isMarkdownFilePath(path) {
@@ -49,6 +50,8 @@ export default function Package() {
   const [downloading, setDownloading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(null);
+  const [updateProgress, setUpdateProgress] = useState(null);
   const [descriptionHtml, setDescriptionHtml] = useState(() => (
     isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource)
   ));
@@ -106,6 +109,12 @@ export default function Package() {
 
   // インストール可能かどうかの判定
   const canInstall = hasInstaller(item) || !!item.downloadURL;
+  const downloadRatio = downloadProgress?.ratio ?? 0;
+  const downloadPercent = downloadProgress?.percent ?? Math.round(downloadRatio * 100);
+  const downloadLabel = downloadProgress?.label ?? '準備中…';
+  const updateRatio = updateProgress?.ratio ?? 0;
+  const updatePercent = updateProgress?.percent ?? Math.round(updateRatio * 100);
+  const updateLabel = updateProgress?.label ?? '準備中…';
 
   // アイテムが見つからない場合のエラー表示
   if (!item) {
@@ -121,8 +130,9 @@ export default function Package() {
   async function onDownload() {
     try {
       setDownloading(true);
+      setDownloadProgress({ ratio: 0, percent: 0, label: '準備中…', phase: 'init' });
       if (hasInstaller(item)) {
-        await runInstallerForItem(item, dispatch);
+        await runInstallerForItem(item, dispatch, setDownloadProgress);
       } else {
         throw new Error('インストールが未実装です');
       }
@@ -130,6 +140,7 @@ export default function Package() {
       setError(`更新に失敗しました\n\n${err?.message || String(err) || '原因不明のエラー'}`);
     } finally {
       setDownloading(false);
+      setDownloadProgress(null);
     }
   }
 
@@ -137,14 +148,18 @@ export default function Package() {
   async function onUpdate() {
     try {
       setUpdating(true);
+      setUpdateProgress({ ratio: 0, percent: 0, label: '準備中…', phase: 'init' });
       if (hasInstaller(item)) {
-        await runInstallerForItem(item, dispatch);
+        await runInstallerForItem(item, dispatch, setUpdateProgress);
       } else {
         throw new Error('インストールが未実装です');
       }
     } catch (err) {
       setError(`更新に失敗しました\n\n${err?.message || String(err) || '原因不明のエラー'}`);
-    } finally { setUpdating(false); }
+    } finally {
+      setUpdating(false);
+      setUpdateProgress(null);
+    }
   }
 
   // 削除処理（アンインストーラがある場合は実行、無い場合は状態のみクリア）
@@ -165,7 +180,11 @@ export default function Package() {
     } catch (err) {
       const msg = (err && (err.message || err.toString())) || '原因不明のエラー';
       setError(`削除に失敗しました\n\n${msg}`);
-    } finally { setRemoving(false); }
+    } finally {
+      setRemoving(false);
+      setDownloadProgress(null);
+      setUpdateProgress(null);
+    }
   }
 
   // 表示用のフォーマット済み情報を準備
@@ -252,12 +271,34 @@ export default function Package() {
                       <span className="pill pill--ok pill--block sideactions__btn"><Icon name="check_circle" size={18} />最新{item.installedVersion ? `（${item.installedVersion}）` : ''}</span>
                     </div>
                   ) : (
-                    <button className="btn btn--primary sideactions__btn" onClick={onUpdate} disabled={!canInstall}><Icon name="refresh" size={18} /> 更新</button>
+                    <button className="btn btn--primary sideactions__btn" onClick={onUpdate} disabled={!canInstall || updating}>
+                      {updating ? (
+                        <span className="action-progress" aria-live="polite">
+                          <ProgressCircle value={updateRatio} size={20} strokeWidth={3} ariaLabel={`${updateLabel} ${updatePercent}%`} />
+                          <span className="action-progress__label">{updateLabel} {`${updatePercent}%`}</span>
+                        </span>
+                      ) : (
+                        <>
+                          <Icon name="refresh" size={18} /> 更新
+                        </>
+                      )}
+                    </button>
                   )}
                   <button className="btn btn--danger sideactions__btn" onClick={onRemove} disabled={removing}>{removing ? (<><span className="spinner" aria-hidden></span> 削除中…</>) : (<><Icon name="delete" size={18} /> 削除</>)}</button>
                 </>
               ) : (
-                <button className="btn btn--primary sideactions__btn" onClick={onDownload} disabled={!canInstall || downloading}>{downloading ? (<><span className="spinner" aria-hidden></span> 実行中…</>) : (<><span aria-hidden><svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><g stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></g></svg></span> ダウンロード</>)}</button>
+                <button className="btn btn--primary sideactions__btn" onClick={onDownload} disabled={!canInstall || downloading}>
+                  {downloading ? (
+                    <span className="action-progress" aria-live="polite">
+                      <ProgressCircle value={downloadRatio} size={20} strokeWidth={3} ariaLabel={`${downloadLabel} ${downloadPercent}%`} />
+                      <span className="action-progress__label">{downloadLabel} {`${downloadPercent}%`}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span aria-hidden><svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><g stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></g></svg></span> インストール
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>

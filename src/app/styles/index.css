@@ -1360,6 +1360,59 @@ select {
     }
 }
 
+.progress-circle {
+    --progress-circle-size: 24px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--progress-circle-size);
+    height: var(--progress-circle-size);
+    color: inherit;
+}
+
+.progress-circle__svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-circle__track {
+    stroke: rgba(255, 255, 255, 0.2);
+}
+
+.progress-circle__indicator {
+    stroke: currentColor;
+    transition: stroke-dashoffset 0.25s ease;
+}
+
+.progress-circle__value {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: currentColor;
+    pointer-events: none;
+}
+
+:root[data-theme='light'] .progress-circle__track,
+:root[data-theme='lightmode'] .progress-circle__track {
+    stroke: rgba(15, 23, 42, 0.2);
+}
+
+.action-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.action-progress__label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 /* シンプルモーダル */
 .modal {
     position: fixed;

@@ -5,6 +5,7 @@ import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, r
 import { useCatalogDispatch } from '../app/store/catalog.jsx';
 import ErrorDialog from './ErrorDialog.jsx';
 import Icon from './Icon.jsx';
+import ProgressCircle from './ProgressCircle.jsx';
 
 // メインページに表示するカードコンポーネント
 export default function PluginCard({ item }) {
@@ -16,8 +17,17 @@ export default function PluginCard({ item }) {
   const [downloading, setDownloading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(null);
+  const [updateProgress, setUpdateProgress] = useState(null);
   // インストーラーがある場合に操作を有効化
-  const canInstall = hasInstaller(item) ;
+  const canInstall = hasInstaller(item);
+
+  const downloadRatio = downloadProgress?.ratio ?? 0;
+  const downloadPercent = downloadProgress?.percent ?? Math.round(downloadRatio * 100);
+  const downloadLabel = downloadProgress?.label ?? '準備中…';
+  const updateRatio = updateProgress?.ratio ?? 0;
+  const updatePercent = updateProgress?.percent ?? Math.round(updateRatio * 100);
+  const updateLabel = updateProgress?.label ?? '準備中…';
 
   // ダウンロード/更新ボタンを押した時の処理
   async function onDownload(e) {
@@ -26,8 +36,9 @@ export default function PluginCard({ item }) {
     e.preventDefault();
     try {
       setDownloading(true); // ダウンロード中フラグON
+      setDownloadProgress({ ratio: 0, percent: 0, label: '準備中…', phase: 'init' });
       if (hasInstaller(item)) {
-        await runInstallerForItem(item, dispatch);
+        await runInstallerForItem(item, dispatch, setDownloadProgress);
       } else {
         throw new Error('インストーラーがありません');
       }
@@ -35,6 +46,7 @@ export default function PluginCard({ item }) {
       setError(`更新に失敗しました\n\n${err?.message || String(err) || '不明なエラー'}`);
     } finally {
       setDownloading(false);
+      setDownloadProgress(null);
     }
   }
 
@@ -45,8 +57,9 @@ export default function PluginCard({ item }) {
     e.preventDefault();
     try {
       setUpdating(true);
+      setUpdateProgress({ ratio: 0, percent: 0, label: '準備中…', phase: 'init' });
       if (hasInstaller(item)) {
-        await runInstallerForItem(item, dispatch);
+        await runInstallerForItem(item, dispatch, setUpdateProgress);
       } else {
         throw new Error('インストーラーがありません');
       }
@@ -54,6 +67,7 @@ export default function PluginCard({ item }) {
       setError(`更新に失敗しました\n\n${err?.message || String(err) || '不明なエラー'}`);
     } finally {
       setUpdating(false);
+      setUpdateProgress(null);
     }
   }
 
@@ -80,6 +94,8 @@ export default function PluginCard({ item }) {
       setError(`削除に失敗しました\n\n${msg}`);
     } finally {
       setRemoving(false);
+      setDownloadProgress(null);
+      setUpdateProgress(null);
     }
   }
 
@@ -135,7 +151,16 @@ export default function PluginCard({ item }) {
                   </span>
                 ) : (
                   <button className="btn btn--primary" onClick={onUpdate} disabled={!canInstall || updating}>
-                    {updating ? (<><span className="spinner" aria-hidden></span> 実行中…</>) : (<><span aria-hidden><Icon name="refresh" /></span> 更新</>)}
+                    {updating ? (
+                      <span className="action-progress" aria-live="polite">
+                        <ProgressCircle value={updateRatio} size={20} strokeWidth={3} ariaLabel={`${updateLabel} ${updatePercent}%`} />
+                        <span className="action-progress__label">{updateLabel} {`${updatePercent}%`}</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span aria-hidden><Icon name="refresh" /></span> 更新
+                      </>
+                    )}
                   </button>
                 )}
                 <button className="btn btn--danger" onClick={onRemove} disabled={removing}>
@@ -144,7 +169,16 @@ export default function PluginCard({ item }) {
               </>
             ) : (
               <button className="btn btn--primary" onClick={onDownload} disabled={!canInstall || downloading}>
-                {downloading ? (<><span className="spinner" aria-hidden></span> 実行中…</>) : (<><span aria-hidden><Icon name="download" /></span> ダウンロード</>)}
+                {downloading ? (
+                  <span className="action-progress" aria-live="polite">
+                    <ProgressCircle value={downloadRatio} size={20} strokeWidth={3} ariaLabel={`${downloadLabel} ${downloadPercent}%`} />
+                    <span className="action-progress__label">{downloadLabel} {`${downloadPercent}%`}</span>
+                  </span>
+                ) : (
+                  <>
+                    <span aria-hidden><Icon name="download" /></span> インストール
+                  </>
+                )}
               </button>
             )}
           </div>

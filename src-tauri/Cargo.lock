@@ -188,6 +188,7 @@ dependencies = [
  "memchr",
  "memmap2",
  "once_cell",
+ "percent-encoding",
  "reqwest",
  "serde",
  "serde_json",

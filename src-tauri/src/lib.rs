@@ -1,10 +1,12 @@
 // use crate::paths::Dir;
 use once_cell::sync::Lazy;
+use percent_encoding::percent_decode_str;
 use std::fs;
 use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use tauri::{Emitter, Manager};
+use url::Url;
 use walkdir::WalkDir;
 
 mod api_key;
@@ -150,6 +152,120 @@ async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_pat
         }
         Err(e) => Err(e),
     }
+}
+
+#[tauri::command]
+async fn download_file_to_path(window: tauri::Window, url: String, dest_path: String, task_id: Option<String>) -> Result<String, String> {
+    use std::fs::{create_dir_all, OpenOptions};
+    use std::io::Write;
+
+    if !url.trim_start().to_ascii_lowercase().starts_with("https://") {
+        return Err("Only https:// is permitted".to_string());
+    }
+    if dest_path.trim().is_empty() {
+        return Err("dest_path must not be empty".to_string());
+    }
+
+    let app = window.app_handle();
+    let task_id = task_id.unwrap_or_else(|| format!("download-{}", chrono::Utc::now().timestamp_micros()));
+    let dest_dir = resolve_rel_to_app_config(&app, &dest_path);
+    if let Err(e) = create_dir_all(&dest_dir) {
+        let msg = format!("failed to prepare destination directory: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        return Err(msg);
+    }
+
+    let parsed_url = Url::parse(&url).map_err(|e| {
+        let msg = format!("invalid url: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        msg
+    })?;
+    let file_name_raw = parsed_url
+        .path_segments()
+        .and_then(|segments| segments.filter(|s| !s.is_empty()).last().map(|s| s.to_string()))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "download.bin".to_string());
+    let file_name = percent_decode_str(&file_name_raw).decode_utf8_lossy().to_string();
+    let final_name = sanitize_filename(&file_name);
+    let final_path = dest_dir.join(final_name);
+
+    let client = reqwest::Client::builder()
+        .user_agent("AviUtl2Catalog")
+        .build()
+        .map_err(|e| {
+            let msg = format!("failed to build http client: {}", e);
+            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+            msg
+        })?;
+
+    let mut response = client.get(&url).send().await.map_err(|e| {
+        let msg = format!("network error: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("download failed (url={}): {}", url, e));
+        msg
+    })?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        let body_snippet: String = if text.len() > 500 { text[..500].to_string() } else { text };
+        let msg = if body_snippet.is_empty() {
+            format!("HTTP error: {}", status)
+        } else {
+            format!("HTTP error: {}: {}", status, body_snippet)
+        };
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("download failed (url={}): {}", url, msg));
+        return Err(msg);
+    }
+
+    let total_opt = response.content_length();
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(&final_path)
+        .map_err(|e| {
+            let msg = format!("failed to open destination file: {}", e);
+            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+            log_error(&app, &format!("download failed (url={}): {}", url, msg));
+            msg
+        })?;
+
+    let mut written: u64 = 0;
+    while let Some(chunk) = response.chunk().await.map_err(|e| {
+        let msg = format!("read error: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("download failed (url={}): {}", url, msg));
+        msg
+    })? {
+        file.write_all(&chunk).map_err(|e| {
+            let msg = format!("write error: {}", e);
+            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+            log_error(&app, &format!("download failed (url={}): {}", url, msg));
+            msg
+        })?;
+        written += chunk.len() as u64;
+        let _ = window.emit(
+            "download:progress",
+            serde_json::json!({
+                "taskId": task_id,
+                "read": written,
+                "total": total_opt,
+            }),
+        );
+    }
+
+    let final_path_str = final_path.to_string_lossy().to_string();
+    let _ = window.emit(
+        "download:done",
+        serde_json::json!({
+            "taskId": task_id,
+            "path": final_path_str,
+        }),
+    );
+
+    Ok(final_path_str)
 }
 
 // -------------------------
@@ -976,6 +1092,7 @@ pub fn run() {
             add_installed_id_cmd,
             remove_installed_id_cmd,
             drive_download_to_file,
+            download_file_to_path,
             expand_macros,
             copy_item_js,
             run_auo_setup,
