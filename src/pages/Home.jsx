@@ -5,6 +5,9 @@ import Header from '../components/Header.jsx';
 import SortBar from '../components/SortBar.jsx';
 import PluginCard from '../components/PluginCard.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
+import ProgressCircle from '../components/ProgressCircle.jsx';
+import ErrorDialog from '../components/ErrorDialog.jsx';
+import Icon from '../components/Icon.jsx';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { getSorter, filterByTagsAndType, matchQuery, logError, hasInstaller, runInstallerForItem } from '../app/utils.js';
 
@@ -28,8 +31,13 @@ export default function Home() {
   // Tauri側の検索結果IDリスト
   const [ids, setIds] = useState([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState('');
   const [bulkError, setBulkError] = useState('');
+  const [bulkProgress, setBulkProgress] = useState(null);
+  const bulkRatio = bulkProgress?.ratio ?? 0;
+  const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
+  const bulkLabel = bulkProgress?.label ?? '更新処理中…';
+  const bulkCurrent = bulkProgress?.current ?? 0;
+  const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? (updatableItems.length || 0) : 0);
 
   // 更新対象: インストール済みかつ最新版でないプラグインのみ抽出
   const updatableItems = useMemo(() => {
@@ -92,47 +100,96 @@ export default function Home() {
     if (bulkUpdating || !updatableItems.length) return;
     setBulkUpdating(true);
     setBulkError('');
-    setBulkStatus('更新を開始します…');
+    setBulkProgress({ ratio: 0, percent: 0, label: '準備中…', current: 0, total: updatableItems.length });
     const targets = updatableItems.slice();
+    const total = targets.length || 1;
     const failed = [];
     for (let i = 0; i < targets.length; i++) {
       const item = targets[i];
-      setBulkStatus(`${i + 1}/${targets.length} ${item.name} を更新中…`);
       try {
-        await runInstallerForItem(item, dispatch);
+        await runInstallerForItem(item, dispatch, (progress) => {
+          const stepRatio = progress && Number.isFinite(progress.ratio) ? Math.min(1, Math.max(0, progress.ratio)) : 0;
+          const overall = Math.min(1, Math.max(0, (i + stepRatio) / total));
+          const percent = Math.round(overall * 100);
+          const label = progress?.label || '処理中…';
+          setBulkProgress({
+            ratio: overall,
+            percent,
+            label: `${item.name} - ${label}`,
+            current: i + 1,
+            total,
+          });
+        });
+        const overall = Math.min(1, Math.max(0, (i + 1) / total));
+        setBulkProgress({
+          ratio: overall,
+          percent: Math.round(overall * 100),
+          label: `${item.name} - 完了`,
+          current: i + 1,
+          total,
+        });
       } catch (err) {
         const msg = err?.message || String(err) || '不明なエラー';
         failed.push({ item, msg });
         try { await logError(`[BulkUpdate] ${item.id}: ${msg}`); } catch (_) { /* ignore */ }
+        const overall = Math.min(1, Math.max(0, (i + 1) / total));
+        setBulkProgress({
+          ratio: overall,
+          percent: Math.round(overall * 100),
+          label: `${item.name} - エラー`,
+          current: i + 1,
+          total,
+        });
       }
     }
 
     if (failed.length) {
       const example = failed[0];
       setBulkError(`${failed.length}件のプラグインで更新に失敗しました（例: ${example.item.name}: ${example.msg}）`);
-      const successCount = targets.length - failed.length;
-      setBulkStatus(successCount > 0 ? `一部のプラグイン（${successCount}件）は更新に成功しました。` : '');
-    } else {
-      setBulkStatus(`${targets.length}件のプラグインを更新しました。`);
     }
+    setBulkProgress(null);
     setBulkUpdating(false);
   }
 
   return (
     <div>
       <Header />
-      <SortBar value={sortKey} />
-      <div className="container" aria-live="polite">
-        <button
-          className="btn btn--primary"
-          onClick={handleBulkUpdate}
-          disabled={bulkUpdating || !updatableItems.length}
-        >
-          {bulkUpdating ? '更新処理中…' : `更新があるプラグインを一括ダウンロード (${updatableItems.length}件)`}
-        </button>
-        {bulkStatus && <div className="bulk-status">{bulkStatus}</div>}
-        {bulkError && <div className="error" role="alert">{bulkError}</div>}
+      <div className="container bulk-card-container" aria-live="polite">
+        <div className="bulk-card">
+          <div className="bulk-card__main">
+            <div className="bulk-card__header">
+              <span className="bulk-card__title">まとめて更新</span>
+              <span className="bulk-card__count" aria-label={`対象 ${updatableItems.length}件`}>
+                <span className="bulk-card__count-number">{updatableItems.length}</span>
+                <span className="bulk-card__count-suffix">件</span>
+              </span>
+            </div>
+          </div>
+          <button
+            className="bulk-card__button"
+            onClick={handleBulkUpdate}
+            disabled={bulkUpdating || !updatableItems.length}
+          >
+            {bulkUpdating ? (
+              <span className="bulk-card__progress" aria-live="polite">
+                <ProgressCircle value={bulkRatio} size={28} strokeWidth={3} ariaLabel={`${bulkLabel} ${bulkPercent}%`} />
+                <span className="bulk-card__progress-text">
+                  <span className="bulk-card__progress-label">{bulkLabel}</span>
+                  <span className="bulk-card__progress-meta">{`${bulkPercent}%`}{bulkTotal ? ` · ${bulkCurrent}/${bulkTotal}` : ''}</span>
+                </span>
+              </span>
+            ) : (
+              <>
+                <span className="bulk-card__button-icon" aria-hidden>
+                  <Icon name="refresh" size={18} />
+                </span>
+                <span>一括更新</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+      <SortBar value={sortKey} />
       <div className="container layout-two">
         <aside>
           {/* 検索結果表示エリア */}
@@ -164,6 +221,7 @@ export default function Home() {
           ))}
         </main>
       </div>
+      <ErrorDialog open={!!bulkError} message={bulkError} onClose={() => setBulkError('')} />
     </div>
   );
 }

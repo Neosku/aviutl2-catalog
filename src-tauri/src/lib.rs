@@ -189,14 +189,11 @@ async fn download_file_to_path(window: tauri::Window, url: String, dest_path: St
     let final_name = sanitize_filename(&file_name);
     let final_path = dest_dir.join(final_name);
 
-    let client = reqwest::Client::builder()
-        .user_agent("AviUtl2Catalog")
-        .build()
-        .map_err(|e| {
-            let msg = format!("failed to build http client: {}", e);
-            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-            msg
-        })?;
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| {
+        let msg = format!("failed to build http client: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        msg
+    })?;
 
     let mut response = client.get(&url).send().await.map_err(|e| {
         let msg = format!("network error: {}", e);
@@ -209,28 +206,19 @@ async fn download_file_to_path(window: tauri::Window, url: String, dest_path: St
     if !status.is_success() {
         let text = response.text().await.unwrap_or_default();
         let body_snippet: String = if text.len() > 500 { text[..500].to_string() } else { text };
-        let msg = if body_snippet.is_empty() {
-            format!("HTTP error: {}", status)
-        } else {
-            format!("HTTP error: {}: {}", status, body_snippet)
-        };
+        let msg = if body_snippet.is_empty() { format!("HTTP error: {}", status) } else { format!("HTTP error: {}: {}", status, body_snippet) };
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
         log_error(&app, &format!("download failed (url={}): {}", url, msg));
         return Err(msg);
     }
 
     let total_opt = response.content_length();
-    let mut file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(&final_path)
-        .map_err(|e| {
-            let msg = format!("failed to open destination file: {}", e);
-            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-            log_error(&app, &format!("download failed (url={}): {}", url, msg));
-            msg
-        })?;
+    let mut file = OpenOptions::new().create(true).truncate(true).write(true).open(&final_path).map_err(|e| {
+        let msg = format!("failed to open destination file: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("download failed (url={}): {}", url, msg));
+        msg
+    })?;
 
     let mut written: u64 = 0;
     while let Some(chunk) = response.chunk().await.map_err(|e| {
@@ -611,7 +599,6 @@ async fn run_auo_setup(app: AppHandle, exe_path: String) -> Result<i32, String> 
         let root_arg = settings.aviutl2_root.to_string_lossy().to_string();
         args_vec.push("-aviutldir".to_string());
         args_vec.push(root_arg);
-
     } else {
         log_info(&app, "Running in standard mode");
         args_vec.push("-aviutldir-default".to_string());

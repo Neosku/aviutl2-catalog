@@ -213,6 +213,166 @@ select {
     margin-inline: auto;
 }
 
+.bulk-card-container {
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.bulk-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 10px 22px;
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.12), rgba(13, 19, 33, 0.7));
+    border: 1px solid rgba(59, 130, 246, 0.24);
+    border-radius: 16px;
+    box-shadow: 0 12px 28px rgba(8, 13, 24, 0.28);
+}
+
+:root[data-theme='light'] .bulk-card {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.08), rgba(255, 255, 255, 0.95));
+    border-color: rgba(37, 99, 235, 0.18);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+}
+
+.bulk-card__main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bulk-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bulk-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.bulk-card__count {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(148, 197, 255, 0.25);
+    color: #dbeafe;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+}
+
+:root[data-theme='light'] .bulk-card__count {
+    background: rgba(37, 99, 235, 0.12);
+    color: rgba(15, 23, 42, 0.9);
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.bulk-card__count-number {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.bulk-card__count-suffix {
+    font-size: 11px;
+    opacity: 0.75;
+}
+
+.bulk-card__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    min-width: 120px;
+}
+
+.bulk-card__button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: grayscale(0.15);
+}
+
+.bulk-card__button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 36px rgba(37, 99, 235, 0.35);
+}
+
+.bulk-card__button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.bulk-card__button-icon .icon {
+    display: block;
+}
+
+.bulk-card__progress {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bulk-card__progress-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.bulk-card__progress-label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.bulk-card__progress-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+:root[data-theme='light'] .bulk-card__progress-meta {
+    color: rgba(15, 23, 42, 0.7);
+}
+
+@media (max-width: 720px) {
+    .bulk-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 18px;
+    }
+
+    .bulk-card__button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .bulk-card__progress {
+        justify-content: center;
+    }
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -412,7 +572,7 @@ select {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 0;
+    padding: 6px 0;
 }
 
 /* (削除済) .filterbar* スタイルは旧検索ページのフィルターバー用 */
@@ -679,6 +839,7 @@ select {
     margin: -2px 0 4px;
     overflow: hidden;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }

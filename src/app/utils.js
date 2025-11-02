@@ -478,12 +478,12 @@ export function hasInstaller(item) {
 // -------------------------
 
 const STEP_PROGRESS_LABELS = {
-  download: 'ダウンロード中…',
-  extract: '展開中…',
-  extract_sfx: '展開中…',
-  copy: 'コピー中…',
-  run: '実行中…',
-  run_auo_setup: '実行中…',
+  download: 'ダウンロード中',
+  extract: '展開中',
+  extract_sfx: '展開中',
+  copy: 'コピー中',
+  run: '実行中',
+  run_auo_setup: '実行中',
 };
 
 const STEP_PROGRESS_OFFSET = 0;
