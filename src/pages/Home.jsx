@@ -37,12 +37,13 @@ export default function Home() {
   const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
   const bulkLabel = bulkProgress?.label ?? '更新処理中…';
   const bulkCurrent = bulkProgress?.current ?? 0;
-  const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? (updatableItems.length || 0) : 0);
 
   // 更新対象: インストール済みかつ最新版でないプラグインのみ抽出
   const updatableItems = useMemo(() => {
     return items.filter(it => it.installed && !it.isLatest && hasInstaller(it));
   }, [items]);
+
+  const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? (updatableItems.length || 0) : 0);
 
   // 基本的なフィルタリング処理（検索・タグ・種別）
   const baseList = useMemo(() => {
@@ -152,74 +153,78 @@ export default function Home() {
   }
 
   return (
-    <div>
+    <div className="route-home">
       <Header />
-      <div className="container bulk-card-container" aria-live="polite">
-        <div className="bulk-card">
-          <div className="bulk-card__main">
-            <div className="bulk-card__header">
-              <span className="bulk-card__title">まとめて更新</span>
-              <span className="bulk-card__count" aria-label={`対象 ${updatableItems.length}件`}>
-                <span className="bulk-card__count-number">{updatableItems.length}</span>
-                <span className="bulk-card__count-suffix">件</span>
-              </span>
-            </div>
-          </div>
-          <button
-            className="bulk-card__button"
-            onClick={handleBulkUpdate}
-            disabled={bulkUpdating || !updatableItems.length}
-          >
-            {bulkUpdating ? (
-              <span className="bulk-card__progress" aria-live="polite">
-                <ProgressCircle value={bulkRatio} size={28} strokeWidth={3} ariaLabel={`${bulkLabel} ${bulkPercent}%`} />
-                <span className="bulk-card__progress-text">
-                  <span className="bulk-card__progress-label">{bulkLabel}</span>
-                  <span className="bulk-card__progress-meta">{`${bulkPercent}%`}{bulkTotal ? ` · ${bulkCurrent}/${bulkTotal}` : ''}</span>
+      <div className="route-home__body">
+        <div className="container bulk-card-container" aria-live="polite">
+          <div className="bulk-card">
+            <div className="bulk-card__main">
+              <div className="bulk-card__header">
+                <span className="bulk-card__title">まとめて更新</span>
+                <span className="bulk-card__count" aria-label={`対象 ${updatableItems.length}件`}>
+                  <span className="bulk-card__count-number">{updatableItems.length}</span>
+                  <span className="bulk-card__count-suffix">件</span>
                 </span>
-              </span>
-            ) : (
-              <>
-                <span className="bulk-card__button-icon" aria-hidden>
-                  <Icon name="refresh" size={18} />
-                </span>
-                <span>一括更新</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-      <SortBar value={sortKey} />
-      <div className="container layout-two">
-        <aside>
-          {/* 検索結果表示エリア */}
-          {q ? (
-            <div className="sidebar" aria-live="polite">
-              <div className="sidebar__group">
-                <span className="badge">検索結果: {sorted.length}件</span>
-                <button className="chip is-selected" onClick={clearSearch} aria-label="検索ワードをクリア">
-                  検索ワード: {q} ×
-                </button>
               </div>
             </div>
-          ) : null}
-          <FilterPanel />
-        </aside>
-        <main className="grid">
-          {/* 読み込み状態とエラー状態の表示 */}
-          {loading && <div>読み込み中…</div>}
-          {error && <div className="error">{error}</div>}
-          {/* 該当結果なしの表示 */}
-          {!loading && !sorted.length && (
-            <div className="empty">
-              <div className="empty__title">該当する結果がありません</div>
+            <button
+              className="bulk-card__button"
+              onClick={handleBulkUpdate}
+              disabled={bulkUpdating || !updatableItems.length}
+            >
+              {bulkUpdating ? (
+                <span className="bulk-card__progress" aria-live="polite">
+                  <ProgressCircle value={bulkRatio} size={28} strokeWidth={3} ariaLabel={`${bulkLabel} ${bulkPercent}%`} />
+                  <span className="bulk-card__progress-text">
+                    <span className="bulk-card__progress-label">{bulkLabel}</span>
+                    <span className="bulk-card__progress-meta">{`${bulkPercent}%`}{bulkTotal ? ` · ${bulkCurrent}/${bulkTotal}` : ''}</span>
+                  </span>
+                </span>
+              ) : (
+                <>
+                  <span className="bulk-card__button-icon" aria-hidden>
+                    <Icon name="refresh" size={18} />
+                  </span>
+                  <span>一括更新</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        <SortBar value={sortKey} />
+        <div className="container layout-two">
+          <aside className="route-home__aside">
+            {/* 検索結果表示エリア */}
+            {q ? (
+              <div className="sidebar" aria-live="polite">
+                <div className="sidebar__group">
+                  <span className="badge">検索結果: {sorted.length}件</span>
+                  <button className="chip is-selected" onClick={clearSearch} aria-label="検索ワードをクリア">
+                    検索ワード: {q} ×
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <FilterPanel />
+          </aside>
+          <main className="route-home__main">
+            <div className="route-home__grid grid">
+              {/* 読み込み状態とエラー状態の表示 */}
+              {loading && <div>読み込み中…</div>}
+              {error && <div className="error">{error}</div>}
+              {/* 該当結果なしの表示 */}
+              {!loading && !sorted.length && (
+                <div className="empty">
+                  <div className="empty__title">該当する結果がありません</div>
+                </div>
+              )}
+              {/* プラグインカード一覧 */}
+              {!loading && sorted.map(it => (
+                <PluginCard key={it.id} item={it} />
+              ))}
             </div>
-          )}
-          {/* プラグインカード一覧 */}
-          {!loading && sorted.map(it => (
-            <PluginCard key={it.id} item={it} />
-          ))}
-        </main>
+          </main>
+        </div>
       </div>
       <ErrorDialog open={!!bulkError} message={bulkError} onClose={() => setBulkError('')} />
     </div>

@@ -52,8 +52,8 @@ body {
     --bg-gradient-b: #0a0c10;
     --selection-bg: rgba(59, 130, 246, 0.25);
     --selection-fg: #ffffff;
-    --scrollbar-thumb-start: #12161f;
-    --scrollbar-thumb-end: #0a0c10;
+    --scrollbar-thumb-start: #191e2a;
+    --scrollbar-thumb-end: #13161c;
     --badge-bg: rgba(59, 130, 246, 0.12);
     --badge-fg: #93c5fd;
     --badge-border: rgba(59, 130, 246, 0.35);
@@ -572,7 +572,7 @@ select {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 0;
+    padding: 5px 0 15px 0;
 }
 
 /* (削除済) .filterbar* スタイルは旧検索ページのフィルターバー用 */
@@ -617,12 +617,95 @@ select {
 
 /* メイン + サイドバーレイアウト */
 .layout-two {
-    display: grid;
-    grid-template-columns: 220px 1fr;
+    display: flex;
     gap: 16px;
-    align-items: start;
-    /* メインページ最下部に余白を追加 */
+    align-items: stretch;
+    padding-bottom: 0;
+}
+
+.route-home {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.route-home__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+}
+
+.route-home__body .layout-two {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.layout-two>aside,
+.layout-two>main {
+    min-height: 0;
+}
+
+.route-home__aside {
+    box-sizing: border-box;
+    flex: 0 0 220px;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    padding-bottom: 16px;
+    padding-right: 4px;
+    overscroll-behavior: contain;
+    min-height: 0;
+}
+
+.route-home__main {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    overscroll-behavior: contain;
+}
+
+.route-home__grid {
+    display: grid;
+    width: 100%;
+    align-content: start;
     padding-bottom: 40px;
+    padding-right: 0;
+}
+
+.route-home__grid>* {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .layout-two {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .route-home__body {
+        overflow: visible;
+    }
+
+    .route-home__aside {
+        flex: initial;
+        max-width: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    .route-home__main {
+        flex: initial;
+        overflow: visible;
+        padding-right: 0;
+    }
 }
 
 .sidebar {
