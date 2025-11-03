@@ -1040,6 +1040,17 @@ fn copy_item_js(src_str: String, dst_str: String) -> Result<usize, String> {
 }
 
 // -----------------------
+// プロセス状態の確認
+// -----------------------
+
+#[tauri::command]
+fn is_aviutl_running() -> bool {
+    use sysinfo::System;
+    let sys = System::new_all();
+    sys.processes().values().any(|proc| proc.name().eq_ignore_ascii_case("aviutl2.exe"))
+}
+
+// -----------------------
 // Tauriアプリケーションのセットアップと起動
 // -----------------------
 
@@ -1082,6 +1093,7 @@ pub fn run() {
             download_file_to_path,
             expand_macros,
             copy_item_js,
+            is_aviutl_running,
             run_auo_setup,
             paths::complete_initial_setup,
             paths::update_settings,

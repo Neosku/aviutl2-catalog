@@ -35,6 +35,7 @@ memmap2 = "0.9"
 memchr  = "2"
 encoding_rs = "0.8"
 percent-encoding = "2"
+sysinfo = "0.37"
 windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_UI_WindowsAndMessaging",
