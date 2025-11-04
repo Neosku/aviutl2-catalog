@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TitleBar from '../../components/TitleBar.jsx';
 import Icon from '../../components/Icon.jsx';
+import ProgressCircle from '../../components/ProgressCircle.jsx';
 import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
@@ -139,7 +140,7 @@ export default function InitSetupApp() {
       setPackageStates(prev => {
         const next = { ...prev };
         if (!next[id]) {
-          next[id] = { downloading: false, installed: false, error: '' };
+          next[id] = { downloading: false, installed: false, error: '', progress: null };
         }
         return next;
       });
@@ -213,7 +214,7 @@ export default function InitSetupApp() {
             const next = { ...prev };
             REQUIRED_PLUGIN_IDS.forEach(id => {
               if (!next[id]) {
-                next[id] = { downloading: false, installed: false, error: '' };
+                next[id] = { downloading: false, installed: false, error: '', progress: null };
               }
             });
             return next;
@@ -269,7 +270,7 @@ export default function InitSetupApp() {
           setPackageStates(prev => {
             const next = { ...prev };
             detectedIds.forEach(id => {
-              const cur = next[id] || { downloading: false, installed: false, error: '' };
+              const cur = next[id] || { downloading: false, installed: false, error: '', progress: null };
               // next[id] = { ...cur, installed: true, error: '' };
               const ver = String(versions[id] || '').trim();
               // バージョン文字列が空なら「存在しない」とみなす
@@ -292,7 +293,7 @@ export default function InitSetupApp() {
 
   function updatePackageState(id, updater) {
     setPackageStates(prev => {
-      const current = prev[id] || { downloading: false, installed: false, error: '' };
+      const current = prev[id] || { downloading: false, installed: false, error: '', progress: null };
       const next = typeof updater === 'function' ? { ...current, ...updater(current) } : { ...current, ...(updater || {}) };
       return { ...prev, [id]: next };
     });
@@ -302,7 +303,7 @@ export default function InitSetupApp() {
     REQUIRED_PLUGIN_IDS.map(id => ({
       id,
       item: packageItems[id] || null,
-      state: packageStates[id] || { downloading: false, installed: false, error: '' }
+      state: packageStates[id] || { downloading: false, installed: false, error: '', progress: null }
     }))
   ), [packageItems, packageStates]);
 
@@ -311,6 +312,30 @@ export default function InitSetupApp() {
     [requiredPackages]
   );
 
+  const corePackageState = packageStates[CORE_PACKAGE_ID] || { downloading: false, installed: false, error: '', progress: null };
+  const coreProgress = corePackageState?.progress;
+  const coreProgressRatio = coreProgress?.ratio ?? 0;
+  const coreProgressPercent = Number.isFinite(coreProgress?.percent)
+    ? coreProgress.percent
+    : Math.round(coreProgressRatio * 100);
+  const coreProgressLabel = coreProgress?.label ?? '処理中…';
+
+  const activeRequiredPackage = useMemo(
+    () => requiredPackages.find(({ state }) => state.downloading) || null,
+    [requiredPackages]
+  );
+  const activeRequiredProgress = activeRequiredPackage?.state.progress;
+  const activeRequiredRatio = activeRequiredProgress?.ratio ?? 0;
+  const activeRequiredPercent = Number.isFinite(activeRequiredProgress?.percent)
+    ? activeRequiredProgress.percent
+    : Math.round(activeRequiredRatio * 100);
+  const activeRequiredLabel = activeRequiredProgress?.label ?? '処理中…';
+  const activeRequiredName = activeRequiredPackage?.item?.name || activeRequiredPackage?.id || '';
+  const bulkProgressLabel = activeRequiredPackage ? activeRequiredLabel : 'インストール中…';
+  const bulkProgressPercent = activeRequiredPackage ? activeRequiredPercent : 0;
+  const bulkProgressNamePrefix = activeRequiredPackage && activeRequiredName ? `${activeRequiredName}: ` : '';
+  const bulkProgressValue = activeRequiredPackage ? activeRequiredRatio : 0;
+
   async function downloadRequiredPackage(id) {
     let pkg = packageItems[id];
     if (!pkg) {
@@ -318,29 +343,45 @@ export default function InitSetupApp() {
         pkg = await ensurePackageItem(id);
       } catch (e) {
         const detail = e?.message || (e?.toString ? e.toString() : '') || 'パッケージ情報を取得できませんでした。';
-        updatePackageState(id, () => ({ downloading: false, error: detail }));
+        updatePackageState(id, () => ({ downloading: false, error: detail, progress: null }));
         await safeLog('[init-window] required package fetch failed (' + id + ')', e);
         return false;
       }
     }
     if (!pkg) {
-      updatePackageState(id, () => ({ downloading: false, error: 'パッケージ情報を取得できませんでした。' }));
+      updatePackageState(id, () => ({ downloading: false, error: 'パッケージ情報を取得できませんでした。', progress: null }));
       return false;
     }
     if (!hasInstaller(pkg)) {
-      updatePackageState(id, () => ({ downloading: false, error: 'このパッケージは現在インストールに対応していません。' }));
+      updatePackageState(id, () => ({ downloading: false, error: 'このパッケージは現在インストールに対応していません。', progress: null }));
       return false;
     }
-    updatePackageState(id, { downloading: true, error: '' });
+    const initialProgress = {
+      ratio: 0,
+      percent: 0,
+      label: '準備中…',
+      phase: 'init',
+      step: null,
+      stepIndex: null,
+      totalSteps: null,
+    };
+    updatePackageState(id, () => ({ downloading: true, installed: false, error: '', progress: initialProgress }));
+    const handleProgress = (payload) => {
+      if (!payload) return;
+      updatePackageState(id, () => ({
+        progress: payload,
+        downloading: payload.phase !== 'done' && payload.phase !== 'error',
+      }));
+    };
     try {
-      await runInstallerForItem(pkg, null);
-      updatePackageState(id, { downloading: false, installed: true, error: '' });
+      await runInstallerForItem(pkg, null, handleProgress);
+      updatePackageState(id, { downloading: false, installed: true, error: '', progress: null });
       // インストールが入ったので検出をリトリガ（同じ packages ステップ内でも再検出）
       setVersionsDetected(false);
       return true;
     } catch (e) {
       const detail = e?.message || (e?.toString ? e.toString() : '') || '処理中にエラーが発生しました。';
-      updatePackageState(id, () => ({ downloading: false, error: detail || '処理中にエラーが発生しました。' }));
+      updatePackageState(id, () => ({ downloading: false, error: detail || '処理中にエラーが発生しました。', progress: null }));
       await safeLog('[init-window] required package install failed (' + id + ')', e);
       return false;
     }
@@ -600,6 +641,19 @@ export default function InitSetupApp() {
                     オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
                   </p>
                 </div>
+                {coreProgress && (
+                  <div className="setup-note" aria-live="polite">
+                    <span className="action-progress">
+                      <ProgressCircle
+                        value={coreProgressRatio}
+                        size={24}
+                        strokeWidth={4}
+                        ariaLabel={`${coreProgressLabel} ${coreProgressPercent}%`}
+                      />
+                      <span className="action-progress__label">{coreProgressLabel} {`${coreProgressPercent}%`}</span>
+                    </span>
+                  </div>
+                )}
                 <div className="setup-nav">
                   <button className="btn btn--primary" onClick={handleInstallDetailsNext} disabled={savingInstallDetails || !canProceedDetails()}>
                     {savingInstallDetails ? 'インストール中…' : 'インストール'}
@@ -635,35 +689,49 @@ export default function InitSetupApp() {
                     )}
 
                     <div className="setup-package-list">
-                      {requiredPackages.map(({ id, item, state }) => (
-                        <div key={id} className="setup-package-card">
-                          <div className="setup-package-card__info">
-                            <div className="setup-package-card__title-row">
-                              <h3>{item?.name || id}</h3>
-                              {packageVersions[id] && (
-                                <span className="setup-version-badge" title={`検出バージョン: ${packageVersions[id]}`}>
-                                  {packageVersions[id]}
+                      {requiredPackages.map(({ id, item, state }) => {
+                        const progress = state.progress;
+                        const ratio = progress?.ratio ?? 0;
+                        const percent = Number.isFinite(progress?.percent)
+                          ? progress.percent
+                          : Math.round(ratio * 100);
+                        const label = progress?.label ?? '処理中…';
+                        return (
+                          <div key={id} className="setup-package-card">
+                            <div className="setup-package-card__info">
+                              <div className="setup-package-card__title-row">
+                                <h3>{item?.name || id}</h3>
+                                {packageVersions[id] && (
+                                  <span className="setup-version-badge" title={`検出バージョン: ${packageVersions[id]}`}>
+                                    {packageVersions[id]}
+                                  </span>
+                                )}
+                              </div>
+                              <p>{item?.summary || '詳細情報を取得できませんでした。'}</p>
+                            </div>
+                            <div className="setup-package-card__status">
+                              {state.downloading ? (
+                                <span className="action-progress" aria-live="polite">
+                                  <ProgressCircle
+                                    value={ratio}
+                                    size={20}
+                                    strokeWidth={3}
+                                    ariaLabel={`${label} ${percent}%`}
+                                  />
+                                  <span className="action-progress__label">{label} {`${percent}%`}</span>
                                 </span>
+                              ) : state.installed ? (
+                                <span className="pill pill--ok">
+                                  <span aria-hidden><Icon name="check_circle" /></span> インストール済
+                                </span>
+                              ) : (
+                                <span className="setup-status">未インストール</span>
                               )}
                             </div>
-                            <p>{item?.summary || '詳細情報を取得できませんでした。'}</p>
+                            {state.error && <div className="setup-note setup-note--error" style={{ gridColumn: '1 / -1' }}>{state.error}</div>}
                           </div>
-                          <div className="setup-package-card__status">
-                            {state.downloading ? (
-                              <span className="setup-status">
-                                <span className="spinner" aria-hidden></span> インストール中…
-                              </span>
-                            ) : state.installed ? (
-                              <span className="pill pill--ok">
-                                <span aria-hidden><Icon name="check_circle" /></span> インストール済
-                              </span>
-                            ) : (
-                              <span className="setup-status">未インストール</span>
-                            )}
-                          </div>
-                          {state.error && <div className="setup-note setup-note--error" style={{ gridColumn: '1 / -1' }}>{state.error}</div>}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div className="setup-actions">
@@ -673,16 +741,9 @@ export default function InitSetupApp() {
                         onClick={downloadAllRequiredPackages}
                         disabled={bulkDownloading || allRequiredInstalled}
                       >
-                        {bulkDownloading ? (
-                          <>
-                            <span className="spinner" aria-hidden></span> インストール中…
-                          </>
-                        ) : (
-                          <>
-                            <span aria-hidden><Icon name="download" /></span> インストール
-                          </>
-                        )}
+                        <span aria-hidden><Icon name="download" /></span> インストール
                       </button>
+
                     </div>
 
                     {/* ここでは finalizeSetup を呼ばず、次のページへ進む */}
