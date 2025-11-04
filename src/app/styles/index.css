@@ -654,7 +654,7 @@ select {
     max-width: 220px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    /* gap: 16px; */
     overflow-y: auto;
     padding-bottom: 16px;
     padding-right: 4px;
@@ -676,6 +676,7 @@ select {
     display: grid;
     width: 100%;
     align-content: start;
+    padding-top: 4px;
     padding-bottom: 40px;
     padding-right: 0;
 }
