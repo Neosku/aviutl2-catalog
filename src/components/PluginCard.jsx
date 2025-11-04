@@ -10,7 +10,14 @@ import ProgressCircle from './ProgressCircle.jsx';
 // メインページに表示するカードコンポーネント
 export default function PluginCard({ item }) {
   // 先頭画像のURL（なければプレースホルダーを出す）
-  const thumb = item?.images?.[0]?.src;
+  const groups = Array.isArray(item?.images) ? item.images : [];
+  const thumb = (() => {
+    for (const group of groups) {
+      const candidate = typeof group?.thumbnail === 'string' ? group.thumbnail.trim() : '';
+      if (candidate) return candidate;
+    }
+    return '';
+  })();
   const dispatch = useCatalogDispatch();
   // UI状態管理（エラー/処理中フラグ）
   const [error, setError] = useState('');

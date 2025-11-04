@@ -42,7 +42,27 @@ export default function Package() {
 
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find(i => i.id === id), [items, id]);
-  const thumb = item?.images?.[0]?.src;
+  const imageGroups = Array.isArray(item?.images) ? item.images : [];
+  const heroImage = (() => {
+    for (const group of imageGroups) {
+      if (!Array.isArray(group?.infoImg)) continue;
+      const candidate = group.infoImg.find(src => typeof src === 'string' && src.trim());
+      if (candidate) return candidate.trim();
+    }
+    return '';
+  })();
+  const carouselImages = (() => {
+    const result = [];
+    imageGroups.forEach(group => {
+      if (!Array.isArray(group?.infoImg)) return;
+      group.infoImg.forEach(src => {
+        if (typeof src === 'string' && src.trim()) {
+          result.push({ src: src.trim(), alt: '' });
+        }
+      });
+    });
+    return result;
+  })();
   const descriptionSource = item?.description || '';
 
   // UI状態管理（エラー/処理中フラグ）
@@ -195,8 +215,8 @@ export default function Package() {
       <main className="container package__layout">
         <div className="package__main">
           {/* メイン情報エリア（タイトル、概要、スクリーンショット） */}
-          <section className={"package__hero" + (thumb ? " has-thumb" : "")} data-type={item.type || ''}>
-            {thumb ? <div className="package__hero-bg" style={{ backgroundImage: `url(${thumb})` }} aria-hidden /> : null}
+          <section className={"package__hero" + (heroImage ? " has-thumb" : "")} data-type={item.type || ''}>
+            {heroImage ? <div className="package__hero-bg" style={{ backgroundImage: `url(${heroImage})` }} aria-hidden /> : null}
             <div className="package__hero-top">
               <h1 className="package__title">{item.name}</h1>
             </div>
@@ -204,10 +224,10 @@ export default function Package() {
           </section>
 
           {/* スクリーンショット表示エリア */}
-          {item.images?.length ? (
+          {carouselImages.length ? (
             <section>
               <h2>スクリーンショット</h2>
-              <ImageCarousel images={item.images} />
+              <ImageCarousel images={carouselImages} />
             </section>
           ) : null}
 

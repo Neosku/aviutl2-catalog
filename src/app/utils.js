@@ -120,6 +120,71 @@ function normalizeCatalogData(data) {
     return [];
 }
 
+function deriveCatalogBaseUrl(rootUrl) {
+    if (!rootUrl || typeof rootUrl !== 'string') return null;
+    const trimmed = rootUrl.trim();
+    if (!trimmed) return null;
+    const origin = (typeof window !== 'undefined' && window.location && window.location.href)
+        ? window.location.href
+        : 'app://localhost/';
+    try {
+        const resolved = new URL(trimmed, origin);
+        const dir = new URL('.', resolved);
+        return dir.toString();
+    } catch (_) {
+        const withoutQuery = trimmed.split(/[?#]/)[0];
+        const idx = withoutQuery.lastIndexOf('/');
+        if (idx >= 0) {
+            return withoutQuery.slice(0, idx + 1);
+        }
+        return null;
+    }
+}
+
+function resolveCatalogAssetUrl(raw, baseUrl) {
+    if (typeof raw !== 'string') return '';
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+    if (baseUrl) {
+        try {
+            return new URL(trimmed, baseUrl).toString();
+        } catch (_) { /* fall through */ }
+    }
+    return trimmed;
+}
+
+function applyCatalogAssetBase(items, baseUrl) {
+    if (!Array.isArray(items)) return [];
+    return items.map(item => {
+        const hasImages = Array.isArray(item?.images);
+        const groups = hasImages
+            ? item.images.map(group => {
+                if (!group || typeof group !== 'object') return group;
+                const next = { ...group };
+                if (typeof group.thumbnail === 'string') {
+                    next.thumbnail = resolveCatalogAssetUrl(group.thumbnail, baseUrl);
+                }
+                const infoImages = Array.isArray(group.infoImg) ? group.infoImg : [];
+                next.infoImg = infoImages
+                    .map(src => resolveCatalogAssetUrl(src, baseUrl))
+                    .filter(Boolean);
+                return next;
+            })
+            : null;
+        let description = item.description;
+        if (typeof description === 'string') {
+            const trimmed = description.trim();
+            if (/\.md$/i.test(trimmed)) {
+                const resolved = resolveCatalogAssetUrl(trimmed, baseUrl);
+                if (resolved) description = resolved;
+            }
+        }
+        const nextItem = { ...item, description };
+        if (hasImages) nextItem.images = groups || [];
+        return nextItem;
+    });
+}
+
 export async function writeCatalogCache(data) {
     const fs = await import('@tauri-apps/plugin-fs');
     const payload = Array.isArray(data) ? data : normalizeCatalogData(data);
@@ -134,6 +199,7 @@ export async function loadCatalogData(options = {}) {
     let items = null;
     let source = null;
     let lastError = null;
+    let assetBase = deriveCatalogBaseUrl(remote);
 
     if (remote) {
         try {
@@ -143,7 +209,10 @@ export async function loadCatalogData(options = {}) {
             clearTimeout(timer);
             if (res.ok) {
                 const json = await res.json();
-                items = normalizeCatalogData(json);
+                const normalized = normalizeCatalogData(json);
+                const resolvedBase = deriveCatalogBaseUrl(res.url || remote) || assetBase;
+                assetBase = resolvedBase;
+                items = applyCatalogAssetBase(normalized, assetBase);
                 source = 'remote';
                 try {
                     await writeCatalogCache(items);
@@ -163,7 +232,8 @@ export async function loadCatalogData(options = {}) {
     if (items == null) {
         try {
             const cache = await readCatalogCache();
-            items = normalizeCatalogData(cache);
+            const normalized = normalizeCatalogData(cache);
+            items = applyCatalogAssetBase(normalized, assetBase);
             source = 'cache';
         } catch (e) {
             lastError = e;

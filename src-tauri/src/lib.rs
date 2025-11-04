@@ -564,7 +564,7 @@ pub fn run_auo_setup_impl(_app: AppHandle, exe_path: PathBuf, args: Option<Vec<S
             }
             close_sent = true;
         }
-        thread::sleep(Duration::from_millis(400));
+        thread::sleep(Duration::from_millis(500));
 
         if let Some(status) = child.try_wait().map_err(|e| format!("try_wait failed: {e}"))? {
             let _ = drain_new_text_from_edit_and_check(hwnd_edit, &mut last_len_u16, "");
