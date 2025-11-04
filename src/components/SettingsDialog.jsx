@@ -1,5 +1,5 @@
 // 設定ダイアログコンポーネント
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { invoke } from '@tauri-apps/api/core';
@@ -7,6 +7,8 @@ import { invoke } from '@tauri-apps/api/core';
 export default function SettingsDialog({ open, onClose }) {
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
+  const initialThemeAttrRef = useRef(null);
+  const didSaveRef = useRef(false);
 
   // 入力は aviutl2Root / isPortableMode / theme のみ
   const [form, setForm] = useState({
@@ -18,6 +20,36 @@ export default function SettingsDialog({ open, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [appVersion, setAppVersion] = useState('');
+
+  function applyThemeAttr(theme) {
+    const root = document?.documentElement;
+    if (!root) return;
+    if (theme == null) {
+      root.removeAttribute('data-theme');
+      return;
+    }
+    const value = String(theme).trim();
+    if (!value || value === 'darkmode' || value === 'noir') {
+      root.removeAttribute('data-theme');
+      return;
+    }
+    if (value === 'lightmode') {
+      root.setAttribute('data-theme', 'lightmode');
+      return;
+    }
+    root.setAttribute('data-theme', value);
+  }
+
+  useEffect(() => {
+    if (!open) return undefined;
+    didSaveRef.current = false;
+    initialThemeAttrRef.current = document?.documentElement?.getAttribute('data-theme');
+    return () => {
+      if (!didSaveRef.current) {
+        applyThemeAttr(initialThemeAttrRef.current);
+      }
+    };
+  }, [open]);
 
   useEffect(() => {
     let mounted = true;
@@ -42,7 +74,7 @@ export default function SettingsDialog({ open, onClose }) {
             }));
 
             // HTML に現在のテーマを即時反映
-            try { document.documentElement.setAttribute('data-theme', theme); } catch (_) { }
+            try { applyThemeAttr(theme); } catch (_) { }
           }
         } catch (e) {
           try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) { }
@@ -66,7 +98,7 @@ export default function SettingsDialog({ open, onClose }) {
     const v = (type === 'checkbox') ? !!checked : value;
     setForm(prev => ({ ...prev, [name]: v }));
     if (name === 'theme') {
-      try { document.documentElement.setAttribute('data-theme', String(v || 'darkmode')); } catch (_) { }
+      try { applyThemeAttr(String(v || 'darkmode')); } catch (_) { }
     }
   }
 
@@ -99,7 +131,11 @@ export default function SettingsDialog({ open, onClose }) {
       });
 
       // 3) テーマはフロント設定として反映
-      try { document.documentElement.setAttribute('data-theme', (form.theme || 'darkmode').trim()); } catch (_) { }
+      try { applyThemeAttr((form.theme || 'darkmode').trim()); } catch (_) { }
+      didSaveRef.current = true;
+      try {
+        initialThemeAttrRef.current = document?.documentElement?.getAttribute('data-theme');
+      } catch (_) { }
 
       // 4) 再検出（UI 反映）
       try {
@@ -118,9 +154,16 @@ export default function SettingsDialog({ open, onClose }) {
 
   if (!open) return null;
 
+  function handleClose() {
+    if (!didSaveRef.current) {
+      try { applyThemeAttr(initialThemeAttrRef.current); } catch (_) { }
+    }
+    onClose?.();
+  }
+
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <div className="modal__backdrop" onClick={onClose} />
+      <div className="modal__backdrop" onClick={handleClose} />
       <div className="modal__dialog">
         <div className="modal__header">
           <h3 id="settings-title" className="modal__title">設定</h3>
@@ -175,10 +218,10 @@ export default function SettingsDialog({ open, onClose }) {
             </div>
 
             {/* テーマ */}
-            <label>テーマ（Theme）
+            <label>テーマ
               <select name="theme" value={form.theme} onChange={onChange}>
-                <option value="darkmode">Dark mode</option>
-                <option value="lightmode">Light mode</option>
+                <option value="darkmode">ダークモード</option>
+                <option value="lightmode">ライトモード</option>
               </select>
             </label>
           </div>
@@ -189,7 +232,7 @@ export default function SettingsDialog({ open, onClose }) {
         </div>
 
         <div className="modal__actions">
-          <button className="btn" onClick={onClose}>閉じる</button>
+          <button className="btn" onClick={handleClose}>閉じる</button>
           <button className="btn btn--primary" onClick={onSave} disabled={saving}>
             {saving ? (<><span className="spinner" aria-hidden></span> 保存中…</>) : '保存'}
           </button>

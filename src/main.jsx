@@ -95,7 +95,7 @@ function Bootstrapper() {
         let theme = (s && s.theme) ? String(s.theme) : '';
         if (theme === 'noir') theme = 'darkmode';
         if (theme === 'lightmode') {
-          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.setAttribute('data-theme', 'lightmode');
         } else {
           document.documentElement.removeAttribute('data-theme');
         }
