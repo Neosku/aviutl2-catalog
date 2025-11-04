@@ -213,9 +213,6 @@ pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_m
     if root_path.as_os_str().is_empty() {
         return Err(String::from("AviUtl2 のフォルダを選択してください。"));
     }
-    if !root_path.exists() {
-        fs::create_dir_all(&root_path).map_err(|e| format!("フォルダを作成できませんでした: {e}"))?;
-    }
     let catalog_config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     fs::create_dir_all(&catalog_config_dir).map_err(|e| e.to_string())?;
     let settings_path = catalog_config_dir.join("settings.json");
@@ -226,7 +223,7 @@ pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_m
     finalize_settings(&app, &mut settings, &settings_path, &catalog_config_dir).map_err(|e| e.to_string())
 }
 
-// aviutl2_rootの初期値を返す（%PROGRAMFILES%）
+// aviutl2_rootの初期値を返す
 #[tauri::command]
 pub fn default_aviutl2_root() -> Result<String, String> {
     let mut root = std::env::var_os("PROGRAMFILES").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Program Files"));
@@ -234,33 +231,17 @@ pub fn default_aviutl2_root() -> Result<String, String> {
     Ok(pathbuf_to_string(&root))
 }
 
-// 将来的に削除
+// aviutl2_rootのパスを正規化して返す
 fn resolve_aviutl_root(raw: &str) -> PathBuf {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return PathBuf::new();
     }
-
     let normalized = trimmed.replace('/', "\\");
-    let lower = normalized.to_ascii_lowercase();
-    const PROGRAMFILES_TAG: &str = "%programfiles%";
-    const PROGRAMDATA_TAG: &str = "%programdata%";
-
-    if lower.starts_with(PROGRAMFILES_TAG) || lower.starts_with(PROGRAMDATA_TAG) {
-        let mut base = std::env::var_os("PROGRAMDATA").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
-        let tag_len = if lower.starts_with(PROGRAMFILES_TAG) { PROGRAMFILES_TAG.len() } else { PROGRAMDATA_TAG.len() };
-        let remainder = normalized[tag_len..].trim_start_matches('\\');
-        if remainder.is_empty() {
-            base.push("AviUtl2");
-        } else {
-            base.push(remainder);
-        }
-        return base;
-    }
-
     PathBuf::from(normalized)
 }
 
+// aviutl2_rootのパスを正規化して返す(JS用)
 #[tauri::command]
 pub fn resolve_aviutl2_root(raw: String) -> Result<String, String> {
     let resolved = resolve_aviutl_root(&raw);
