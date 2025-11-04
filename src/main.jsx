@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import AppRouter from './app/Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './app/store/catalog.jsx';
-import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError } from './app/utils.js';
+import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData } from './app/utils.js';
 import InitSetupApp from './app/init/InitSetupApp.jsx';
 import './app/styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -36,7 +36,7 @@ async function detectWindowLabel() {
       }
     }
   } catch (e) {
-    try { await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`); } catch (_) {}
+    try { await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`); } catch (_) { }
   }
   return 'main';
 }
@@ -45,7 +45,7 @@ async function detectWindowLabel() {
 // カタログの読み込み・検出・状態反映を行う起動用コンポーネント
 function Bootstrapper() {
   const dispatch = useCatalogDispatch();
-  
+
   // Webアプリの右クリックコンテキストメニューを無効化
   useEffect(() => {
     const onCtx = (e) => {
@@ -59,18 +59,18 @@ function Bootstrapper() {
 
   // グローバルエラーがをapp.logに記録
   useEffect(() => {
-    const onError = async (e) => { try { await logError(`[window.error] ${e?.message || e}`); } catch (_) {} };
+    const onError = async (e) => { try { await logError(`[window.error] ${e?.message || e}`); } catch (_) { } };
     const onRejection = async (e) => {
       const reason = e?.reason;
       const msg = (reason && (reason.message || (reason.toString && reason.toString()))) || String(reason || 'unhandled rejection');
-      try { await logError(`[window.unhandledrejection] ${msg}`); } catch (_) {}
+      try { await logError(`[window.unhandledrejection] ${msg}`); } catch (_) { }
     };
     const origError = console.error;
-    console.error = (...args) => { try { origError?.(...args); } catch (_) {} try { logError(`[console.error] ${args.map(a => (a && a.stack) ? a.stack : (a && a.message) ? a.message : String(a)).join(' ')}`); } catch (_) {} };
+    console.error = (...args) => { try { origError?.(...args); } catch (_) { } try { logError(`[console.error] ${args.map(a => (a && a.stack) ? a.stack : (a && a.message) ? a.message : String(a)).join(' ')}`); } catch (_) { } };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     return () => {
-      try { console.error = origError; } catch (_) {}
+      try { console.error = origError; } catch (_) { }
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
     };
@@ -90,57 +90,30 @@ function Bootstrapper() {
         } else {
           document.documentElement.removeAttribute('data-theme');
         }
-      } catch (e) { try { await logError(`[bootstrap] theme apply failed: ${e?.message || e}`); } catch (_) {} }
-      
-      // Remote catalog URL can be configured via Vite env
-      const REMOTE = import.meta.env.VITE_REMOTE;
-      
-      // キャッシュされたカタログをAppConfigから読み込み
-      async function readCache() {
-        try {
-          const fs = await import('@tauri-apps/plugin-fs');
-          const raw = await fs.readTextFile('catalog/index.json', { baseDir: fs.BaseDirectory.AppConfig });
-          return JSON.parse(raw);
-        } catch (e) { try { await logError(`[bootstrap] readCache failed: ${e?.message || e}`); } catch (_) {} return null; }
-      }
-      // カタログをAppConfigにJSON形式で保存
-      async function writeCache(data) {
-        try {
-          const fs = await import('@tauri-apps/plugin-fs');
-          await fs.mkdir('catalog', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-          await fs.writeTextFile('catalog/index.json', JSON.stringify(data, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
-        } catch (e) { try { await logError(`[bootstrap] writeCache failed: ${e?.message || e}`); } catch (_) {} }
-      }
+      } catch (e) { try { await logError(`[bootstrap] theme apply failed: ${e?.message || e}`); } catch (_) { } }
+
       try {
         // インストール情報を先に読み込んでアイテムを装飾
         const installedMap = await loadInstalledMap();
         if (!cancelled) dispatch({ type: 'SET_INSTALLED_MAP', payload: installedMap });
 
-        // まずリモートからの取得を試行
-        let data = null;
+        let catalogItems;
         try {
-          const ctrl = new AbortController();
-          const to = setTimeout(() => ctrl.abort(), 10000);
-          const res = await fetch(REMOTE, { signal: ctrl.signal });
-          clearTimeout(to);
-          if (res.ok) data = await res.json();
+          const { items } = await loadCatalogData({ timeoutMs: 10000 });
+          catalogItems = items;
         } catch (e) {
-          console.warn('Remote catalog fetch failed, will try cache:', e);
+          console.warn('Catalog load failed:', e);
+          try { await logError(`[bootstrap] loadCatalogData failed: ${e?.message || e}`); } catch (_) { }
         }
 
-        // リモート取得に失敗した場合はキャッシュを使用
-        if (!data) {
-          data = await readCache();
-        }
-
-        if (data) {
-          const items = Array.isArray(data) ? data : [];
+        if (Array.isArray(catalogItems) && catalogItems.length > 0) {
+          const items = catalogItems;
           if (!cancelled) dispatch({ type: 'SET_ITEMS', payload: items });
           // 高速検索のためにRust側のカタログインデックスを構築
           try {
             const { invoke } = await import('@tauri-apps/api/core');
             await invoke('set_catalog_index', { items });
-          } catch (e) { try { await logError(`[bootstrap] set_catalog_index failed: ${e?.message || e}`); } catch (_) {} }
+          } catch (e) { try { await logError(`[bootstrap] set_catalog_index failed: ${e?.message || e}`); } catch (_) { } }
           // ファイルのハッシュでインストール済みバージョンを検出
           try {
             const detected = await detectInstalledVersionsMap(items);
@@ -150,15 +123,9 @@ function Bootstrapper() {
               try {
                 const snap = await saveInstalledSnapshot(detected);
                 dispatch({ type: 'SET_INSTALLED_MAP', payload: snap });
-              } catch (e) { try { await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`); } catch (_) {} }
+              } catch (e) { try { await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`); } catch (_) { } }
             }
-          } catch (e) { try { await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`); } catch (_) {} }
-          // キャッシュを利用した場合はバックグラウンドで更新（現状 no-op）
-          if (!Array.isArray(data) || data.length === 0) {
-            // 何もしません
-          }
-          // リモート成功時もキャッシュへ書き込み
-          writeCache(items);
+          } catch (e) { try { await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`); } catch (_) { } }
         } else {
           if (!cancelled) dispatch({ type: 'SET_ERROR', payload: 'カタログの読み込みに失敗しました（ネットワーク/キャッシュなし）。' });
         }
@@ -202,16 +169,16 @@ function Bootstrapper() {
                 try {
                   const { message } = await import('@tauri-apps/plugin-dialog');
                   await message('アップデートを適用しました。アプリを再起動してください。', { title: 'アップデート', kind: 'info' });
-                } catch (_) {}
+                } catch (_) { }
               }
             }
           } catch (e) {
-            try { await logError(`[updater] prompt/install failed: ${e?.message || e}`); } catch (_) {}
+            try { await logError(`[updater] prompt/install failed: ${e?.message || e}`); } catch (_) { }
           }
         }
       } catch (e) {
         // check() が未設定やネットワークにより失敗する可能性あり
-        try { await logError(`[updater] check failed: ${e?.message || e}`); } catch (_) {}
+        try { await logError(`[updater] check failed: ${e?.message || e}`); } catch (_) { }
       }
     })();
     return () => { cancelled = true; };

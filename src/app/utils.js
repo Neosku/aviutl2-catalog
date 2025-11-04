@@ -93,6 +93,91 @@ export function getSorter(key = 'newest', dir = 'desc') {
 // インストールされているプラグインのIDとバージョンをjsonに保存
 // スキーマ: { [id: string]: string /* version */ }
 const INSTALLED_FILE = 'installed.json';
+const CATALOG_CACHE_DIR = 'catalog';
+const CATALOG_CACHE_FILE = `${CATALOG_CACHE_DIR}/index.json`;
+
+// カタログキャッシュ(index.json)を読み込み
+export async function readCatalogCache() {
+    const fs = await import('@tauri-apps/plugin-fs');
+    const raw = await fs.readTextFile(CATALOG_CACHE_FILE, { baseDir: fs.BaseDirectory.AppConfig });
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+    if (!trimmed) {
+        throw new Error('catalog cache is empty');
+    }
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        throw new Error(`catalog cache parse failed: ${e?.message || e}`);
+    }
+}
+
+function normalizeCatalogData(data) {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object') {
+        const fromPackages = data.packages;
+        if (Array.isArray(fromPackages)) return fromPackages;
+    }
+    return [];
+}
+
+export async function writeCatalogCache(data) {
+    const fs = await import('@tauri-apps/plugin-fs');
+    const payload = Array.isArray(data) ? data : normalizeCatalogData(data);
+    await fs.mkdir(CATALOG_CACHE_DIR, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+    await fs.writeTextFile(CATALOG_CACHE_FILE, JSON.stringify(payload, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
+    return payload;
+}
+
+export async function loadCatalogData(options = {}) {
+    const remote = import.meta.env.VITE_REMOTE;
+    const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 10000;
+    let items = null;
+    let source = null;
+    let lastError = null;
+
+    if (remote) {
+        try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+            const res = await fetch(remote, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (res.ok) {
+                const json = await res.json();
+                items = normalizeCatalogData(json);
+                source = 'remote';
+                try {
+                    await writeCatalogCache(items);
+                } catch (cacheError) {
+                    await logError(`[catalog] cache write failed: ${cacheError?.message || cacheError}`);
+                }
+            } else {
+                lastError = new Error(`remote fetch http ${res.status}`);
+                await logError(`[catalog] remote fetch failed: HTTP ${res.status}`);
+            }
+        } catch (e) {
+            lastError = e;
+            await logError(`[catalog] remote fetch threw: ${e?.message || e}`);
+        }
+    }
+
+    if (items == null) {
+        try {
+            const cache = await readCatalogCache();
+            items = normalizeCatalogData(cache);
+            source = 'cache';
+        } catch (e) {
+            lastError = e;
+            await logError(`[catalog] cache read failed: ${e?.message || e}`);
+        }
+    }
+
+    if (items == null) {
+        if (lastError) throw lastError;
+        throw new Error('catalog data unavailable');
+    }
+
+    return { items, source };
+}
 
 // installed.jsonからインストールパッケージ一覧を読み込み（RustとJSを統合）
 export async function loadInstalledMap() {

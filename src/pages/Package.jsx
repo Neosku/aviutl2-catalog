@@ -60,8 +60,6 @@ export default function Package() {
 
   const baseURL = "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/"
   // MarkdownファイルのベースURL（相対パス解決用）
-  // const remote = import.meta?.env?.VITE_REMOTE;
-  // const remoteWithMd = remote ? `${remote.replace(/\/+$/, '')}/md/` : null;
   useEffect(() => {
     let cancelled = false;
     const raw = descriptionSource;

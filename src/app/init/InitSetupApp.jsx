@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TitleBar from '../../components/TitleBar.jsx';
 import Icon from '../../components/Icon.jsx';
-import { hasInstaller, logError, runInstallerForItem} from '../utils.js';
+import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 async function showMain() {
@@ -117,35 +117,16 @@ export default function InitSetupApp() {
 
   // カタログ取得（remote → ローカルキャッシュ）
   const fetchCatalogList = useCallback(async () => {
-    let data = null;
-    const remote = import.meta?.env?.VITE_REMOTE;
-    if (remote) {
-      try {
-        const ctrl = new AbortController();
-        const timeoutId = setTimeout(() => ctrl.abort(), 10000);
-        const res = await fetch(remote, { signal: ctrl.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          data = await res.json();
-        }
-      } catch (e) {
-        await safeLog('[init-window] required packages remote fetch failed', e);
+    try {
+      const { items } = await loadCatalogData({ timeoutMs: 10000 });
+      if (!Array.isArray(items) || !items.length) {
+        throw new Error('catalog data unavailable');
       }
+      return items;
+    } catch (e) {
+      await safeLog('[init-window] catalog load failed', e);
+      throw e;
     }
-    if (!data) {
-      try {
-        const fs = await import('@tauri-apps/plugin-fs');
-        const raw = await fs.readTextFile('catalog/index.json', { baseDir: fs.BaseDirectory.AppConfig });
-        data = JSON.parse(raw);
-      } catch (e) {
-        await safeLog('[init-window] required packages cache load failed', e);
-      }
-    }
-    const list = Array.isArray(data) ? data : (Array.isArray(data?.packages) ? data.packages : []);
-    if (!Array.isArray(list) || list.length === 0) {
-      throw new Error('catalog data unavailable');
-    }
-    return list;
   }, []);
 
   // 単一パッケージ情報を確実に得る
@@ -184,7 +165,7 @@ export default function InitSetupApp() {
       await safeLog('[init-window] resolve aviutl2 root failed', resolveError);
     }
     try {
-      await core.invoke('update_settings', { aviutl2Root: resolved, isPortableMode: Boolean(portableMode), theme: 'dark'});
+      await core.invoke('update_settings', { aviutl2Root: resolved, isPortableMode: Boolean(portableMode), theme: 'dark' });
     } catch (invocationError) {
       await safeLog('[init-window] update_settings invoke failed', invocationError);
       throw invocationError;
@@ -661,7 +642,7 @@ export default function InitSetupApp() {
                               <h3>{item?.name || id}</h3>
                               {packageVersions[id] && (
                                 <span className="setup-version-badge" title={`検出バージョン: ${packageVersions[id]}`}>
-                                  v{packageVersions[id]}
+                                  {packageVersions[id]}
                                 </span>
                               )}
                             </div>
