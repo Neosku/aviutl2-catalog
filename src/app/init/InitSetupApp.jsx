@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TitleBar from '../../components/TitleBar.jsx';
 import Icon from '../../components/Icon.jsx';
 import ProgressCircle from '../../components/ProgressCircle.jsx';
+import UpdateDialog from '../../components/UpdateDialog.jsx';
 import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils.js';
+import { useUpdatePrompt } from '../hooks/useUpdatePrompt.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 async function showMain() {
@@ -92,6 +94,14 @@ export default function InitSetupApp() {
   const [packagesDownloadError, setPackagesDownloadError] = useState('');// error message for bulk download
   const [packageVersions, setPackageVersions] = useState({}); // id -> detected version string
   const [versionsDetected, setVersionsDetected] = useState(false); // 検出完了フラグ
+
+  const {
+    updateInfo,
+    updateBusy,
+    updateError,
+    confirmUpdate,
+    dismissUpdate,
+  } = useUpdatePrompt();
 
   // デフォルトのルート候補を事前取得
   useEffect(() => {
@@ -512,268 +522,280 @@ export default function InitSetupApp() {
   }
 
   return (
-    <div className="init-root" data-window-label={label || ''}>
-      <TitleBar />
-      <div className="setup-body">
-        <div className="setup-card">
-          <header className="setup-card__header">
-            <h1>セットアップ</h1>
-            <p>AviUtl2 を使用するための初期設定を行います。</p>
-            <StepIndicator step={step} installed={installed} />
-          </header>
-          <main className="setup-card__content">
-            {error && <div className="setup-error" role="alert">{error}</div>}
+    <>
+      <div className="init-root" data-window-label={label || ''}>
+        <TitleBar />
+        <div className="setup-body">
+          <div className="setup-card">
+            <header className="setup-card__header">
+              <h1>セットアップ</h1>
+              <p>AviUtl2 を使用するための初期設定を行います。</p>
+              <StepIndicator step={step} installed={installed} />
+            </header>
+            <main className="setup-card__content">
+              {error && <div className="setup-error" role="alert">{error}</div>}
 
-            {/* 導入ページ */}
-            {step === 'intro' && (
-              <section className="setup-section">
-                <h2>セットアップの開始</h2>
-                <p>AviUtl2 のインストールや必要なプラグインの準備を行います。</p>
-                <div className="setup-actions">
-                  <button className="btn btn--primary" onClick={() => setStep('question')}>
-                    セットアップを開始
-                  </button>
-                </div>
-              </section>
-            )}
+              {/* 導入ページ */}
+              {step === 'intro' && (
+                <section className="setup-section">
+                  <h2>セットアップの開始</h2>
+                  <p>AviUtl2 のインストールや必要なプラグインの準備を行います。</p>
+                  <div className="setup-actions">
+                    <button className="btn btn--primary" onClick={() => setStep('question')}>
+                      セットアップを開始
+                    </button>
+                  </div>
+                </section>
+              )}
 
-            {/* インストール有無の質問 */}
-            {step === 'question' && (
-              <section className="setup-section">
-                <h2>AviUtl2 のインストール状況</h2>
-                <p>AviUtl2 をすでにインストールしていますか？</p>
-                <div className="setup-actions">
-                  <button className="btn btn--primary" onClick={() => proceedInstalled(true)}>インストール済み</button>
-                  <button className="btn btn--primary" onClick={() => proceedInstalled(false)}>未インストール</button>
-                  <button className="btn btn--secondary" onClick={() => setStep('intro')}>戻る</button>
-                </div>
-                {/* <div className="setup-nav"> */}
-                {/* </div> */}
-              </section>
-            )}
+              {/* インストール有無の質問 */}
+              {step === 'question' && (
+                <section className="setup-section">
+                  <h2>AviUtl2 のインストール状況</h2>
+                  <p>AviUtl2 をすでにインストールしていますか？</p>
+                  <div className="setup-actions">
+                    <button className="btn btn--primary" onClick={() => proceedInstalled(true)}>インストール済み</button>
+                    <button className="btn btn--primary" onClick={() => proceedInstalled(false)}>未インストール</button>
+                    <button className="btn btn--secondary" onClick={() => setStep('intro')}>戻る</button>
+                  </div>
+                  {/* <div className="setup-nav"> */}
+                  {/* </div> */}
+                </section>
+              )}
 
-            {/* 既存インストール指定 */}
-            {step === 'details' && installed === true && (
-              <section className="setup-section">
-                <h2>インストール済みの AviUtl2 を指定</h2>
-                <div className="setup-field">
-                  <label>AviUtl2 フォルダのパス</label>
-                  <p>aviutl2.exeがあるフォルダを選択してください。</p>
-                  <div className="setup-field__input">
-                    <input
-                      value={aviutlRoot}
-                      onChange={e => setAviutlRoot(e.target.value)}
-                      placeholder="aviutl2.exe があるフォルダを選択してください"
-                    />
-                    <button type="button" className="btn" onClick={() => pickDir('existing')}>選択</button>
-                  </div>
-                </div>
-                <div className="setup-checkbox">
-                  <div className="setup-checkbox__header">ポータブルモード</div>
-                  <div className="setup-checkbox__options">
-                    <div
-                      className={`setup-checkbox__option ${!portable ? 'is-active' : ''}`}
-                      onClick={() => setPortable(false)}
-                    >
-                      <span className="setup-checkbox__option-label">
-                        オフ
-                        <span className="setup-checkbox__option-badge">推奨</span>
-                      </span>
-                    </div>
-                    <div
-                      className={`setup-checkbox__option ${portable ? 'is-active' : ''}`}
-                      onClick={() => setPortable(true)}
-                    >
-                      <span className="setup-checkbox__option-label">オン</span>
-                    </div>
-                  </div>
-                  <p className="setup-checkbox__description">
-                    オフ（推奨）: AviUtl2 の設定やプラグインは ProgramData フォルダに保存されます。<br />
-                    オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
-                  </p>
-                </div>
-                <div className="setup-nav">
-                  <button className="btn btn--primary" onClick={handleExistingDetailsNext} disabled={savingInstallDetails || !canProceedDetails()}>
-                    {savingInstallDetails ? '処理中…' : '次へ'}
-                  </button>
-                  <button className="btn btn--secondary" onClick={() => setStep('question')}>戻る</button>
-                </div>
-              </section>
-            )}
-
-            {/* 新規インストール */}
-            {step === 'details' && installed === false && (
-              <section className="setup-section">
-                <h2>AviUtl2 をインストール</h2>
-                <p>インストール先のフォルダを指定してください。インストールを実行します。</p>
-                <div className="setup-field">
-                  <label>インストール先フォルダ</label>
-                  <div className="setup-field__input">
-                    <input
-                      value={installDir}
-                      onChange={e => setInstallDir(e.target.value)}
-                      placeholder="インストール先を選択してください"
-                    />
-                    <button type="button" className="btn" onClick={() => pickDir('install')}>参照</button>
-                  </div>
-                </div>
-                <div className="setup-checkbox">
-                  <div className="setup-checkbox__header">ポータブルモード</div>
-                  <div className="setup-checkbox__options">
-                    <div
-                      className={`setup-checkbox__option ${!portable ? 'is-active' : ''}`}
-                      onClick={() => setPortable(false)}
-                    >
-                      <span className="setup-checkbox__option-label">
-                        オフ
-                        <span className="setup-checkbox__option-badge">推奨</span>
-                      </span>
-                    </div>
-                    <div
-                      className={`setup-checkbox__option ${portable ? 'is-active' : ''}`}
-                      onClick={() => setPortable(true)}
-                    >
-                      <span className="setup-checkbox__option-label">オン</span>
-                    </div>
-                  </div>
-                  <p className="setup-checkbox__description">
-                    オフ（推奨）: AviUtl2 の設定やプラグインは ProgramData フォルダに保存されます。<br />
-                    オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
-                  </p>
-                </div>
-                {coreProgress && (
-                  <div className="setup-note" aria-live="polite">
-                    <span className="action-progress">
-                      <ProgressCircle
-                        value={coreProgressRatio}
-                        size={24}
-                        strokeWidth={4}
-                        ariaLabel={`${coreProgressLabel} ${coreProgressPercent}%`}
+              {/* 既存インストール指定 */}
+              {step === 'details' && installed === true && (
+                <section className="setup-section">
+                  <h2>インストール済みの AviUtl2 を指定</h2>
+                  <div className="setup-field">
+                    <label>AviUtl2 フォルダのパス</label>
+                    <p>aviutl2.exeがあるフォルダを選択してください。</p>
+                    <div className="setup-field__input">
+                      <input
+                        value={aviutlRoot}
+                        onChange={e => setAviutlRoot(e.target.value)}
+                        placeholder="aviutl2.exe があるフォルダを選択してください"
                       />
-                      <span className="action-progress__label">{coreProgressLabel} {`${coreProgressPercent}%`}</span>
-                    </span>
+                      <button type="button" className="btn" onClick={() => pickDir('existing')}>選択</button>
+                    </div>
                   </div>
-                )}
-                <div className="setup-nav">
-                  <button className="btn btn--primary" onClick={handleInstallDetailsNext} disabled={savingInstallDetails || !canProceedDetails()}>
-                    {savingInstallDetails ? 'インストール中…' : 'インストール'}
-                  </button>
-                  <button className="btn btn--secondary" onClick={() => setStep('question')}>戻る</button>
-                </div>
-              </section>
-            )}
-
-            {/* 必須パッケージ */}
-            {step === 'packages' && (
-              <section className="setup-section">
-                <h2>必須パッケージの確認</h2>
-                <p>必要なパッケージをまとめてインストールします。不要であれば、この手順はスキップできます。</p>
-                {packagesLoading && (
-                  <div className="setup-note">パッケージ一覧を読み込み中です…</div>
-                )}
-                {packagesError && !packagesLoading && (
-                  <div className="setup-note setup-note--error" role="status">{packagesError}</div>
-                )}
-                {packagesDownloadError && (
-                  <div className="setup-note setup-note--error" role="status">{packagesDownloadError}</div>
-                )}
-
-                {!packagesLoading && (
-                  <>
-                    {allRequiredInstalled && (
-                      <div className="setup-actions">
-                        <span className="pill pill--ok">
-                          <span aria-hidden><Icon name="check_circle" /></span> すべてインストール済み
+                  <div className="setup-checkbox">
+                    <div className="setup-checkbox__header">ポータブルモード</div>
+                    <div className="setup-checkbox__options">
+                      <div
+                        className={`setup-checkbox__option ${!portable ? 'is-active' : ''}`}
+                        onClick={() => setPortable(false)}
+                      >
+                        <span className="setup-checkbox__option-label">
+                          オフ
+                          <span className="setup-checkbox__option-badge">推奨</span>
                         </span>
                       </div>
-                    )}
+                      <div
+                        className={`setup-checkbox__option ${portable ? 'is-active' : ''}`}
+                        onClick={() => setPortable(true)}
+                      >
+                        <span className="setup-checkbox__option-label">オン</span>
+                      </div>
+                    </div>
+                    <p className="setup-checkbox__description">
+                      オフ（推奨）: AviUtl2 の設定やプラグインは ProgramData フォルダに保存されます。<br />
+                      オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
+                    </p>
+                  </div>
+                  <div className="setup-nav">
+                    <button className="btn btn--primary" onClick={handleExistingDetailsNext} disabled={savingInstallDetails || !canProceedDetails()}>
+                      {savingInstallDetails ? '処理中…' : '次へ'}
+                    </button>
+                    <button className="btn btn--secondary" onClick={() => setStep('question')}>戻る</button>
+                  </div>
+                </section>
+              )}
 
-                    <div className="setup-package-list">
-                      {requiredPackages.map(({ id, item, state }) => {
-                        const progress = state.progress;
-                        const ratio = progress?.ratio ?? 0;
-                        const percent = Number.isFinite(progress?.percent)
-                          ? progress.percent
-                          : Math.round(ratio * 100);
-                        const label = progress?.label ?? '処理中…';
-                        return (
-                          <div key={id} className="setup-package-card">
-                            <div className="setup-package-card__info">
-                              <div className="setup-package-card__title-row">
-                                <h3>{item?.name || id}</h3>
-                                {packageVersions[id] && (
-                                  <span className="setup-version-badge" title={`検出バージョン: ${packageVersions[id]}`}>
-                                    {packageVersions[id]}
+              {/* 新規インストール */}
+              {step === 'details' && installed === false && (
+                <section className="setup-section">
+                  <h2>AviUtl2 をインストール</h2>
+                  <p>インストール先のフォルダを指定してください。インストールを実行します。</p>
+                  <div className="setup-field">
+                    <label>インストール先フォルダ</label>
+                    <div className="setup-field__input">
+                      <input
+                        value={installDir}
+                        onChange={e => setInstallDir(e.target.value)}
+                        placeholder="インストール先を選択してください"
+                      />
+                      <button type="button" className="btn" onClick={() => pickDir('install')}>参照</button>
+                    </div>
+                  </div>
+                  <div className="setup-checkbox">
+                    <div className="setup-checkbox__header">ポータブルモード</div>
+                    <div className="setup-checkbox__options">
+                      <div
+                        className={`setup-checkbox__option ${!portable ? 'is-active' : ''}`}
+                        onClick={() => setPortable(false)}
+                      >
+                        <span className="setup-checkbox__option-label">
+                          オフ
+                          <span className="setup-checkbox__option-badge">推奨</span>
+                        </span>
+                      </div>
+                      <div
+                        className={`setup-checkbox__option ${portable ? 'is-active' : ''}`}
+                        onClick={() => setPortable(true)}
+                      >
+                        <span className="setup-checkbox__option-label">オン</span>
+                      </div>
+                    </div>
+                    <p className="setup-checkbox__description">
+                      オフ（推奨）: AviUtl2 の設定やプラグインは ProgramData フォルダに保存されます。<br />
+                      オン　　　　: aviutl2.exe と同じディレクトリに保存されます。
+                    </p>
+                  </div>
+                  {coreProgress && (
+                    <div className="setup-note" aria-live="polite">
+                      <span className="action-progress">
+                        <ProgressCircle
+                          value={coreProgressRatio}
+                          size={24}
+                          strokeWidth={4}
+                          ariaLabel={`${coreProgressLabel} ${coreProgressPercent}%`}
+                        />
+                        <span className="action-progress__label">{coreProgressLabel} {`${coreProgressPercent}%`}</span>
+                      </span>
+                    </div>
+                  )}
+                  <div className="setup-nav">
+                    <button className="btn btn--primary" onClick={handleInstallDetailsNext} disabled={savingInstallDetails || !canProceedDetails()}>
+                      {savingInstallDetails ? 'インストール中…' : 'インストール'}
+                    </button>
+                    <button className="btn btn--secondary" onClick={() => setStep('question')}>戻る</button>
+                  </div>
+                </section>
+              )}
+
+              {/* 必須パッケージ */}
+              {step === 'packages' && (
+                <section className="setup-section">
+                  <h2>必須パッケージの確認</h2>
+                  <p>必要なパッケージをまとめてインストールします。不要であれば、この手順はスキップできます。</p>
+                  {packagesLoading && (
+                    <div className="setup-note">パッケージ一覧を読み込み中です…</div>
+                  )}
+                  {packagesError && !packagesLoading && (
+                    <div className="setup-note setup-note--error" role="status">{packagesError}</div>
+                  )}
+                  {packagesDownloadError && (
+                    <div className="setup-note setup-note--error" role="status">{packagesDownloadError}</div>
+                  )}
+
+                  {!packagesLoading && (
+                    <>
+                      {allRequiredInstalled && (
+                        <div className="setup-actions">
+                          <span className="pill pill--ok">
+                            <span aria-hidden><Icon name="check_circle" /></span> すべてインストール済み
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="setup-package-list">
+                        {requiredPackages.map(({ id, item, state }) => {
+                          const progress = state.progress;
+                          const ratio = progress?.ratio ?? 0;
+                          const percent = Number.isFinite(progress?.percent)
+                            ? progress.percent
+                            : Math.round(ratio * 100);
+                          const label = progress?.label ?? '処理中…';
+                          return (
+                            <div key={id} className="setup-package-card">
+                              <div className="setup-package-card__info">
+                                <div className="setup-package-card__title-row">
+                                  <h3>{item?.name || id}</h3>
+                                  {packageVersions[id] && (
+                                    <span className="setup-version-badge" title={`検出バージョン: ${packageVersions[id]}`}>
+                                      {packageVersions[id]}
+                                    </span>
+                                  )}
+                                </div>
+                                <p>{item?.summary || '詳細情報を取得できませんでした。'}</p>
+                              </div>
+                              <div className="setup-package-card__status">
+                                {state.downloading ? (
+                                  <span className="action-progress" aria-live="polite">
+                                    <ProgressCircle
+                                      value={ratio}
+                                      size={20}
+                                      strokeWidth={3}
+                                      ariaLabel={`${label} ${percent}%`}
+                                    />
+                                    <span className="action-progress__label">{label} {`${percent}%`}</span>
                                   </span>
+                                ) : state.installed ? (
+                                  <span className="pill pill--ok">
+                                    <span aria-hidden><Icon name="check_circle" /></span> インストール済
+                                  </span>
+                                ) : (
+                                  <span className="setup-status">未インストール</span>
                                 )}
                               </div>
-                              <p>{item?.summary || '詳細情報を取得できませんでした。'}</p>
+                              {state.error && <div className="setup-note setup-note--error" style={{ gridColumn: '1 / -1' }}>{state.error}</div>}
                             </div>
-                            <div className="setup-package-card__status">
-                              {state.downloading ? (
-                                <span className="action-progress" aria-live="polite">
-                                  <ProgressCircle
-                                    value={ratio}
-                                    size={20}
-                                    strokeWidth={3}
-                                    ariaLabel={`${label} ${percent}%`}
-                                  />
-                                  <span className="action-progress__label">{label} {`${percent}%`}</span>
-                                </span>
-                              ) : state.installed ? (
-                                <span className="pill pill--ok">
-                                  <span aria-hidden><Icon name="check_circle" /></span> インストール済
-                                </span>
-                              ) : (
-                                <span className="setup-status">未インストール</span>
-                              )}
-                            </div>
-                            {state.error && <div className="setup-note setup-note--error" style={{ gridColumn: '1 / -1' }}>{state.error}</div>}
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
 
-                    <div className="setup-actions">
-                      <button
-                        className="btn btn--primary"
-                        type="button"
-                        onClick={downloadAllRequiredPackages}
-                        disabled={bulkDownloading || allRequiredInstalled}
-                      >
-                        <span aria-hidden><Icon name="download" /></span> インストール
-                      </button>
+                      <div className="setup-actions">
+                        <button
+                          className="btn btn--primary"
+                          type="button"
+                          onClick={downloadAllRequiredPackages}
+                          disabled={bulkDownloading || allRequiredInstalled}
+                        >
+                          <span aria-hidden><Icon name="download" /></span> インストール
+                        </button>
 
-                    </div>
+                      </div>
 
-                    {/* ここでは finalizeSetup を呼ばず、次のページへ進む */}
-                    <div className="setup-nav">
-                      <button className="btn btn--primary" onClick={() => setStep('done')}>
-                        次へ
-                      </button>
-                      <button className="btn btn--secondary" type="button" onClick={() => setStep('details')}>戻る</button>
-                    </div>
-                  </>
-                )}
-              </section>
-            )}
+                      {/* ここでは finalizeSetup を呼ばず、次のページへ進む */}
+                      <div className="setup-nav">
+                        <button className="btn btn--primary" onClick={() => setStep('done')}>
+                          次へ
+                        </button>
+                        <button className="btn btn--secondary" type="button" onClick={() => setStep('details')}>戻る</button>
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
 
-            {/* 完了ページ（ここで finalizeSetup を実行） */}
-            {step === 'done' && (
-              <section className="setup-section">
-                <h2>初期設定の完了</h2>
-                <p>セットアップが完了しました。</p>
-                <div className="setup-nav">
-                  <button className="btn btn--primary" onClick={finalizeSetup} disabled={busy}>
-                    {busy ? '処理中…' : 'セットアップを完了'}
-                  </button>
-                  <button className="btn btn--secondary" onClick={() => setStep('packages')}>戻る</button>
-                </div>
-              </section>
-            )}
-          </main>
+              {/* 完了ページ（ここで finalizeSetup を実行） */}
+              {step === 'done' && (
+                <section className="setup-section">
+                  <h2>初期設定の完了</h2>
+                  <p>セットアップが完了しました。</p>
+                  <div className="setup-nav">
+                    <button className="btn btn--primary" onClick={finalizeSetup} disabled={busy}>
+                      {busy ? '処理中…' : 'セットアップを完了'}
+                    </button>
+                    <button className="btn btn--secondary" onClick={() => setStep('packages')}>戻る</button>
+                  </div>
+                </section>
+              )}
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+      <UpdateDialog
+        open={!!updateInfo}
+        version={updateInfo?.version || ''}
+        notes={updateInfo?.notes || ''}
+        publishedOn={updateInfo?.publishedOn || ''}
+        busy={updateBusy}
+        error={updateError}
+        onConfirm={confirmUpdate}
+        onCancel={dismissUpdate}
+      />
+    </>
   );
 }

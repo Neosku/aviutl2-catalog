@@ -1807,6 +1807,161 @@ select {
     gap: 8px;
 }
 
+.modal__dialog--update {
+    width: min(520px, 92vw);
+    max-height: 84vh;
+    gap: 0;
+    padding: 0;
+    border-radius: 16px;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    background:
+        radial-gradient(120% 140% at 0% 0%, rgba(59, 130, 246, 0.12), transparent 60%),
+        linear-gradient(180deg, var(--surface-2), var(--surface));
+    box-shadow: 0 24px 64px rgba(9, 12, 16, 0.45);
+    overflow: hidden;
+}
+
+.update-dialog__header {
+    padding: 22px 26px 18px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0.05) 75%);
+}
+
+.update-dialog__eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--badge-fg);
+    margin-bottom: 6px;
+}
+
+.update-dialog__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+    padding: 6px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #d5e5ff;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.26);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.update-dialog__meta .icon {
+    color: #9bbdfc;
+}
+
+.modal__dialog--update .modal__title {
+    font-size: 20px;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.update-dialog__version {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.5));
+    border: 1px solid rgba(102, 153, 255, 0.5);
+    color: #f3f7ff;
+    font-weight: 600;
+    font-size: 14.5px;
+    box-shadow: 0 10px 24px rgba(15, 30, 55, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.update-dialog__body {
+    padding: 22px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.update-dialog__body .error {
+    margin: 0;
+}
+
+.update-dialog__notes {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+}
+
+.update-dialog__notes h2,
+.update-dialog__notes h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.update-dialog__notes ul {
+    margin: 12px 0 0 20px;
+    padding: 0;
+    list-style: disc;
+}
+
+.update-dialog__notes li {
+    margin: 8px 0;
+}
+
+.update-dialog__fallback {
+    margin: 0;
+    color: var(--muted);
+}
+
+.update-dialog__actions {
+    padding: 16px 26px 22px;
+    background: linear-gradient(180deg, rgba(15, 18, 26, 0.88), rgba(15, 18, 26, 0.95));
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.update-dialog__actions .btn {
+    min-width: 120px;
+}
+
+:root[data-theme='light'] .modal__dialog--update {
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    background:
+        radial-gradient(110% 140% at 0% 0%, rgba(37, 99, 235, 0.12), transparent 55%),
+        linear-gradient(180deg, var(--surface), var(--surface-2));
+    box-shadow: 0 24px 56px rgba(12, 20, 34, 0.2);
+}
+
+:root[data-theme='light'] .update-dialog__header {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.04) 75%);
+}
+
+:root[data-theme='light'] .update-dialog__version {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(59, 130, 246, 0.42));
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #14326f;
+}
+
+:root[data-theme='light'] .update-dialog__meta {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.2);
+    color: #1e3a8a;
+}
+
+:root[data-theme='light'] .update-dialog__meta .icon {
+    color: #3458b0;
+}
+
+:root[data-theme='light'] .update-dialog__actions {
+    background: linear-gradient(180deg, rgba(247, 250, 255, 0.95), rgba(232, 238, 251, 0.98));
+    border-top: 1px solid rgba(37, 99, 235, 0.08);
+}
+
 /* モード選択用のセグメントコントロール */
 .segmented {
     display: inline-flex;

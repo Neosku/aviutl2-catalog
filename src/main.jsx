@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppRouter from './app/Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
+import UpdateDialog from './components/UpdateDialog.jsx';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './app/store/catalog.jsx';
 import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData } from './app/utils.js';
+import { useUpdatePrompt } from './app/hooks/useUpdatePrompt.js';
 import InitSetupApp from './app/init/InitSetupApp.jsx';
 import './app/styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -45,6 +47,13 @@ async function detectWindowLabel() {
 // カタログの読み込み・検出・状態反映を行う起動用コンポーネント
 function Bootstrapper() {
   const dispatch = useCatalogDispatch();
+  const {
+    updateInfo,
+    updateBusy,
+    updateError,
+    confirmUpdate,
+    dismissUpdate
+  } = useUpdatePrompt();
 
   // Webアプリの右クリックコンテキストメニューを無効化
   useEffect(() => {
@@ -140,50 +149,21 @@ function Bootstrapper() {
   }, [dispatch]);
 
   // アップデート確認（起動時1回）
-  useEffect(() => {
-    // 開発モードではアップデートチェックをスキップ
-    if (import.meta?.env?.DEV) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { check } = await import('@tauri-apps/plugin-updater');
-        const update = await check();
-        // v2 plugin: update?.available が true の場合に更新可能
-        if (!cancelled && update && (update.available ?? true)) {
-          try {
-            const { ask } = await import('@tauri-apps/plugin-dialog');
-            const ver = update.version || '';
-            const ok = await ask(`新しいバージョン${ver ? ` (${ver})` : ''}が利用可能です。今すぐ更新しますか？`, {
-              title: 'アップデート',
-              kind: 'info',
-              okLabel: '更新',
-              cancelLabel: '後で'
-            });
-            if (ok) {
-              await update.downloadAndInstall();
-              try {
-                const { relaunch } = await import('@tauri-apps/plugin-process');
-                await relaunch();
-              } catch (e) {
-                // relaunch に失敗した場合は再起動を案内
-                try {
-                  const { message } = await import('@tauri-apps/plugin-dialog');
-                  await message('アップデートを適用しました。アプリを再起動してください。', { title: 'アップデート', kind: 'info' });
-                } catch (_) { }
-              }
-            }
-          } catch (e) {
-            try { await logError(`[updater] prompt/install failed: ${e?.message || e}`); } catch (_) { }
-          }
-        }
-      } catch (e) {
-        // check() が未設定やネットワークにより失敗する可能性あり
-        try { await logError(`[updater] check failed: ${e?.message || e}`); } catch (_) { }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  return <AppRouter />;
+  return (
+    <>
+      <AppRouter />
+      <UpdateDialog
+        open={!!updateInfo}
+        version={updateInfo?.version || ''}
+        notes={updateInfo?.notes || ''}
+        publishedOn={updateInfo?.publishedOn || ''}
+        busy={updateBusy}
+        error={updateError}
+        onConfirm={confirmUpdate}
+        onCancel={dismissUpdate}
+      />
+    </>
+  );
 }
 
 // メインアプリケーションコンポーネント
