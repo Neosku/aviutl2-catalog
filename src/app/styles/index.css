@@ -763,7 +763,7 @@ select {
     position: relative;
     display: grid;
     /* デフォルトレイアウト: コンテンツは左側、サムネイルは右側 */
-    grid-template-columns: 1fr 160px;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: 'content thumb';
     gap: 16px;
     border-radius: 16px;
@@ -823,6 +823,10 @@ select {
     align-items: center;
     justify-content: center;
     background: var(--surface-2);
+    width: 136px;
+    min-width: 120px;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
 }
 
 .card:focus-within,
@@ -832,8 +836,8 @@ select {
 
 .card__thumb img {
     width: 100%;
-    height: auto;
-    max-height: 100%;
+    height: 100%;
+    max-height: none;
     object-fit: contain;
     object-position: center;
     display: block;
@@ -883,7 +887,7 @@ select {
 .card__content {
     /* コンテンツはグリッドでサムネイルの左側に配置 */
     grid-area: content;
-    padding: 16px 0 14px 16px;
+    padding: 16px 16px 14px 16px;
     display: grid;
     grid-template-rows: auto auto auto 1fr auto;
     gap: 8px;
@@ -946,7 +950,8 @@ select {
 
 .card__meta {
     display: flex;
-    gap: 14px;
+    flex-wrap: wrap;
+    gap: 10px 14px;
     align-items: center;
     color: var(--muted);
     font-size: 13px;
@@ -980,35 +985,68 @@ select {
 }
 
 .carousel {
+    position: relative;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 100%;
+    overflow: hidden;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: #080b12;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background:
+        radial-gradient(150% 120% at 10% 10%, rgba(59, 130, 246, 0.2), rgba(8, 11, 18, 0)), linear-gradient(180deg, rgba(8, 11, 18, 0.98), rgba(8, 11, 18, 0.82));
+    box-shadow: 0 30px 64px rgba(8, 11, 18, 0.65);
     overscroll-behavior-x: contain;
     overscroll-behavior-y: none;
 }
 
+.carousel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+    mix-blend-mode: screen;
+    opacity: 0.4;
+    transition: opacity .35s ease;
+}
+
+.carousel:focus-within::before,
+.carousel:hover::before {
+    opacity: 0.6;
+}
+
 .carousel>img {
     width: 100%;
-    height: 320px;
+    height: clamp(260px, 38vw, 340px);
     object-fit: cover;
     scroll-snap-align: start;
     background: #080b12;
+    border-radius: inherit;
+    filter: saturate(1.08) contrast(1.05);
+    transition: transform .35s ease, filter .35s ease;
+}
+
+.carousel>img:hover,
+.carousel>img:focus-visible {
+    transform: scale(1.015);
+    filter: saturate(1.15) contrast(1.08);
 }
 
 .carousel__nav {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--border);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 6px 8px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    padding: 6px 10px;
     border-radius: 999px;
+    box-shadow: 0 12px 24px rgba(8, 11, 18, 0.45);
+    backdrop-filter: blur(8px);
+    transition: transform .25s ease, opacity .25s ease, background .25s ease;
 }
 
 .carousel__nav.prev {
@@ -1019,25 +1057,45 @@ select {
     right: 8px;
 }
 
+.carousel__nav:hover,
+.carousel__nav:focus-visible {
+    background: rgba(15, 23, 42, 0.9);
+    transform: translateY(-50%) scale(1.05);
+}
+
 .carousel__dots {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
-    gap: 6px;
-    margin-top: 8px;
+    gap: 10px;
+    margin: 14px auto 0;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(8, 11, 18, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 16px 32px rgba(8, 11, 18, 0.45);
+    backdrop-filter: blur(8px);
 }
 
 .dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 999px;
-    border: 1px solid #1c2433;
-    background: #0f141c;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.85);
+    transition: transform .25s ease, background .25s ease, border-color .25s ease;
 }
 
 .dot.is-active {
-    background: var(--accent);
-    border-color: var(--accent);
-    transform: scale(1.15);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+    transform: scale(1.25);
+}
+
+.dot:hover,
+.dot:focus-visible {
+    transform: scale(1.18);
+    border-color: rgba(148, 163, 184, 0.45);
 }
 
 .empty {
@@ -1053,18 +1111,18 @@ select {
 /* Package hero */
 .package__hero {
     position: relative;
-    border-radius: 16px;
-    padding: 16px;
-    border: 1px solid transparent;
+    border-radius: 20px;
+    padding: 28px 24px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
     background:
-        linear-gradient(180deg, var(--surface-2), var(--surface)) padding-box,
-        linear-gradient(135deg, var(--accent), var(--accent-2)) border-box;
+        radial-gradient(140% 120% at -10% -10%, rgba(59, 130, 246, 0.22), rgba(15, 23, 42, 0)), linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.82));
+    box-shadow: 0 32px 72px rgba(8, 11, 18, 0.62);
+    overflow: hidden;
 }
 
 .package__hero[data-type="本体"] {
     background:
-        linear-gradient(180deg, rgba(17, 24, 39, 0.7), rgba(17, 24, 39, 0.4)) padding-box,
-        linear-gradient(135deg, var(--accent), var(--accent-2)) border-box;
+        radial-gradient(120% 120% at -10% -10%, rgba(248, 113, 113, 0.24), rgba(15, 23, 42, 0)), linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.82));
 }
 
 .package__hero-top {
@@ -1104,13 +1162,47 @@ select {
 }
 
 /* Enhanced hero visuals */
-.package__hero.has-thumb {
-    overflow: hidden;
+.package__hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+    mix-blend-mode: screen;
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity .4s ease;
+    z-index: 0;
 }
 
-/* remove blurred image background for hero */
+.package__hero.has-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(8, 11, 18, 0.25), rgba(8, 11, 18, 0.85));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.package__hero> :not(.package__hero-bg) {
+    position: relative;
+    z-index: 2;
+}
+
 .package__hero-bg {
-    display: none !important;
+    position: absolute;
+    inset: -14%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(26px) saturate(1.12);
+    opacity: 0.55;
+    transform: scale(1.08);
+    z-index: 0;
+}
+
+.package__hero:hover::before {
+    opacity: 0.55;
 }
 
 .package__back {
