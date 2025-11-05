@@ -1,8 +1,24 @@
 // 設定ダイアログコンポーネント
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { invoke } from '@tauri-apps/api/core';
+import Icon from './Icon.jsx';
+
+// テーマ選択肢の定義
+const THEME_OPTIONS = [
+  {
+    value: 'darkmode',
+    label: 'ダークモード',
+    icon: 'moon',
+  },
+  {
+    value: 'lightmode',
+    label: 'ライトモード',
+    icon: 'sun',
+  },
+];
 
 export default function SettingsDialog({ open, onClose }) {
   const { items } = useCatalog();
@@ -20,6 +36,8 @@ export default function SettingsDialog({ open, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [appVersion, setAppVersion] = useState('');
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const themeDropdownRef = useRef(null);
 
   function applyThemeAttr(theme) {
     const root = document?.documentElement;
@@ -44,7 +62,18 @@ export default function SettingsDialog({ open, onClose }) {
     if (!open) return undefined;
     didSaveRef.current = false;
     initialThemeAttrRef.current = document?.documentElement?.getAttribute('data-theme');
+
+    // ドロップダウンを閉じる処理
+    function handleClickOutside(e) {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target)) {
+        setThemeDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       if (!didSaveRef.current) {
         applyThemeAttr(initialThemeAttrRef.current);
       }
@@ -91,6 +120,19 @@ export default function SettingsDialog({ open, onClose }) {
       })();
     }
     return () => { mounted = false; };
+  }, [open]);
+
+  useEffect(() => {
+    const body = document?.body;
+    if (!body) return undefined;
+    if (open) {
+      body.classList.add('is-modal-open');
+    } else {
+      body.classList.remove('is-modal-open');
+    }
+    return () => {
+      body.classList.remove('is-modal-open');
+    };
   }, [open]);
 
   function onChange(e) {
@@ -158,17 +200,27 @@ export default function SettingsDialog({ open, onClose }) {
     if (!didSaveRef.current) {
       try { applyThemeAttr(initialThemeAttrRef.current); } catch (_) { }
     }
+    try { document?.body?.classList?.remove('is-modal-open'); } catch (_) { }
+    setThemeDropdownOpen(false);
     onClose?.();
   }
 
-  return (
+  function handleThemeSelect(value) {
+    setForm(prev => ({ ...prev, theme: value }));
+    try { applyThemeAttr(String(value || 'darkmode')); } catch (_) { }
+    setThemeDropdownOpen(false);
+  }
+
+  const selectedTheme = THEME_OPTIONS.find(opt => opt.value === form.theme) || THEME_OPTIONS[0];
+
+  const content = (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div className="modal__backdrop" onClick={handleClose} />
       <div className="modal__dialog">
         <div className="modal__header">
           <h3 id="settings-title" className="modal__title">設定</h3>
         </div>
-        <div className="modal__body">
+        <div className="modal__body modal__body--compact">
           {error && <div className="error" role="alert">{error}</div>}
 
           <div className="form" style={{ gap: 10 }}>
@@ -219,10 +271,50 @@ export default function SettingsDialog({ open, onClose }) {
 
             {/* テーマ */}
             <label>テーマ
-              <select name="theme" value={form.theme} onChange={onChange}>
-                <option value="darkmode">ダークモード</option>
-                <option value="lightmode">ライトモード</option>
-              </select>
+              <div className="theme-select" ref={themeDropdownRef}>
+                <button
+                  type="button"
+                  className="theme-select__button"
+                  onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
+                  aria-expanded={themeDropdownOpen}
+                  aria-haspopup="listbox"
+                  aria-labelledby="theme-label"
+                >
+                  <div className="theme-select__current">
+                    <div className="theme-select__icon">
+                      <Icon name={selectedTheme.icon} size={18} />
+                    </div>
+                    <div className="theme-select__label">
+                      {selectedTheme.label}
+                    </div>
+                  </div>
+                  <div className="theme-select__arrow">
+                    <Icon name="chevron_down" size={18} />
+                  </div>
+                </button>
+                <div className={`theme-select__dropdown ${themeDropdownOpen ? 'is-open' : ''}`} role="listbox">
+                  {THEME_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`theme-select__option ${option.value === form.theme ? 'is-selected' : ''}`}
+                      onClick={() => handleThemeSelect(option.value)}
+                      role="option"
+                      aria-selected={option.value === form.theme}
+                    >
+                      <div className="theme-select__option-icon">
+                        <Icon name={option.icon} size={18} />
+                      </div>
+                      <div className="theme-select__option-content">
+                        <div className="theme-select__option-label">{option.label}</div>
+                      </div>
+                      <div className="theme-select__option-check">
+                        <Icon name="check" size={18} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </label>
           </div>
 
@@ -240,4 +332,6 @@ export default function SettingsDialog({ open, onClose }) {
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

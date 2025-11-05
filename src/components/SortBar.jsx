@@ -46,7 +46,7 @@ export default function SortBar({ value }) {
   }
 
   return (
-    <div className="sortbar container" role="group" aria-label="ソート">
+    <div className="sortbar" role="group" aria-label="ソート">
       {/* 新着順ボタン */}
       <button
         className={"btn btn--toggle" + (current === 'newest' ? ' is-active' : '')}

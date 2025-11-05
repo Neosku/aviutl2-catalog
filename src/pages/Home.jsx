@@ -156,42 +156,44 @@ export default function Home() {
     <div className="route-home">
       <Header />
       <div className="route-home__body">
-        <div className="container bulk-card-container" aria-live="polite">
-          <div className="bulk-card">
-            <div className="bulk-card__main">
-              <div className="bulk-card__header">
-                <span className="bulk-card__title">まとめて更新</span>
-                <span className="bulk-card__count" aria-label={`対象 ${updatableItems.length}件`}>
-                  <span className="bulk-card__count-number">{updatableItems.length}</span>
-                  <span className="bulk-card__count-suffix">件</span>
-                </span>
+        <div className="sortbar-container container">
+          <SortBar value={sortKey} />
+          <div className="bulk-card-container" aria-live="polite">
+            <div className="bulk-card">
+              <div className="bulk-card__main">
+                <div className="bulk-card__header">
+                  <span className="bulk-card__title">まとめて更新</span>
+                  <span className="bulk-card__count" aria-label={`対象 ${updatableItems.length}件`}>
+                    <span className="bulk-card__count-number">{updatableItems.length}</span>
+                    <span className="bulk-card__count-suffix">件</span>
+                  </span>
+                </div>
               </div>
+              <button
+                className="bulk-card__button"
+                onClick={handleBulkUpdate}
+                disabled={bulkUpdating || !updatableItems.length}
+              >
+                {bulkUpdating ? (
+                  <span className="bulk-card__progress" aria-live="polite">
+                    <ProgressCircle value={bulkRatio} size={28} strokeWidth={3} ariaLabel={`${bulkLabel} ${bulkPercent}%`} />
+                    <span className="bulk-card__progress-text">
+                      <span className="bulk-card__progress-label">{bulkLabel}</span>
+                      <span className="bulk-card__progress-meta">{`${bulkPercent}%`}{bulkTotal ? ` · ${bulkCurrent}/${bulkTotal}` : ''}</span>
+                    </span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="bulk-card__button-icon" aria-hidden>
+                      <Icon name="refresh" size={18} />
+                    </span>
+                    <span>一括更新</span>
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              className="bulk-card__button"
-              onClick={handleBulkUpdate}
-              disabled={bulkUpdating || !updatableItems.length}
-            >
-              {bulkUpdating ? (
-                <span className="bulk-card__progress" aria-live="polite">
-                  <ProgressCircle value={bulkRatio} size={28} strokeWidth={3} ariaLabel={`${bulkLabel} ${bulkPercent}%`} />
-                  <span className="bulk-card__progress-text">
-                    <span className="bulk-card__progress-label">{bulkLabel}</span>
-                    <span className="bulk-card__progress-meta">{`${bulkPercent}%`}{bulkTotal ? ` · ${bulkCurrent}/${bulkTotal}` : ''}</span>
-                  </span>
-                </span>
-              ) : (
-                <>
-                  <span className="bulk-card__button-icon" aria-hidden>
-                    <Icon name="refresh" size={18} />
-                  </span>
-                  <span>一括更新</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
-        <SortBar value={sortKey} />
         <div className="container layout-two">
           <aside className="route-home__aside">
             {/* 検索結果表示エリア */}
