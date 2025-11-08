@@ -269,6 +269,11 @@ pub fn xxh3_128_hex<P: AsRef<Path>>(path: P) -> Result<String, String> {
     Ok(format!("{:032x}", h))
 }
 
+#[tauri::command]
+fn calc_xxh3_hex(path: String) -> Result<String, String> {
+    xxh3_128_hex(path)
+}
+
 // -------------------------
 // カタログインデックスとRust内での検索処理
 // -------------------------
@@ -1086,6 +1091,7 @@ pub fn run() {
             extract_7z_sfx,
             detect_versions_map,
             log_cmd,
+            calc_xxh3_hex,
             get_installed_map_cmd,
             add_installed_id_cmd,
             remove_installed_id_cmd,

@@ -41,10 +41,10 @@ export default function Header() {
             <Icon name="search" size={18} />
           </button>
         </form>
+        {/* フィードバック */}
+        <Link to="/submit" className="btn btn--ghost" title="フィードバック">フィードバック・パッケージ登録</Link>
         {/* 設定ボタン */}
         <button className="btn" type="button" onClick={() => setShowSettings(true)} title="設定"><span aria-hidden><Icon name="settings" /></span> 設定</button>
-        {/* フィードバック */}
-        <Link to="/submit" className="btn btn--ghost" title="フィードバック">フィードバック</Link>
       </div>
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
     </header>
