@@ -8,7 +8,7 @@ import { renderMarkdown } from '../app/markdown.js';
 const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];
 const SPECIAL_INSTALL_ACTIONS = ['extract_sfx', 'run_auo_setup'];
 const UNINSTALL_ACTIONS = ['delete', 'run'];
-const ID_PATTERN = /^[A-Za-z0-9.]+$/;
+const ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const ACTION_LABELS = {
   download: 'ダウンロード',
   extract: 'ZIP展開',
@@ -435,7 +435,7 @@ function buildPackageEntry(form) {
 
 function validatePackageForm(form) {
   if (!form.id.trim()) return 'ID は必須です';
-  if (!ID_PATTERN.test(form.id.trim())) return 'ID は英数字とドットのみ使用できます';
+  if (!ID_PATTERN.test(form.id.trim())) return 'ID は英数字・ドット・アンダーバー・ハイフンのみ使用できます';
   if (!form.name.trim()) return 'パッケージ名は必須です';
   if (!form.author.trim()) return '作者名は必須です';
   if (!form.type.trim()) return '種類は必須です';
@@ -1490,7 +1490,7 @@ export default function Submit() {
                     <div>このフォームに入力するプラグイン情報はすべて公開されます。</div>
                   </div>
                   <div className="form__grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-                    <label>ID*<input name="id" value={packageForm.id} onChange={e => updatePackageField('id', e.target.value)} required placeholder="英数字のみ(例: Kenkun.AviUtlExEdit2)" /></label>
+                    <label>ID*<input name="id" value={packageForm.id} onChange={e => updatePackageField('id', e.target.value)} required placeholder="英数字と記号(. - _)のみ(例: Kenkun.AviUtlExEdit2)" /></label>
                     <label>パッケージ名*<input name="name" value={packageForm.name} onChange={e => updatePackageField('name', e.target.value)} required placeholder="(例: AviUtl2)" /></label>
                     <label>作者名*<input name="author" value={packageForm.author} onChange={e => updatePackageField('author', e.target.value)} required placeholder="(例: KENくん)" /></label>
                     <label>オリジナル作者名(任意)<input name="originalAuthor" value={packageForm.originalAuthor} onChange={e => updatePackageField('originalAuthor', e.target.value)} /></label>
