@@ -313,15 +313,17 @@ function extractInstallerSource(form) {
 
 function serializeInstallStep(step) {
   const payload = { action: step.action };
-  if (step.action === 'run') {
-    if (step.path) payload.path = step.path;
-    if (step.argsText) {
-      payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
-    }
+  if (step.path && step.path.trim()) {
+    payload.path = step.path.trim();
   }
-  if (step.action === 'copy') {
-    if (step.from) payload.from = step.from;
-    if (step.to) payload.to = step.to;
+  if (step.action === 'run' && step.argsText) {
+    payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
+  }
+  if (step.from && step.from.trim()) {
+    payload.from = step.from.trim();
+  }
+  if (step.to && step.to.trim()) {
+    payload.to = step.to.trim();
   }
   return payload;
 }
@@ -366,9 +368,6 @@ function buildImagesPayload(form) {
       group.infoImg.push(entry.existingPath);
     }
   });
-  if (!group.thumbnail && !group.infoImg.length) {
-    return [];
-  }
   return [group];
 }
 
@@ -429,7 +428,6 @@ function buildPackageEntry(form) {
   if (!entry.license) entry.license = '';
   if (!entry.tags.length) entry.tags = [];
   if (!entry.dependencies.length) entry.dependencies = [];
-  if (!entry.images.length) delete entry.images;
   return entry;
 }
 
