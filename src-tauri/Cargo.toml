@@ -1,6 +1,6 @@
 [package]
 name = "aviutl2-catalog"
-version = "0.1.7"
+version = "0.1.8"
 description = "AviUtl2 Catalog"
 authors = ["Neosku"]
 edition = "2021"
