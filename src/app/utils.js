@@ -801,14 +801,14 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
                     }
                     case 'extract': {
                         const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
-                        const toRel = await expandMacros(step.to || `{tmp}/extracted`, ctx);
+                        const toRel = await expandMacros(step.to || `{tmp}`, ctx);
                         logInfo(`[installer ${item.id}] extracting from ${fromRel} to ${toRel}`);
                         await extractZip(fromRel, toRel);
                         break;
                     }
                     case 'extract_sfx': {
                         const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
-                        const toRel = await expandMacros(step.to || `{tmp}/extracted`, ctx);
+                        const toRel = await expandMacros(step.to || `{tmp}`, ctx);
                         logInfo(`[installer ${item.id}] extracting SFX from ${fromRel} to ${toRel}`);
                         await extractSevenZipSfx(fromRel, toRel);
                         break;
