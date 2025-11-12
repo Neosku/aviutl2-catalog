@@ -2,7 +2,7 @@
 import React from 'react';
 
 // アイコン名(name)に応じたSVGを描画するコンポーネント
-export default function Icon({ name, size = 18, className = '', strokeWidth = 2, title }) {
+export default function Icon({ name, size = 18, className = '', strokeWidth = 2, title, ...rest }) {
   // 共通のSVGプロパティ
   const props = {
     width: size,
@@ -14,6 +14,7 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
     // アクセシビリティ対応
     'aria-hidden': title ? undefined : true,
     role: title ? 'img' : 'presentation',
+    ...rest,
   };
 
   // 色はcurrentColorに依存
@@ -185,6 +186,52 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
         // チェックマーク
         return (
           <path d="M20 6 9 17l-5-5" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+        );
+      case 'callout-note':
+        // GitHub風のNote（情報）アイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </g>
+        );
+      case 'callout-tip':
+        // GitHub風のTip（ヒント）アイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18h6" />
+            <path d="M10 21h4" />
+            <path d="M12 3a6 6 0 0 1 3.5 10.9c-.9.7-1.5 1.8-1.5 3.1V18h-4v-1c0-1.3-.6-2.4-1.5-3.1A6 6 0 0 1 12 3z" />
+          </g>
+        );
+      case 'callout-important':
+        // GitHub風のImportant（重要）アイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v6" />
+            <path d="M12 17h.01" />
+            <path d="M9 4l3-2 3 2" />
+          </g>
+        );
+      case 'callout-warning':
+        // GitHub風のWarning（警告）アイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" fill="none">
+            <path d="M12 3l9 16H3l9-16z" />
+            <path d="M12 9v5" />
+            <path d="M12 17h.01" />
+          </g>
+        );
+      case 'callout-caution':
+        // GitHub風のCaution（注意）アイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" fill="none">
+            <path d="M7.76 3h8.48L21 7.76v8.48L16.24 21H7.76L3 16.24V7.76L7.76 3z" />
+            <path d="M12 8v5.5" />
+            <path d="M12 17h.01" />
+          </g>
         );
       default:
         // 不明なアイコン名の場合は空

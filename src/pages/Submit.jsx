@@ -1527,7 +1527,7 @@ export default function Submit() {
                               style={{ minHeight: 280, resize: 'vertical' }}
                             />
                           ) : (
-                            <div className="markdown-preview tab-panel__preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(packageForm.descriptionText) }} />
+                            <div className="markdown-preview tab-panel__preview md" dangerouslySetInnerHTML={{ __html: renderMarkdown(packageForm.descriptionText) }} />
                           )}
                         </div>
                       </div>

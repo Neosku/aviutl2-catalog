@@ -85,6 +85,22 @@ function Bootstrapper() {
     };
   }, []);
 
+  // Markdown内のリンクは既定ブラウザで開く
+  useEffect(() => {
+    const handler = (event) => {
+      const target = event?.target;
+      if (!target || typeof target.closest !== 'function') return;
+      const anchor = target.closest('.md a[href]');
+      if (!anchor || event.defaultPrevented) return;
+      const rawHref = anchor.getAttribute('href') || '';
+      if (!rawHref || rawHref.trim().startsWith('#') || /^javascript:/i.test(rawHref)) return;
+      event.preventDefault();
+      openMarkdownLinkExternally(rawHref);
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
   // アプリケーション初期化処理（カタログ読み込み・テーマ適用・インストール状態検出）
   useEffect(() => {
     let cancelled = false;
@@ -205,3 +221,35 @@ function RootApp() {
 // アプリケーションのルート要素を作成し、描画開始
 const root = createRoot(document.getElementById('root'));
 root.render(<RootApp />);
+
+function normalizeHref(rawHref) {
+  const trimmed = String(rawHref || '').trim();
+  if (!trimmed) return '';
+  try {
+    if (/^[a-zA-Z][\w+.-]*:/.test(trimmed)) {
+      return new URL(trimmed).toString();
+    }
+    return new URL(trimmed, window.location.href).toString();
+  } catch (_) {
+    return trimmed;
+  }
+}
+
+async function openMarkdownLinkExternally(rawHref) {
+  const href = normalizeHref(rawHref);
+  if (!href) return;
+  try {
+    const shell = await import('@tauri-apps/plugin-shell');
+    if (typeof shell.open === 'function') {
+      await shell.open(href);
+      return;
+    }
+  } catch (err) {
+    console.warn('Failed to open link via Tauri shell plugin, falling back to window.open', err);
+  }
+  try {
+    window.open(href, '_blank', 'noopener,noreferrer');
+  } catch (_) {
+    window.location.href = href;
+  }
+}
