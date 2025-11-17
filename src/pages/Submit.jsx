@@ -1797,6 +1797,7 @@ export default function Submit() {
                                   <div className="version-date__control">
                                     <input
                                       type="date"
+                                      max="9999-12-31"
                                       value={ver.release_date}
                                       onChange={e => updateVersionField(ver.key, 'release_date', e.target.value)}
                                       ref={(el) => {
