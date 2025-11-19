@@ -229,6 +229,11 @@ body {
     top: 0;
 }
 
+/* Submitページではスクロールバーをタイトルバーの下に表示するため、.app-scrollでスクロールさせる */
+body.route-submit .app-scroll {
+    overflow-y: auto;
+}
+
 /* アプリ全体で偶発的なテキスト選択を防止（ドラッグ中など） */
 /* フォーム入力とコードブロックでは使いやすさを保つため選択を許可 */
 :where(html, body, #root) {
@@ -350,7 +355,7 @@ select {
     justify-content: space-between;
     gap: 16px;
     padding: 10px 18px;
-    margin:5px 0px 10px 0px;
+    margin: 5px 0px 10px 0px;
     background: var(--bulk-card-bg);
     border: 1px solid var(--bulk-card-border);
     border-radius: 12px;
@@ -1668,11 +1673,11 @@ body.is-modal-open .modal {
     line-height: 1.2;
 }
 
-.md .md-callout__body > :first-child {
+.md .md-callout__body> :first-child {
     margin-top: 0;
 }
 
-.md .md-callout__body > :last-child {
+.md .md-callout__body> :last-child {
     margin-bottom: 0;
 }
 
@@ -1996,6 +2001,7 @@ body.route-submit--package {
 
 .submit-page--package .segmented {
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 .form--package {
@@ -2099,7 +2105,7 @@ body.route-submit--package {
     transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 
-.package-editor__item + .package-editor__item {
+.package-editor__item+.package-editor__item {
     border-top: 1px solid var(--border);
 }
 
@@ -3903,14 +3909,17 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     border-color: rgba(148, 163, 184, 0.35);
     padding: 6px;
 }
+
 .package-card--drag-origin {
     visibility: hidden;
 }
+
 .package-card--floating {
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35);
     opacity: 0.95;
     pointer-events: none;
 }
+
 .package-card--placeholder {
     border: 1px dashed var(--accent);
     background: rgba(59, 130, 246, 0.08);
@@ -3986,10 +3995,12 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     justify-content: center;
     width: 28px;
 }
+
 .package-card__handle:focus-visible {
     outline: none;
     color: var(--accent);
 }
+
 .package-card__handle:active {
     cursor: grabbing;
     color: var(--text);
@@ -4178,6 +4189,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     gap: 8px;
     flex-wrap: wrap;
 }
+
 .version-file-card__metaRow {
     display: flex;
     gap: 8px;
@@ -4185,6 +4197,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     align-items: center;
     flex-wrap: wrap;
 }
+
 .version-file-card__summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -4192,11 +4205,13 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     flex: 1;
     font-size: 0.88rem;
 }
+
 .version-file-card__summary dt {
     font-size: 0.8rem;
     color: var(--muted);
     margin: 0;
 }
+
 .version-file-card__summary dd {
     margin: 2px 0 0;
     font-weight: 600;
@@ -4278,6 +4293,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 .package-editor__item.is-selected .package-editor__itemMeta {
     color: #dbeafe;
 }
+
 .version-date__control {
     display: flex;
     align-items: center;
