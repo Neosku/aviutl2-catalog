@@ -527,7 +527,7 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
     const scriptRel = `${tmpPath.replace(/\\/g, '/')}/${scriptName}`;
     await fs.writeTextFile(scriptRel, body);
     const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptRel];
-    const cmd = shell.Command.create('powershell', argsPs, { encoding: 'windows-31j' });
+    const cmd = shell.Command.create('powershell', argsPs, { encoding: 'utf-8' });
     const res = await cmd.execute();
     if (res.code !== 0) {
         throw new Error(`runExecutableQuietWindows failed (exe=${exeAbsPath}, args=${JSON.stringify(args)}, elevate=${!!elevate}) exit=${res.code}, stderr=${(res.stderr || '').slice(0, 500)}`);
