@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AviUtl2_Catalog",
+  "productName": "AviUtl2 カタログ",
   "mainBinaryName": "AviUtl2_Catalog",
   "version": "0.1.8",
   "identifier": "aviutl2-catalog",
