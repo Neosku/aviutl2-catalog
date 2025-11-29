@@ -1,8 +1,15 @@
 name: Publish to WinGet
+
 on:
   release:
     types: [released]
-  workflow_dispatch:  
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '対象のタグ名'
+        required: true
+        default: 'v'
+
 jobs:
   publish:
     runs-on: windows-latest
@@ -10,6 +17,6 @@ jobs:
       - uses: vedantmgoyal9/winget-releaser@main
         with:
           identifier: Neosku.AviUtl2-Catalog
-          installers-regex: '\.exe$' # Only .exe files
+          installers-regex: '\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
-          release-tag: ${{ github.event.inputs.tag_name || github.ref_name }}
+          release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
