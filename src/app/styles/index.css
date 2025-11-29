@@ -229,8 +229,9 @@ body {
     top: 0;
 }
 
-/* Submitページではスクロールバーをタイトルバーの下に表示するため、.app-scrollでスクロールさせる */
-body.route-submit .app-scroll {
+/* Submit/Packageページではスクロールバーをタイトルバーの下に表示するため、.app-scrollでスクロールさせる */
+body.route-submit .app-scroll,
+body.route-package .app-scroll {
     overflow-y: auto;
 }
 

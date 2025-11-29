@@ -40,6 +40,11 @@ export default function Package() {
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
 
+  useEffect(() => {
+    document.body.classList.add('route-package');
+    return () => { document.body.classList.remove('route-package'); };
+  }, []);
+
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find(i => i.id === id), [items, id]);
   const imageGroups = Array.isArray(item?.images) ? item.images : [];
