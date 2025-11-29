@@ -24,17 +24,17 @@ body {
 /* CSS変数（カスタムプロパティ）：アプリ全体の色やスタイルを定義 */
 :root {
     --titlebar-h: 32px;
-    --header-bg: rgba(5, 7, 10, 0.85);
-    --input-bg: linear-gradient(180deg, rgba(8, 10, 14, 0.72), rgba(10, 12, 16, 0.9));
+    --header-bg: rgba(3, 5, 10, 0.9);
+    --input-bg: linear-gradient(180deg, rgba(5, 7, 13, 0.72), rgba(6, 8, 14, 0.9));
     --input-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 30px rgba(0, 0, 0, 0.28);
     --input-shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     /* darkmode (default) palette */
-    --bg: #05060a;
-    --surface: #0a0c10;
-    --surface-2: #0c0e13;
+    --bg: #020409;
+    --surface: #04070d;
+    --surface-2: #0a1019;
     --text: #e6eaf2;
     --muted: #9ea7b5;
-    --border: #171c29;
+    --border: #273347;
     --accent: #3b82f6;
     --accent-2: #2557d6;
     --accent-green: #10b981;
@@ -51,8 +51,8 @@ body {
     --error-border: #832727;
     --ring: rgba(59, 130, 246, 0.4);
     /* theming helpers */
-    --bg-gradient-a: #0b1220;
-    --bg-gradient-b: #0a0c10;
+    --bg-gradient-a: #0a0f17;
+    --bg-gradient-b: #05070d;
     --selection-bg: rgba(59, 130, 246, 0.25);
     --selection-fg: #ffffff;
     --scrollbar-thumb-start: #2d3752;
@@ -61,13 +61,13 @@ body {
     --badge-bg: rgba(59, 130, 246, 0.12);
     --badge-fg: #93c5fd;
     --badge-border: rgba(59, 130, 246, 0.35);
-    --card-border: #1a2230;
-    --card-border-hover: #223049;
-    --btn-hover-border: #2b3a55;
+    --card-border: #273347;
+    --card-border-hover: #33405a;
+    --btn-hover-border: #3b4a66;
     --pill-bg: rgba(17, 24, 39, 0.5);
     --pill-border: rgba(255, 255, 255, 0.18);
-    --tag-bg: #0f141c;
-    --tag-text: #d1d5db;
+    --tag-bg: #182234;
+    --tag-text: #e5edf7;
     --md-pre-bg: #0b1220;
     --md-code-bg: rgba(255, 255, 255, 0.06);
     --md-code-border: var(--border);
@@ -122,10 +122,10 @@ body {
     --input-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --bg: #f7f8fa;
     --surface: #ffffff;
-    --surface-2: #f2f4f8;
+    --surface-2: #eef2f8;
     --text: #0b0d12;
     --muted: #606772;
-    --border: #dfe3ea;
+    --border: #bfcbe0;
     --accent: #2563eb;
     --accent-2: #1d4ed8;
     --accent-green: #059669;
@@ -151,13 +151,13 @@ body {
     --badge-bg: #e8f0ff;
     --badge-fg: #1e40af;
     --badge-border: #bfd7ff;
-    --card-border: #e5e7eb;
-    --card-border-hover: #cfd8e3;
-    --btn-hover-border: #cbd5e1;
+    --card-border: #c3ccdc;
+    --card-border-hover: #adbcd6;
+    --btn-hover-border: #93a9d3;
     --pill-bg: rgba(0, 0, 0, 0.04);
     --pill-border: rgba(0, 0, 0, 0.06);
-    --tag-bg: #f3f4f6;
-    --tag-text: #1f2937;
+    --tag-bg: #e1e7f2;
+    --tag-text: #13233c;
     --md-pre-bg: #f5f7fb;
     --md-code-bg: rgba(0, 0, 0, 0.06);
     --md-code-border: var(--border);
