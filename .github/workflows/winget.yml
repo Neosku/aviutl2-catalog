@@ -12,3 +12,4 @@ jobs:
           identifier: Neosku.AviUtl2-Catalog
           installers-regex: '\.exe$' # Only .exe files
           token: ${{ secrets.WINGET_TOKEN }}
+          release-tag: ${{ github.event.inputs.tag_name || github.ref_name }}
