@@ -88,7 +88,10 @@ export default function Header() {
         )}
         <div className="header__actions">
           {/* フィードバック */}
-          <Link to="/submit" className="btn btn--ghost" title="フィードバック">フィードバック・パッケージ登録</Link>
+          <Link to="/submit" className="btn btn--ghost" title="フィードバック">
+            <span aria-hidden><Icon name="feedback" size={20} /></span>
+            フィードバック
+          </Link>
           {/* 設定ボタン */}
           <button className="btn" type="button" onClick={() => setShowSettings(true)} title="設定"><span aria-hidden><Icon name="settings" /></span> 設定</button>
         </div>
