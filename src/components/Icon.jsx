@@ -52,6 +52,14 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
             <path d="M5 10.5V20h14v-9.5" />
           </g>
         );
+      case 'folder_open':
+        // フォルダーを開くアイコン
+        return (
+          <g stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
+            <path d="M3 13h18" />
+          </g>
+        );
       case 'person':
         // 人のアイコン
         return (
@@ -122,6 +130,13 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
             <path d="M10 14L19 5" />
             <path d="M19 14v5H5V5h5" />
           </g>
+        );
+      case 'feedback':
+        // フィードバック/送信を表すアイコン
+        return (
+          <path fill={stroke}
+            d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z M10 5h4v6h-4z M10 13h4v3h-4z"
+          />
         );
       case 'filter':
         // フィルタアイコン

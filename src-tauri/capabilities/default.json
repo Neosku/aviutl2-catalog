@@ -26,6 +26,11 @@
           "name": "powershell",
           "cmd": "powershell",
           "args": true
+        },
+        {
+          "name": "explorer",
+          "cmd": "explorer.exe",
+          "args": true
         }
       ]
     },
