@@ -89,13 +89,6 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [q, tags.join(','), types.join(','), sortKey, dir]);
 
-  // 検索条件をクリアする
-  function clearSearch() {
-    const p = new URLSearchParams(location.search);
-    p.delete('q');
-    navigate(`${location.pathname}?${p.toString()}`);
-  }
-
   // 更新があるプラグインをまとめてインストール処理
   async function handleBulkUpdate() {
     if (bulkUpdating || !updatableItems.length) return;
@@ -200,10 +193,7 @@ export default function Home() {
             {q ? (
               <div className="sidebar" aria-live="polite">
                 <div className="sidebar__group">
-                  <span className="badge">検索結果: {sorted.length}件</span>
-                  <button className="chip is-selected" onClick={clearSearch} aria-label="検索ワードをクリア">
-                    検索ワード: {q} ×
-                  </button>
+                  <span className="badge badge--sidebar">検索結果: {sorted.length}件</span>
                 </div>
               </div>
             ) : null}

@@ -499,14 +499,19 @@ select {
 }
 
 .badge {
-    display: inline-block;
+    display: flex;
     background: var(--badge-bg);
     color: var(--badge-fg);
     border: 1px solid var(--badge-border);
     border-radius: 999px;
-    padding: 2px 10px;
-    margin-right: 8px;
-    font-size: 12px;
+    padding: 4px 12px;
+    margin: 0px 10px;
+    font-size: 16px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0;
+    text-align: center;
 }
 
 .error {
@@ -612,6 +617,13 @@ select {
     padding: 10px 0;
 }
 
+.header__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .logo {
     font-weight: 700;
     letter-spacing: 0.2px;
@@ -646,13 +658,23 @@ select {
 .searchbar input {
     width: 100%;
     height: 44px;
-    padding: 0 48px 0 14px;
+    padding: 0 110px 0 14px;
     border: 1px solid var(--border);
     border-radius: 999px;
     color: var(--text);
     background: var(--input-bg);
     box-shadow: var(--input-shadow);
     transition: border-color .15s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.searchbar input::-webkit-search-cancel-button,
+.searchbar input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.searchbar input::-ms-clear {
+    display: none;
 }
 
 .searchbar input::placeholder {
@@ -664,8 +686,31 @@ select {
     box-shadow: var(--input-shadow-focus);
 }
 
+.searchbar__clear {
+    position: absolute;
+    right: 40px;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    background: #00000000;
+    border: 0;
+    transition: color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.searchbar__clear .icon {
+    width: 22px;
+    height: 22px;
+}
+
+.searchbar__clear:hover {
+    color: var(--accent);
+    background: var(--chip-selected);
+}
+
 .searchbar__btn {
-    /* Align the button flush inside the input field */
     position: absolute;
     right: 6px;
     top: 6px;

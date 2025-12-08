@@ -31,6 +31,11 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
             <path d="M20 20l-6-6" />
           </g>
         );
+      case 'close':
+        // バツ印（クリアボタン用）
+        return (
+          <path d="M7 7l10 10M17 7 7 17" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+        );
       case 'settings':
         // 設定の歯車アイコン
         return (
