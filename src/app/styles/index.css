@@ -4023,11 +4023,125 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.package-card__select {
-    flex: 1;
-    min-width: 140px;
+
+.package-card__toolbar {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
 }
 
+.package-card__toolbar .btn--icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+}
+
+.package-card__handle {
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    cursor: grab;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+}
+
+.action-select {
+    position: relative;
+    min-width: 160px;
+}
+
+.action-select__button {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+      linear-gradient(120deg, rgba(59, 130, 246, 0.06), rgba(37, 87, 214, 0.04));
+    color: var(--text);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+}
+
+.action-select__button:hover {
+    border-color: var(--btn-hover-border);
+    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.12);
+}
+
+.action-select__button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+.action-select__chevron .icon {
+    stroke: currentColor;
+    width: 18px;
+    height: 18px;
+}
+
+.action-select__dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+    z-index: 10;
+}
+
+:root[data-theme='lightmode'] .action-select__button {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.92)),
+      linear-gradient(120deg, rgba(59, 130, 246, 0.04), rgba(37, 87, 214, 0.03));
+    color: #0f172a;
+    border-color: #d4d9e3;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme='lightmode'] .action-select__dropdown {
+    background: #fff;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.action-select__option {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.action-select__option:hover {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+.action-select__option.is-active {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(37, 87, 214, 0.08));
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+:root[data-theme='lightmode'] .action-select__option {
+    color: #0f172a;
+}
 .package-card__toolbar {
     display: inline-flex;
     gap: 6px;
@@ -4224,6 +4338,10 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     font-size: 0.95rem;
 }
 
+.version-files__add--inline {
+    align-self: flex-start;
+}
+
 .version-files {
     display: flex;
     flex-direction: column;
@@ -4281,15 +4399,10 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     gap: 6px;
 }
 
-.version-files__footer {
-    margin-top: 8px;
-    display: flex;
-    justify-content: center;
-}
-
 .version-files__add {
     white-space: nowrap;
-    min-width: 200px;
+    min-width: 0;
+    padding-inline: 12px;
 }
 
 .version-file-card__head {

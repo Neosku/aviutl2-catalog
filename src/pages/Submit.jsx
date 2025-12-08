@@ -29,6 +29,9 @@ const SUBMIT_ACTIONS = {
   package: 'plugin',
 };
 const PACKAGE_GUIDE_FALLBACK_URL = 'https://github.com/Neosku/aviutl2-catalog-data/blob/main/register-package.md';
+// ステップ選択で使う選択肢（ラベルを毎回手書きしないために先に展開）
+const INSTALL_ACTION_OPTIONS = INSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
+const UNINSTALL_ACTION_OPTIONS = UNINSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
 
 function generateKey() {
   return Math.random().toString(36).slice(2, 10);
@@ -104,6 +107,67 @@ function basename(path) {
   if (typeof path !== 'string') return '';
   const parts = path.split(/[/\\]/);
   return parts[parts.length - 1] || path;
+}
+
+// シンプルなカスタムセレクト（WebView標準のプルダウンを避ける）
+function ActionSelect({ value, onChange, options, ariaLabel }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(opt => opt.value === value) || options[0];
+
+  useEffect(() => {
+    // ドロップダウン外をクリックしたら閉じる
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function choose(val) {
+    onChange?.(val);
+    setOpen(false);
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') setOpen(false);
+  }
+
+  return (
+    <div className={`action-select${open ? ' is-open' : ''}`} ref={ref} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        className="action-select__button"
+        onClick={() => setOpen(prev => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+      >
+        <span className="action-select__label">{selected?.label || value}</span>
+        <span className="action-select__chevron" aria-hidden>
+          <Icon name="chevron_down" size={16} />
+        </span>
+      </button>
+      {open && (
+        <div className="action-select__dropdown" role="listbox">
+          {options.map(opt => (
+            <button
+              type="button"
+              key={opt.value}
+              className={`action-select__option${opt.value === value ? ' is-active' : ''}`}
+              role="option"
+              aria-selected={opt.value === value}
+              onClick={() => choose(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function createEmptyInstaller() {
@@ -1683,13 +1747,12 @@ export default function Submit() {
                                     <span className="package-card__presetNotice">このステップは固定されています</span>
                                   </div>
                                 ) : (
-                                  <select className="package-card__select" value={step.action} onChange={e => updateInstallStep(step.key, 'action', e.target.value)}>
-                                    {INSTALL_ACTIONS.map(action => (
-                                      <option key={action} value={action}>
-                                        {ACTION_LABELS[action] || action}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  <ActionSelect
+                                    value={step.action}
+                                    onChange={(val) => updateInstallStep(step.key, 'action', val)}
+                                    options={INSTALL_ACTION_OPTIONS}
+                                    ariaLabel="ステップの種類を選択"
+                                  />
                                 )}
                                 <div className="package-card__toolbar">
                                   {!isSpecialAction && (
@@ -1743,13 +1806,12 @@ export default function Submit() {
                                     aria-label="ドラッグして並び替え"
                                   >⋮⋮</span>
                                 </div>
-                                <select className="package-card__select" value={step.action} onChange={e => updateUninstallStep(step.key, 'action', e.target.value)}>
-                                  {UNINSTALL_ACTIONS.map(action => (
-                                    <option key={action} value={action}>
-                                      {ACTION_LABELS[action] || action}
-                                    </option>
-                                  ))}
-                                </select>
+                                <ActionSelect
+                                  value={step.action}
+                                  onChange={(val) => updateUninstallStep(step.key, 'action', val)}
+                                  options={UNINSTALL_ACTION_OPTIONS}
+                                  ariaLabel="ステップの種類を選択"
+                                />
                                 <div className="package-card__toolbar">
                                   <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
                                 </div>
@@ -1782,7 +1844,6 @@ export default function Submit() {
                                 <span className="version-item__date">{ver.release_date || "日付未設定"}</span>
                               </div>
                               <div className="version-item__actions">
-                                <div className="badge">ファイル {ver.files.length} 件</div>
                                 <DeleteButton
                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeVersion(ver.key); }}
                                   ariaLabel="このバージョンを削除"
@@ -1824,6 +1885,9 @@ export default function Submit() {
                                   <h3>ファイル</h3>
                                   <p>主要ファイル(最低1件)のハッシュを計算してください。</p>
                                 </div>
+                                <button type="button" className="btn btn--secondary version-files__add version-files__add--inline" onClick={() => addVersionFile(ver.key)}>
+                                  ファイルを追加
+                                </button>
                               </div>
                               <div className="version-files">
                                 {ver.files.map((file, idx) => (
@@ -1857,11 +1921,6 @@ export default function Submit() {
                                   </div>
                                 ))}
                                 {!ver.files.length && <div className="note">ファイルを追加してください</div>}
-                                <div className="version-files__footer">
-                                  <button type="button" className="btn btn--secondary version-files__add" onClick={() => addVersionFile(ver.key)}>
-                                    ＋ ファイルを追加
-                                  </button>
-                                </div>
                               </div>
                             </div>
                           </details>
