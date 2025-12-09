@@ -1,10 +1,13 @@
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue, memo } from 'react';
+// Submit 画面全体。パッケージ投稿/問い合わせ/バグ報告フォームを1ページで扱う。
 import Header from '../components/Header.jsx';
 import Icon from '../components/Icon.jsx';
 import { collectDeviceInfo, readAppLog, loadInstalledMap } from '../app/utils.js';
 import { renderMarkdown } from '../app/markdown.js';
+import { useCatalog } from '../app/store/catalog.jsx';
 
+// インストーラ関連で許可されるアクションやラベル定義
 const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];
 const SPECIAL_INSTALL_ACTIONS = ['extract_sfx', 'run_auo_setup'];
 const UNINSTALL_ACTIONS = ['delete', 'run'];
@@ -33,10 +36,12 @@ const PACKAGE_GUIDE_FALLBACK_URL = 'https://github.com/Neosku/aviutl2-catalog-da
 const INSTALL_ACTION_OPTIONS = INSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
 const UNINSTALL_ACTION_OPTIONS = UNINSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
 
+// UIで安定したkeyを作るための簡易ID生成
 function generateKey() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+// 共通の配列/文字列ユーティリティ群
 function normalizeArrayText(values = []) {
   return (Array.isArray(values) ? values : []).map(v => String(v || '').trim()).filter(Boolean);
 }
@@ -110,7 +115,7 @@ function basename(path) {
 }
 
 // シンプルなカスタムセレクト（WebView標準のプルダウンを避ける）
-function ActionSelect({ value, onChange, options, ariaLabel }) {
+const ActionSelect = memo(function ActionSelect({ value, onChange, options, ariaLabel }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = options.find(opt => opt.value === value) || options[0];
@@ -168,8 +173,13 @@ function ActionSelect({ value, onChange, options, ariaLabel }) {
       )}
     </div>
   );
-}
+}, (prev, next) => (
+  prev.value === next.value
+  && prev.ariaLabel === next.ariaLabel
+  && prev.options === next.options
+));
 
+// 空のインストーラ、バージョン、パッケージ入力の初期値を生成
 function createEmptyInstaller() {
   return {
     sourceType: 'direct',
@@ -213,7 +223,6 @@ function createEmptyPackageForm() {
     descriptionPath: '',
     repoURL: '',
     license: '',
-    tagsText: '',
     dependenciesText: '',
     installer: createEmptyInstaller(),
     versions: [],
@@ -224,7 +233,7 @@ function createEmptyPackageForm() {
   };
 }
 
-function DeleteButton({ onClick, ariaLabel = '削除', title }) {
+const DeleteButton = memo(function DeleteButton({ onClick, ariaLabel = '削除', title }) {
   return (
     <button
       type="button"
@@ -236,7 +245,621 @@ function DeleteButton({ onClick, ariaLabel = '削除', title }) {
       <Icon name="delete" size={16} />
     </button>
   );
-}
+});
+
+// タグ入力と候補選択をローカルステートで完結させる軽量エディタ
+const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onChange }) {
+  const [tags, setTags] = useState(() => normalizeArrayText(initialTags));
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef(null);
+
+  // 親からの初期タグ変更時だけ同期し、入力中の再レンダーを抑える
+  useEffect(() => {
+    const normalized = normalizeArrayText(initialTags);
+    setTags(normalized);
+    setInputValue('');
+  }, [initialTags]);
+
+  const handleAddTagsFromInput = useCallback((text) => {
+    const parts = String(text || '')
+      .split(',')
+      .map(v => v.trim())
+      .filter(Boolean);
+    if (!parts.length) {
+      setInputValue('');
+      return;
+    }
+    const next = [...tags];
+    let updated = false;
+    parts.forEach(tag => {
+      if (!next.includes(tag)) {
+        next.push(tag);
+        updated = true;
+      }
+    });
+    if (updated) {
+      setTags(next);
+      onChange?.(next);
+    }
+    setInputValue('');
+  }, [tags, onChange]);
+
+  const handleToggleTag = useCallback((tag) => {
+    if (tags.includes(tag)) {
+      const next = tags.filter(t => t !== tag);
+      setTags(next);
+      onChange?.(next);
+      return;
+    }
+    handleAddTagsFromInput(tag);
+  }, [handleAddTagsFromInput, onChange, tags]);
+
+  const handleRemoveTag = useCallback((tag) => {
+    const next = tags.filter(t => t !== tag);
+    setTags(next);
+    onChange?.(next);
+  }, [tags, onChange]);
+
+  const handleTagInputKeyDown = useCallback((e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    handleAddTagsFromInput(inputValue);
+  }, [handleAddTagsFromInput, inputValue]);
+
+  return (
+    <div className="tag-editor">
+      <span className="tag-editor__label">タグ</span>
+      <div
+        className="tag-editor__selected"
+        onClick={() => inputRef.current?.focus()}
+      >
+        {tags.map(tag => (
+          <span key={tag} className="tag-chip">
+            <span className="tag-chip__text">{tag}</span>
+            <button type="button" className="tag-chip__remove" onClick={() => handleRemoveTag(tag)} aria-label={`${tag} を削除`}>
+              <Icon name="close" size={18} />
+            </button>
+          </span>
+        ))}
+        {!tags.length && !inputValue && <span className="tag-editor__empty">タグが未設定です</span>}
+        <input
+          ref={inputRef}
+          name="tags"
+          className="tag-editor__input"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onKeyDown={handleTagInputKeyDown}
+          aria-label="タグを追加"
+          placeholder="タグを追加"
+        />
+      </div>
+      {suggestions.length > 0 && (
+        <div className="tag-editor__suggestions">
+          <div className="tag-editor__suggestionList">
+            <span className="tag-editor__hint">既存タグから選択</span>
+            <div className="tag-editor__suggestionItems">
+              {suggestions.map(tag => (
+                <button
+                  type="button"
+                  key={tag}
+                  className={`tag-chip tag-chip--ghost${tags.includes(tag) ? ' is-active' : ''}`}
+                  onClick={() => handleToggleTag(tag)}
+                >
+                  <span className="tag-chip__text">{tag}</span>
+                  {tags.includes(tag) && (
+                    <span className="tag-chip__state" aria-hidden>✔</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const PackageImagesSection = memo(function PackageImagesSection({
+  images,
+  packageId,
+  onThumbnailChange,
+  onRemoveThumbnail,
+  onAddInfoImages,
+  onRemoveInfoImage,
+}) {
+  const thumbnailPreview = images.thumbnail?.previewUrl || images.thumbnail?.existingPath || '';
+  return (
+    <section className="package-section">
+      <div className="package-section__header">
+        <h2>画像</h2>
+      </div>
+      <div className="image-upload-grid">
+        <div className="image-upload image-upload--thumbnail">
+          <div className="image-upload__header">
+            <div>
+              <h3 className="image-upload__title">サムネイル</h3>
+              <p className="image-upload__subtitle">最大1枚</p>
+            </div>
+            <label className="image-upload__button">
+              画像を選択
+              <input type="file" accept="image/*" onChange={e => onThumbnailChange(e.target.files?.[0])} className="image-upload__input" />
+            </label>
+          </div>
+          {images.thumbnail ? (
+            <div className="image-card image-card--thumbnail">
+              <div
+                className={`image-card__thumb${thumbnailPreview ? '' : ' image-card__thumb--empty'}`}
+                style={thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined}
+              >
+                {!thumbnailPreview && <span>プレビューなし</span>}
+              </div>
+              <div className="image-card__footer">
+                <span className="image-card__name" title={images.thumbnail.file?.name || images.thumbnail.existingPath}>
+                  {images.thumbnail.file?.name || images.thumbnail.existingPath || '未設定'}
+                </span>
+                <DeleteButton onClick={onRemoveThumbnail} ariaLabel="サムネイルを削除" />
+              </div>
+            </div>
+          ) : (
+            <div className="image-card image-card--empty">サムネイルが未設定です</div>
+          )}
+        </div>
+        <div className="image-upload image-upload--gallery">
+          <div className="image-upload__header">
+            <div>
+              <h3 className="image-upload__title">説明画像</h3>
+              <p className="image-upload__subtitle">複数追加できます</p>
+            </div>
+            <label className="image-upload__button">
+              画像を追加
+              <input type="file" accept="image/*" multiple onChange={e => onAddInfoImages(e.target.files)} className="image-upload__input" />
+            </label>
+          </div>
+          {images.info.length ? (
+            <div className="image-gallery">
+              {images.info.map((entry, idx) => {
+                const preview = entry.previewUrl || entry.existingPath || '';
+                const filename = entry.file?.name || entry.existingPath || `./image/${packageId}_${idx + 1}.(拡張子)`;
+                return (
+                  <div key={entry.key} className="image-card image-card--gallery">
+                    <div
+                      className={`image-card__thumb${preview ? '' : ' image-card__thumb--empty'}`}
+                      style={preview ? { backgroundImage: `url(${preview})` } : undefined}
+                    >
+                      {!preview && <span>プレビューなし</span>}
+                    </div>
+                    <div className="image-card__footer">
+                      <span className="image-card__name" title={filename}>{filename}</span>
+                      <DeleteButton onClick={() => onRemoveInfoImage(entry.key)} ariaLabel="説明画像を削除" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="image-card image-card--empty">説明画像が未設定です</div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}, (prev, next) => (
+  prev.images === next.images
+  && prev.packageId === next.packageId
+  && prev.onThumbnailChange === next.onThumbnailChange
+  && prev.onRemoveThumbnail === next.onRemoveThumbnail
+  && prev.onAddInfoImages === next.onAddInfoImages
+  && prev.onRemoveInfoImage === next.onRemoveInfoImage
+));
+
+const PackageInstallerSection = memo(function PackageInstallerSection({
+  installer,
+  installListRef,
+  uninstallListRef,
+  addInstallStep,
+  addUninstallStep,
+  removeInstallStep,
+  removeUninstallStep,
+  startHandleDrag,
+  updateInstallStep,
+  updateInstallerField,
+  updateUninstallStep,
+}) {
+  return (
+    <section className="package-section">
+      <div className="package-section__header">
+        <h2>インストーラ</h2>
+      </div>
+      <div className="package-section__content">
+        <div>
+          <span className="package-section__label">ダウンロード元</span>
+          <div className="segmented segmented--compact package-section__source">
+            {INSTALLER_SOURCES.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                className={`btn btn--toggle ${installer.sourceType === option.value ? 'is-active' : ''}`}
+                onClick={() => updateInstallerField('sourceType', option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {installer.sourceType === 'direct' && (
+          <label>ダウンロードURL<input value={installer.directUrl} onChange={e => updateInstallerField('directUrl', e.target.value)} placeholder="ダウンロード先のURLを入れてください" /></label>
+        )}
+        {installer.sourceType === 'github' && (
+          <div className="form__grid package-grid">
+            <label>GitHub ID<input value={installer.githubOwner} onChange={e => updateInstallerField('githubOwner', e.target.value)} placeholder="例: neosku" /></label>
+            <label>レポジトリ名<input value={installer.githubRepo} onChange={e => updateInstallerField('githubRepo', e.target.value)} placeholder="例: aviutl2-catalog" /></label>
+            <label className="package-grid__full">ダウンロードファイルの正規表現<input value={installer.githubPattern} onChange={e => updateInstallerField('githubPattern', e.target.value)} placeholder="^file.*\\.zip$" /></label>
+          </div>
+        )}
+        {installer.sourceType === 'GoogleDrive' && (
+          <label>ファイルID<input value={installer.googleDriveId} onChange={e => updateInstallerField('googleDriveId', e.target.value)} placeholder="Google Drive ファイルID" /></label>
+        )}
+      </div>
+
+      <div className="package-subsection">
+        <div className="package-subsection__header">
+          <h3>インストール ステップ</h3>
+          <button type="button" className="btn btn--secondary" onClick={addInstallStep}>ステップを追加</button>
+        </div>
+        <div
+          className="package-cards"
+          ref={installListRef}
+        >
+          {installer.installSteps.map((step, idx) => {
+            const order = idx + 1;
+            const isSpecialAction = SPECIAL_INSTALL_ACTIONS.includes(step.action);
+            return (
+              <div
+                key={step.key}
+                className="package-card package-card--minimal"
+              >
+                <div className="package-card__header">
+                  <div className="package-card__lead">
+                    <span className="package-card__order" aria-label={`ステップ${order}`}>{order}</span>
+                    {!isSpecialAction && (
+                      <span
+                        className="package-card__handle"
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={e => startHandleDrag('install', idx, e)}
+                        aria-label="ドラッグして並び替え"
+                      >⋮⋮</span>
+                    )}
+                  </div>
+                  {isSpecialAction ? (
+                    <div className="package-card__presetAction" aria-label="固定ステップ">
+                      <span className="package-card__presetLabel">{ACTION_LABELS[step.action] || step.action}</span>
+                      <span className="package-card__presetNotice">このステップは固定されています</span>
+                    </div>
+                  ) : (
+                    <ActionSelect
+                      value={step.action}
+                      onChange={(val) => updateInstallStep(step.key, 'action', val)}
+                      options={INSTALL_ACTION_OPTIONS}
+                      ariaLabel="ステップの種類を選択"
+                    />
+                  )}
+                  <div className="package-card__toolbar">
+                    {!isSpecialAction && (
+                      <DeleteButton onClick={() => removeInstallStep(step.key)} ariaLabel="ステップを削除" />
+                    )}
+                  </div>
+                </div>
+                {!isSpecialAction && step.action === 'run' && (
+                  <div className="package-card__fields package-card__fields--tight">
+                    <label>パス<input value={step.path} onChange={e => updateInstallStep(step.key, 'path', e.target.value)} placeholder="{tmp}/setup.exe" /></label>
+                    <label>引数(コンマ区切り)<input value={step.argsText} onChange={e => updateInstallStep(step.key, 'argsText', e.target.value)} placeholder="--silent, --option" /></label>
+                  </div>
+                )}
+                {!isSpecialAction && step.action === 'copy' && (
+                  <div className="package-card__fields package-card__fields--tight">
+                    <label>コピー元<input value={step.from} onChange={e => updateInstallStep(step.key, 'from', e.target.value)} placeholder="{tmp}/example.auo2" /></label>
+                    <label>コピー先<input value={step.to} onChange={e => updateInstallStep(step.key, 'to', e.target.value)} placeholder="{pluginsDir}" /></label>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {!installer.installSteps.length && <div className="note">必要な手順を順に追加してください</div>}
+        </div>
+      </div>
+
+      <div className="package-subsection">
+        <div className="package-subsection__header">
+          <h3>アンインストール ステップ</h3>
+          <button type="button" className="btn btn--secondary" onClick={addUninstallStep}>ステップを追加</button>
+        </div>
+        <div
+          className="package-cards"
+          ref={uninstallListRef}
+        >
+          {installer.uninstallSteps.map((step, idx) => {
+            const order = idx + 1;
+            return (
+              <div
+                key={step.key}
+                className="package-card package-card--minimal"
+              >
+                <div className="package-card__header">
+                  <div className="package-card__lead">
+                    <span className="package-card__order" aria-label={`ステップ${order}`}>{order}</span>
+                    <span
+                      className="package-card__handle"
+                      role="button"
+                      tabIndex={0}
+                      onPointerDown={e => startHandleDrag('uninstall', idx, e)}
+                      aria-label="ドラッグして並び替え"
+                    >⋮⋮</span>
+                  </div>
+                  <ActionSelect
+                    value={step.action}
+                    onChange={(val) => updateUninstallStep(step.key, 'action', val)}
+                    options={UNINSTALL_ACTION_OPTIONS}
+                    ariaLabel="ステップの種類を選択"
+                  />
+                  <div className="package-card__toolbar">
+                    <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
+                  </div>
+                </div>
+                <div className="package-card__fields package-card__fields--tight">
+                  <label>パス<input value={step.path} onChange={e => updateUninstallStep(step.key, 'path', e.target.value)} placeholder={step.action === 'delete' ? '(例: {pluginsDir}/example.auo2)' : '(例: {appDir}/uninstall.exe)'} /></label>
+                  {step.action === 'run' && (
+                    <label>引数(カンマ区切り)<input value={step.argsText} onChange={e => updateUninstallStep(step.key, 'argsText', e.target.value)} placeholder="(例: /VERYSILENT)" /></label>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {!installer.uninstallSteps.length && <div className="note">必要な手順を順に追加してください</div>}
+        </div>
+      </div>
+    </section>
+  );
+}, (prev, next) => (
+  prev.installer === next.installer
+  && prev.installListRef === next.installListRef
+  && prev.uninstallListRef === next.uninstallListRef
+  && prev.addInstallStep === next.addInstallStep
+  && prev.addUninstallStep === next.addUninstallStep
+  && prev.removeInstallStep === next.removeInstallStep
+  && prev.removeUninstallStep === next.removeUninstallStep
+  && prev.startHandleDrag === next.startHandleDrag
+  && prev.updateInstallStep === next.updateInstallStep
+  && prev.updateInstallerField === next.updateInstallerField
+  && prev.updateUninstallStep === next.updateUninstallStep
+));
+
+
+
+const VersionFileCard = memo(function VersionFileCard({
+  versionKey,
+  file,
+  index,
+  removeVersionFile,
+  updateVersionFile,
+  chooseFileForHash,
+}) {
+  const order = index + 1;
+  return (
+    <div className="version-file-card">
+      <div className="version-file-card__head">
+        <span className="version-file-card__chip">ファイル {order}</span>
+        <DeleteButton onClick={() => removeVersionFile(versionKey, file.key)} ariaLabel={`ファイル${order}を削除`} />
+      </div>
+      <label>保存先パス<input value={file.path} onChange={e => updateVersionFile(versionKey, file.key, 'path', e.target.value)} placeholder="{pluginsDir}/plugin.dll" /></label>
+      <div className="version-file-card__metaRow">
+        <dl className="version-file-card__summary">
+          <div>
+            <dt>ハッシュ値</dt>
+            <dd>{file.hash ? file.hash : '未計算'}</dd>
+          </div>
+          {file.fileName ? (
+            <div>
+              <dt>ファイル名</dt>
+              <dd>{file.fileName}</dd>
+            </div>
+          ) : null}
+        </dl>
+        <button
+          type="button"
+          className="btn version-file-card__actionButton"
+          onClick={() => chooseFileForHash(versionKey, file.key)}
+        >
+          ファイルを選択して計算
+        </button>
+      </div>
+    </div>
+  );
+}, (prev, next) => (
+  prev.file === next.file
+  && prev.index === next.index
+  && prev.versionKey === next.versionKey
+  && prev.removeVersionFile === next.removeVersionFile
+  && prev.updateVersionFile === next.updateVersionFile
+  && prev.chooseFileForHash === next.chooseFileForHash
+));
+
+const VersionItem = memo(function VersionItem({
+  version,
+  isOpen,
+  toggleVersionOpen,
+  removeVersion,
+  updateVersionField,
+  addVersionFile,
+  removeVersionFile,
+  updateVersionFile,
+  chooseFileForHash,
+  openDatePicker,
+  versionDateRefs,
+}) {
+  const handleToggle = useCallback((event) => {
+    toggleVersionOpen(version.key, event.target.open);
+  }, [toggleVersionOpen, version.key]);
+
+  const handleRemove = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    removeVersion(version.key);
+  }, [removeVersion, version.key]);
+
+  const handleDateRef = useCallback((el) => {
+    if (el) {
+      versionDateRefs.current.set(version.key, el);
+    } else {
+      versionDateRefs.current.delete(version.key);
+    }
+  }, [versionDateRefs, version.key]);
+
+  return (
+    <details open={isOpen} onToggle={handleToggle} className="version-item">
+      <summary className="version-item__summary">
+        <div className="version-item__meta">
+          <span className="version-item__name">{version.version || "（バージョン未設定）"}</span>
+          <span className="version-item__date">{version.release_date || "日付未設定"}</span>
+        </div>
+        <div className="version-item__actions">
+          <DeleteButton
+            onClick={handleRemove}
+            ariaLabel="このバージョンを削除"
+          />
+        </div>
+      </summary>
+      {isOpen ? (
+        <div className="version-item__body">
+          <div className="version-item__fields version-item__fields--compact">
+            <label>バージョン<input value={version.version} onChange={e => updateVersionField(version.key, 'version', e.target.value)} placeholder="v1.0.0" /></label>
+            <label className="version-date">
+              <span>公開日</span>
+              <div className="version-date__control">
+                <input
+                  type="date"
+                  max="9999-12-31"
+                  value={version.release_date}
+                  onChange={e => updateVersionField(version.key, 'release_date', e.target.value)}
+                  ref={handleDateRef}
+                />
+                <button
+                  type="button"
+                  className="btn btn--icon version-date__btn"
+                  onClick={() => openDatePicker(version.key)}
+                  aria-label="カレンダーを開く"
+                >
+                  <Icon name="calendar" size={16} />
+                </button>
+              </div>
+            </label>
+          </div>
+          <div className="version-files__header">
+            <div className="version-files__title">
+              <h3>ファイル</h3>
+              <p>主要ファイル(最低1件)のハッシュを計算してください。</p>
+            </div>
+            <button type="button" className="btn btn--secondary version-files__add version-files__add--inline" onClick={() => addVersionFile(version.key)}>
+              ファイルを追加
+            </button>
+          </div>
+          <div className="version-files">
+            {version.files.map((file, idx) => (
+              <VersionFileCard
+                key={file.key}
+                versionKey={version.key}
+                file={file}
+                index={idx}
+                removeVersionFile={removeVersionFile}
+                updateVersionFile={updateVersionFile}
+                chooseFileForHash={chooseFileForHash}
+              />
+            ))}
+            {!version.files.length && <div className="note">ファイルを追加してください</div>}
+          </div>
+        </div>
+      ) : null}
+    </details>
+  );
+}, (prev, next) => (
+  prev.version === next.version
+  && prev.isOpen === next.isOpen
+  && prev.toggleVersionOpen === next.toggleVersionOpen
+  && prev.removeVersion === next.removeVersion
+  && prev.updateVersionField === next.updateVersionField
+  && prev.addVersionFile === next.addVersionFile
+  && prev.removeVersionFile === next.removeVersionFile
+  && prev.updateVersionFile === next.updateVersionFile
+  && prev.chooseFileForHash === next.chooseFileForHash
+  && prev.openDatePicker === next.openDatePicker
+  && prev.versionDateRefs === next.versionDateRefs
+));
+
+const PackageVersionSection = memo(function PackageVersionSection({
+  versions,
+  expandedVersionKeys,
+  toggleVersionOpen,
+  removeVersion,
+  updateVersionField,
+  addVersion,
+  addVersionFile,
+  removeVersionFile,
+  updateVersionFile,
+  chooseFileForHash,
+  openDatePicker,
+  versionDateRefs,
+}) {
+  return (
+    <section className="package-section">
+      <div className="package-section__header">
+        <h2>バージョン</h2>
+      </div>
+      <div className="version-list">
+        {versions.map(ver => (
+          <VersionItem
+            key={ver.key}
+            version={ver}
+            isOpen={expandedVersionKeys.has(ver.key)}
+            toggleVersionOpen={toggleVersionOpen}
+            removeVersion={removeVersion}
+            updateVersionField={updateVersionField}
+            addVersionFile={addVersionFile}
+            removeVersionFile={removeVersionFile}
+            updateVersionFile={updateVersionFile}
+            chooseFileForHash={chooseFileForHash}
+            openDatePicker={openDatePicker}
+            versionDateRefs={versionDateRefs}
+          />
+        ))}
+        {!versions.length && <div className="note">バージョン情報を追加してください。</div>}
+      </div>
+      <div className="version-add">
+        <button
+          type="button"
+          className="btn btn--secondary version-add__button"
+          onClick={addVersion}
+          aria-label="バージョンを追加"
+        >
+          <span aria-hidden>＋</span>
+          <span>バージョンを追加</span>
+        </button>
+      </div>
+    </section>
+  );
+}, (prev, next) => (
+  prev.versions === next.versions
+  && prev.expandedVersionKeys === next.expandedVersionKeys
+  && prev.toggleVersionOpen === next.toggleVersionOpen
+  && prev.removeVersion === next.removeVersion
+  && prev.updateVersionField === next.updateVersionField
+  && prev.addVersion === next.addVersion
+  && prev.addVersionFile === next.addVersionFile
+  && prev.removeVersionFile === next.removeVersionFile
+  && prev.updateVersionFile === next.updateVersionFile
+  && prev.chooseFileForHash === next.chooseFileForHash
+  && prev.openDatePicker === next.openDatePicker
+  && prev.versionDateRefs === next.versionDateRefs
+));
 
 function VisibilityBadge({ type = 'public', label }) {
   const text = label || (type === 'public' ? '公開' : '非公開');
@@ -404,6 +1027,7 @@ function serializeUninstallStep(step) {
   }
   return payload;
 }
+// インストーラ関連の入力値を index.json 用の形に直す
 function buildInstallerPayload(form) {
   const source = extractInstallerSource(form);
   return {
@@ -413,6 +1037,7 @@ function buildInstallerPayload(form) {
   };
 }
 
+// 画像設定を index.json 用の構造に変換
 function buildImagesPayload(form) {
   const id = form.id.trim();
   const group = { thumbnail: '', infoImg: [] };
@@ -446,6 +1071,7 @@ function buildVersionPayload(form) {
   }));
 }
 
+// version 配列の末尾を latest-version として同期
 function computeLatestVersion(form) {
   if (!form.versions.length) return '';
   const last = form.versions[form.versions.length - 1];
@@ -460,6 +1086,7 @@ async function computeHashFromFile(fileOrPath) {
   if (!path) {
     throw new Error('XXH3_128 を計算するにはローカルファイルのパスが必要です。');
   }
+  // ハッシュ計算は Tauri 側のコマンドを叩く
   const { invoke } = await import('@tauri-apps/api/core');
   const hex = await invoke('calc_xxh3_hex', { path });
   if (!hex || typeof hex !== 'string') {
@@ -468,7 +1095,8 @@ async function computeHashFromFile(fileOrPath) {
   return hex.toLowerCase();
 }
 
-function buildPackageEntry(form) {
+// フォーム入力＋タグ配列から index.json の1エントリを構築
+function buildPackageEntry(form, tags) {
   const id = form.id.trim();
   const entry = {
     id,
@@ -481,7 +1109,7 @@ function buildPackageEntry(form) {
     repoURL: form.repoURL.trim(),
     'latest-version': computeLatestVersion(form),
     license: form.license.trim(),
-    tags: commaListToArray(form.tagsText),
+    tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
     dependencies: commaListToArray(form.dependenciesText),
     images: buildImagesPayload(form),
     installer: buildInstallerPayload(form),
@@ -555,6 +1183,7 @@ function validatePackageForm(form) {
   }
   return '';
 }
+// 送信ページ本体：モード切替・データ取得・送信処理をまとめる
 export default function Submit() {
   const submitEndpoint = (import.meta.env.VITE_SUBMIT_ENDPOINT || '').trim();
   const packageGuideUrl = (import.meta.env.VITE_PACKAGE_GUIDE_URL || PACKAGE_GUIDE_FALLBACK_URL).trim();
@@ -571,13 +1200,17 @@ export default function Submit() {
   const [appVersion, setAppVersion] = useState('');
   const [inq, setInq] = useState({ title: '', detail: '', contact: '', includeApp: true, includeDevice: true, includeLog: true });
 
+  // カタログ一覧・フォーム状態・送信関連のステート群
   const [catalogItems, setCatalogItems] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [catalogBaseUrl, setCatalogBaseUrl] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
+  const deferredPackageSearch = useDeferredValue(packageSearch);
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [packageForm, setPackageForm] = useState(createEmptyPackageForm());
+  const [initialTags, setInitialTags] = useState([]);
+  const tagListRef = useRef([]); // TagEditor 内部とは分離したタグ配列の最新値を保持
   const [packageSender, setPackageSender] = useState('');
   const [descriptionTab, setDescriptionTab] = useState('edit');
   const [descriptionLoading, setDescriptionLoading] = useState(false);
@@ -587,12 +1220,58 @@ export default function Submit() {
   const installListRef = useRef(null);
   const uninstallListRef = useRef(null);
   const dragHandleRef = useRef({ active: false, type: '', index: -1 });
+  const { allTags } = useCatalog();
+  const [descriptionPreviewHtml, setDescriptionPreviewHtml] = useState('');
+  const deferredDescriptionText = useDeferredValue(descriptionTab === 'preview' ? packageForm.descriptionText : '');
+  const renderImages = packageForm.images;
+  const renderInstaller = packageForm.installer;
+  const renderVersions = packageForm.versions;
+  const tagCandidates = useMemo(() => {
+    const set = new Set(allTags || []);
+    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), 'ja'));
+  }, [allTags]);
+  // TagEditor からの変更を受け取り、送信時に使う参照を最新化
+  const handleTagsChange = useCallback((list) => {
+    tagListRef.current = normalizeArrayText(list);
+  }, []);
 
   useEffect(() => {
     document.body.classList.add('route-submit');
     return () => { document.body.classList.remove('route-submit'); };
   }, []);
 
+  // TagEditor に渡す初期タグが変わったら、送信用の参照値も合わせる
+  useEffect(() => {
+    tagListRef.current = normalizeArrayText(initialTags);
+  }, [initialTags]);
+
+  // Markdown プレビューはプレビュータブ表示時のみ、アイドル時間や遅延で変換して入力体験を維持
+  useEffect(() => {
+    if (descriptionTab !== 'preview') {
+      setDescriptionPreviewHtml('');
+      return;
+    }
+    const text = deferredDescriptionText;
+    let cancelled = false;
+    let idleId = null;
+    let timeoutId = null;
+    const run = () => {
+      if (cancelled) return;
+      setDescriptionPreviewHtml(renderMarkdown(text));
+    };
+    if (typeof requestIdleCallback === 'function') {
+      idleId = requestIdleCallback(run, { timeout: 500 });
+    } else {
+      timeoutId = setTimeout(run, 200);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId && typeof cancelIdleCallback === 'function') cancelIdleCallback(idleId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [descriptionTab, deferredDescriptionText]);
+
+  // モードごとに body クラスを付け替え（スタイル分岐用）
   useEffect(() => {
     if (mode === 'package') {
       document.body.classList.add('route-submit--package');
@@ -619,6 +1298,7 @@ export default function Submit() {
     });
   }, [packageForm.versions]);
 
+  // バグ報告モードのときだけ、端末情報やログを読み込む
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -661,6 +1341,7 @@ export default function Submit() {
     return () => { cancelled = true; };
   }, [mode]);
 
+  // index.json を取得してパッケージ一覧をローカルにロード
   const loadCatalog = useCallback(async () => {
     if (catalogLoaded || catalogLoading) return;
     setCatalogLoading(true);
@@ -715,7 +1396,7 @@ export default function Submit() {
   }, [mode, loadCatalog]);
 
   const filteredPackages = useMemo(() => {
-    const query = packageSearch.trim().toLowerCase();
+    const query = deferredPackageSearch.trim().toLowerCase();
     const items = Array.isArray(catalogItems) ? catalogItems : [];
     if (!query) return items;
     return items.filter(item => {
@@ -723,11 +1404,14 @@ export default function Submit() {
       const author = String(item?.author || '').toLowerCase();
       return name.includes(query) || author.includes(query);
     });
-  }, [catalogItems, packageSearch]);
+  }, [catalogItems, deferredPackageSearch]);
 
+  // サイドバーのパッケージ選択/新規開始時の状態遷移
   const handleSelectPackage = useCallback(async (item) => {
     if (!item) {
       setSelectedPackageId('');
+      setInitialTags([]);
+      tagListRef.current = [];
       setPackageForm(prev => {
         cleanupImagePreviews(prev.images);
         return createEmptyPackageForm();
@@ -738,6 +1422,9 @@ export default function Submit() {
     }
     const form = entryToForm(item, catalogBaseUrl);
     setSelectedPackageId(item.id || '');
+    // 既存パッケージ選択時にタグ初期値を同期（エディタ内部のローカルステートと共有するため）
+    setInitialTags(commaListToArray(form.tagsText));
+    tagListRef.current = commaListToArray(form.tagsText);
     setPackageForm(prev => {
       cleanupImagePreviews(prev.images);
       return form;
@@ -769,8 +1456,13 @@ export default function Submit() {
       cleanupImagePreviews(prev.images);
       return createEmptyPackageForm();
     });
+    setInitialTags([]);
+    tagListRef.current = [];
     setDescriptionTab('edit');
     setExpandedVersionKeys(new Set());
+  }, []);
+  const handlePackageSearchChange = useCallback((value) => {
+    setPackageSearch(value);
   }, []);
   const toggleVersionOpen = useCallback((key, open) => {
     setExpandedVersionKeys(prev => {
@@ -1162,6 +1854,7 @@ export default function Submit() {
     return `${id}.md`;
   }, [packageForm.id]);
 
+  // モード別に payload を組み立て、フォームデータと添付を送信
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setError('');
@@ -1183,7 +1876,7 @@ export default function Submit() {
           setError(validation);
           return;
         }
-        const entry = buildPackageEntry(packageForm);
+        const entry = buildPackageEntry(packageForm, tagListRef.current);
         const existingIndex = catalogItems.findIndex(item => item.id === entry.id);
         const nextCatalog = existingIndex >= 0
           ? catalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
@@ -1321,11 +2014,11 @@ export default function Submit() {
     }
   }, [mode, packageForm, catalogItems, packageMdFilename, bug, appVersion, device, pluginsPreview, attachments, appLog, inq, submitEndpoint, packageSender]);
 
-  const thumbnailPreview = packageForm.images.thumbnail?.previewUrl || packageForm.images.thumbnail?.existingPath || "";
   const successPrimaryText = successDialog.packageName
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
     : (successDialog.message || '送信が完了しました。');
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
+  // 画面描画
   return (
     <div className={`submit-page${mode === 'package' ? ' submit-page--package' : ''}`}>
       {successDialog.open && (
@@ -1507,7 +2200,7 @@ export default function Submit() {
                   <input
                     type="search"
                     value={packageSearch}
-                    onChange={e => setPackageSearch(e.target.value)}
+                    onChange={e => handlePackageSearchChange(e.target.value)}
                     placeholder="パッケージ名・作者名で検索"
                     className="package-editor__searchInput"
                   />
@@ -1585,361 +2278,60 @@ export default function Submit() {
                             <textarea
                               className="textarea--lg"
                               value={packageForm.descriptionText}
-                              onChange={e => updatePackageField('descriptionText', e.target.value)}
-                              required
-                              placeholder="パッケージについての詳細情報を入力してください。Markdown形式で記述できます。"
-                              style={{ minHeight: 280, resize: 'vertical' }}
-                            />
-                          ) : (
-                            <div className="markdown-preview tab-panel__preview md" dangerouslySetInnerHTML={{ __html: renderMarkdown(packageForm.descriptionText) }} />
-                          )}
-                        </div>
-                      </div>
+                          onChange={e => updatePackageField('descriptionText', e.target.value)}
+                          required
+                          placeholder="パッケージについての詳細情報を入力してください。Markdown形式で記述できます。"
+                          style={{ minHeight: 280, resize: 'vertical' }}
+                        />
+                      ) : (
+                        <div className="markdown-preview tab-panel__preview md" dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }} />
+                      )}
+                    </div>
+                  </div>
                     </div>
 
                     <label>パッケージのサイト<input name="repoURL" value={packageForm.repoURL} onChange={e => updatePackageField('repoURL', e.target.value)} placeholder="パッケージのメインページ" /></label>
-                    <label>ライセンス*<input name="license" value={packageForm.license} onChange={e => updatePackageField('license', e.target.value)} required placeholder="(例: MIT)" /></label>
-                    <label>タグ(カンマ区切り)<input name="tags" value={packageForm.tagsText} onChange={e => updatePackageField('tagsText', e.target.value)} placeholder="(例: エンコード, フィルタ)" /></label>
-                    <label>依存パッケージ(現在非対応)<input name="dependencies" value={packageForm.dependenciesText} onChange={e => updatePackageField('dependenciesText', e.target.value)} placeholder="パッケージIDを書いてください" /></label>
-                  </div>
+                  <label>ライセンス*<input name="license" value={packageForm.license} onChange={e => updatePackageField('license', e.target.value)} required placeholder="(例: MIT)" /></label>
+                  <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={handleTagsChange} />
+                  <label className="dependencies-field">依存パッケージ(現在非対応)<input name="dependencies" value={packageForm.dependenciesText} onChange={e => updatePackageField('dependenciesText', e.target.value)} placeholder="パッケージIDを書いてください" /></label>
+                </div>
 
-                  <section className="package-section">
-                    <div className="package-section__header">
-                      <h2>画像</h2>
-                    </div>
-                    <div className="image-upload-grid">
-                      <div className="image-upload image-upload--thumbnail">
-                        <div className="image-upload__header">
-                          <div>
-                            <h3 className="image-upload__title">サムネイル</h3>
-                            <p className="image-upload__subtitle">最大1枚</p>
-                          </div>
-                          <label className="image-upload__button">
-                            画像を選択
-                            <input type="file" accept="image/*" onChange={e => handleThumbnailChange(e.target.files?.[0])} className="image-upload__input" />
-                          </label>
-                        </div>
-                        {packageForm.images.thumbnail ? (
-                          <div className="image-card image-card--thumbnail">
-                            <div
-                              className={`image-card__thumb${thumbnailPreview ? '' : ' image-card__thumb--empty'}`}
-                              style={thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined}
-                            >
-                              {!thumbnailPreview && <span>プレビューなし</span>}
-                            </div>
-                            <div className="image-card__footer">
-                              <span className="image-card__name" title={packageForm.images.thumbnail.file?.name || packageForm.images.thumbnail.existingPath}>
-                                {packageForm.images.thumbnail.file?.name || packageForm.images.thumbnail.existingPath || '未設定'}
-                              </span>
-                              <DeleteButton onClick={handleRemoveThumbnail} ariaLabel="サムネイルを削除" />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="image-card image-card--empty">サムネイルが未設定です</div>
-                        )}
-                      </div>
-                      <div className="image-upload image-upload--gallery">
-                        <div className="image-upload__header">
-                          <div>
-                            <h3 className="image-upload__title">説明画像</h3>
-                            <p className="image-upload__subtitle">複数追加できます</p>
-                          </div>
-                          <label className="image-upload__button">
-                            画像を追加
-                            <input type="file" accept="image/*" multiple onChange={e => handleAddInfoImages(e.target.files)} className="image-upload__input" />
-                          </label>
-                        </div>
-                        {packageForm.images.info.length ? (
-                          <div className="image-gallery">
-                            {packageForm.images.info.map((entry, idx) => {
-                              const preview = entry.previewUrl || entry.existingPath || '';
-                              const filename = entry.file?.name || entry.existingPath || `./image/${packageForm.id}_${idx + 1}.(拡張子)`;
-                              return (
-                                <div key={entry.key} className="image-card image-card--gallery">
-                                  <div
-                                    className={`image-card__thumb${preview ? '' : ' image-card__thumb--empty'}`}
-                                    style={preview ? { backgroundImage: `url(${preview})` } : undefined}
-                                  >
-                                    {!preview && <span>プレビューなし</span>}
-                                  </div>
-                                  <div className="image-card__footer">
-                                    <span className="image-card__name" title={filename}>{filename}</span>
-                                    <DeleteButton onClick={() => handleRemoveInfoImage(entry.key)} ariaLabel="説明画像を削除" />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="image-card image-card--empty">説明画像が未設定です</div>
-                        )}
-                      </div>
-                    </div>
-                  </section>
-                  <section className="package-section">
-                    <div className="package-section__header">
-                      <h2>インストーラ</h2>
-                    </div>
-                    <div className="package-section__content">
-                      <div>
-                        <span className="package-section__label">ダウンロード元</span>
-                        <div className="segmented segmented--compact package-section__source">
-                          {INSTALLER_SOURCES.map(option => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`btn btn--toggle ${packageForm.installer.sourceType === option.value ? 'is-active' : ''}`}
-                              onClick={() => updateInstallerField('sourceType', option.value)}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {packageForm.installer.sourceType === 'direct' && (
-                        <label>ダウンロードURL<input value={packageForm.installer.directUrl} onChange={e => updateInstallerField('directUrl', e.target.value)} placeholder="ダウンロード先のURLを入れてください" /></label>
-                      )}
-                      {packageForm.installer.sourceType === 'github' && (
-                        <div className="form__grid package-grid">
-                          <label>GitHub ID<input value={packageForm.installer.githubOwner} onChange={e => updateInstallerField('githubOwner', e.target.value)} placeholder="例: neosku" /></label>
-                          <label>レポジトリ名<input value={packageForm.installer.githubRepo} onChange={e => updateInstallerField('githubRepo', e.target.value)} placeholder="例: aviutl2-catalog" /></label>
-                          <label className="package-grid__full">ダウンロードファイルの正規表現<input value={packageForm.installer.githubPattern} onChange={e => updateInstallerField('githubPattern', e.target.value)} placeholder="^file.*\.zip$" /></label>
-                        </div>
-                      )}
-                      {packageForm.installer.sourceType === 'GoogleDrive' && (
-                        <label>ファイルID<input value={packageForm.installer.googleDriveId} onChange={e => updateInstallerField('googleDriveId', e.target.value)} placeholder="Google Drive ファイルID" /></label>
-                      )}
-                    </div>
+                  <PackageImagesSection
+                    images={renderImages}
+                    packageId={packageForm.id}
+                    onThumbnailChange={handleThumbnailChange}
+                    onRemoveThumbnail={handleRemoveThumbnail}
+                    onAddInfoImages={handleAddInfoImages}
+                    onRemoveInfoImage={handleRemoveInfoImage}
+                  />
+                  <PackageInstallerSection
+                    installer={renderInstaller}
+                    installListRef={installListRef}
+                    uninstallListRef={uninstallListRef}
+                    addInstallStep={addInstallStep}
+                    addUninstallStep={addUninstallStep}
+                    removeInstallStep={removeInstallStep}
+                    removeUninstallStep={removeUninstallStep}
+                    startHandleDrag={startHandleDrag}
+                    updateInstallStep={updateInstallStep}
+                    updateInstallerField={updateInstallerField}
+                    updateUninstallStep={updateUninstallStep}
+                  />
+                  <PackageVersionSection
+                    versions={renderVersions}
+                    expandedVersionKeys={expandedVersionKeys}
+                    toggleVersionOpen={toggleVersionOpen}
+                    removeVersion={removeVersion}
+                    updateVersionField={updateVersionField}
+                    addVersion={addVersion}
+                    addVersionFile={addVersionFile}
+                    removeVersionFile={removeVersionFile}
+                    updateVersionFile={updateVersionFile}
+                    chooseFileForHash={chooseFileForHash}
+                    openDatePicker={openDatePicker}
+                    versionDateRefs={versionDateRefs}
+                  />
 
-                    <div className="package-subsection">
-                      <div className="package-subsection__header">
-                        <h3>インストール ステップ</h3>
-                        <button type="button" className="btn btn--secondary" onClick={addInstallStep}>ステップを追加</button>
-                      </div>
-                      <div
-                        className="package-cards"
-                        ref={installListRef}
-                      >
-                        {packageForm.installer.installSteps.map((step, idx) => {
-                          const order = idx + 1;
-                          const isSpecialAction = SPECIAL_INSTALL_ACTIONS.includes(step.action);
-                          return (
-                            <div
-                              key={step.key}
-                              className="package-card package-card--minimal"
-                            >
-                              <div className="package-card__header">
-                                <div className="package-card__lead">
-                                  <span className="package-card__order" aria-label={`ステップ${order}`}>{order}</span>
-                                  {!isSpecialAction && (
-                                    <span
-                                      className="package-card__handle"
-                                      role="button"
-                                      tabIndex={0}
-                                      onPointerDown={e => startHandleDrag('install', idx, e)}
-                                      aria-label="ドラッグして並び替え"
-                                    >⋮⋮</span>
-                                  )}
-                                </div>
-                                {isSpecialAction ? (
-                                  <div className="package-card__presetAction" aria-label="固定ステップ">
-                                    <span className="package-card__presetLabel">{ACTION_LABELS[step.action] || step.action}</span>
-                                    <span className="package-card__presetNotice">このステップは固定されています</span>
-                                  </div>
-                                ) : (
-                                  <ActionSelect
-                                    value={step.action}
-                                    onChange={(val) => updateInstallStep(step.key, 'action', val)}
-                                    options={INSTALL_ACTION_OPTIONS}
-                                    ariaLabel="ステップの種類を選択"
-                                  />
-                                )}
-                                <div className="package-card__toolbar">
-                                  {!isSpecialAction && (
-                                    <DeleteButton onClick={() => removeInstallStep(step.key)} ariaLabel="ステップを削除" />
-                                  )}
-                                </div>
-                              </div>
-                              {!isSpecialAction && step.action === 'run' && (
-                                <div className="package-card__fields package-card__fields--tight">
-                                  <label>パス<input value={step.path} onChange={e => updateInstallStep(step.key, 'path', e.target.value)} placeholder="{tmp}/setup.exe" /></label>
-                                  <label>引数(コンマ区切り)<input value={step.argsText} onChange={e => updateInstallStep(step.key, 'argsText', e.target.value)} placeholder="--silent, --option" /></label>
-                                </div>
-                              )}
-                              {!isSpecialAction && step.action === 'copy' && (
-                                <div className="package-card__fields package-card__fields--tight">
-                                  <label>コピー元<input value={step.from} onChange={e => updateInstallStep(step.key, 'from', e.target.value)} placeholder="{tmp}/example.auo2" /></label>
-                                  <label>コピー先<input value={step.to} onChange={e => updateInstallStep(step.key, 'to', e.target.value)} placeholder="{pluginsDir}" /></label>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {!packageForm.installer.installSteps.length && <div className="note">必要な手順を順に追加してください</div>}
-                      </div>
-                    </div>
-
-                    <div className="package-subsection">
-                      <div className="package-subsection__header">
-                        <h3>アンインストール ステップ</h3>
-                        <button type="button" className="btn btn--secondary" onClick={addUninstallStep}>ステップを追加</button>
-                      </div>
-                      <div
-                        className="package-cards"
-                        ref={uninstallListRef}
-                      >
-                        {packageForm.installer.uninstallSteps.map((step, idx) => {
-                          const order = idx + 1;
-                          return (
-                            <div
-                              key={step.key}
-                              className="package-card package-card--minimal"
-                            >
-                              <div className="package-card__header">
-                                <div className="package-card__lead">
-                                  <span className="package-card__order" aria-label={`ステップ${order}`}>{order}</span>
-                                  <span
-                                    className="package-card__handle"
-                                    role="button"
-                                    tabIndex={0}
-                                    onPointerDown={e => startHandleDrag('uninstall', idx, e)}
-                                    aria-label="ドラッグして並び替え"
-                                  >⋮⋮</span>
-                                </div>
-                                <ActionSelect
-                                  value={step.action}
-                                  onChange={(val) => updateUninstallStep(step.key, 'action', val)}
-                                  options={UNINSTALL_ACTION_OPTIONS}
-                                  ariaLabel="ステップの種類を選択"
-                                />
-                                <div className="package-card__toolbar">
-                                  <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
-                                </div>
-                              </div>
-                              <div className="package-card__fields package-card__fields--tight">
-                                <label>パス<input value={step.path} onChange={e => updateUninstallStep(step.key, 'path', e.target.value)} placeholder={step.action === 'delete' ? '(例: {pluginsDir}/example.auo2)' : '(例: {appDir}/uninstall.exe)'} /></label>
-                                {step.action === 'run' && (
-                                  <label>引数(カンマ区切り)<input value={step.argsText} onChange={e => updateUninstallStep(step.key, 'argsText', e.target.value)} placeholder="(例: /VERYSILENT)" /></label>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {!packageForm.installer.uninstallSteps.length && <div className="note">必要な手順を順に追加してください</div>}
-                      </div>
-                    </div>
-                  </section>
-                  <section className="package-section">
-                    <div className="package-section__header">
-                      <h2>バージョン</h2>
-                    </div>
-                    <div className="version-list">
-                      {packageForm.versions.map(ver => {
-                        const isOpen = expandedVersionKeys.has(ver.key);
-                        return (
-                          <details key={ver.key} open={isOpen} onToggle={e => toggleVersionOpen(ver.key, e.target.open)} className="version-item">
-                            <summary className="version-item__summary">
-                              <div className="version-item__meta">
-                                <span className="version-item__name">{ver.version || "（バージョン未設定）"}</span>
-                                <span className="version-item__date">{ver.release_date || "日付未設定"}</span>
-                              </div>
-                              <div className="version-item__actions">
-                                <DeleteButton
-                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeVersion(ver.key); }}
-                                  ariaLabel="このバージョンを削除"
-                                />
-                              </div>
-                            </summary>
-                            <div className="version-item__body">
-                              <div className="version-item__fields version-item__fields--compact">
-                                <label>バージョン<input value={ver.version} onChange={e => updateVersionField(ver.key, 'version', e.target.value)} placeholder="v1.0.0" /></label>
-                                <label className="version-date">
-                                  <span>公開日</span>
-                                  <div className="version-date__control">
-                                    <input
-                                      type="date"
-                                      max="9999-12-31"
-                                      value={ver.release_date}
-                                      onChange={e => updateVersionField(ver.key, 'release_date', e.target.value)}
-                                      ref={(el) => {
-                                        if (el) {
-                                          versionDateRefs.current.set(ver.key, el);
-                                        } else {
-                                          versionDateRefs.current.delete(ver.key);
-                                        }
-                                      }}
-                                    />
-                                    <button
-                                      type="button"
-                                      className="btn btn--icon version-date__btn"
-                                      onClick={() => openDatePicker(ver.key)}
-                                      aria-label="カレンダーを開く"
-                                    >
-                                      <Icon name="calendar" size={16} />
-                                    </button>
-                                  </div>
-                                </label>
-                              </div>
-                              <div className="version-files__header">
-                                <div className="version-files__title">
-                                  <h3>ファイル</h3>
-                                  <p>主要ファイル(最低1件)のハッシュを計算してください。</p>
-                                </div>
-                                <button type="button" className="btn btn--secondary version-files__add version-files__add--inline" onClick={() => addVersionFile(ver.key)}>
-                                  ファイルを追加
-                                </button>
-                              </div>
-                              <div className="version-files">
-                                {ver.files.map((file, idx) => (
-                                  <div key={file.key} className="version-file-card">
-                                    <div className="version-file-card__head">
-                                      <span className="version-file-card__chip">ファイル {idx + 1}</span>
-                                      <DeleteButton onClick={() => removeVersionFile(ver.key, file.key)} ariaLabel={`ファイル${idx + 1}を削除`} />
-                                    </div>
-                                    <label>保存先パス<input value={file.path} onChange={e => updateVersionFile(ver.key, file.key, 'path', e.target.value)} placeholder="{pluginsDir}/plugin.dll" /></label>
-                                    <div className="version-file-card__metaRow">
-                                      <dl className="version-file-card__summary">
-                                        <div>
-                                          <dt>ハッシュ値</dt>
-                                          <dd>{file.hash ? file.hash : '未計算'}</dd>
-                                        </div>
-                                        {file.fileName ? (
-                                          <div>
-                                            <dt>ファイル名</dt>
-                                            <dd>{file.fileName}</dd>
-                                          </div>
-                                        ) : null}
-                                      </dl>
-                                      <button
-                                        type="button"
-                                        className="btn version-file-card__actionButton"
-                                        onClick={() => chooseFileForHash(ver.key, file.key)}
-                                      >
-                                        ファイルを選択して計算
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                                {!ver.files.length && <div className="note">ファイルを追加してください</div>}
-                              </div>
-                            </div>
-                          </details>
-                        );
-                      })}
-                      {!packageForm.versions.length && <div className="note">バージョン情報を追加してください。</div>}
-                    </div>
-                    <div className="version-add">
-                      <button
-                        type="button"
-                        className="btn btn--secondary version-add__button"
-                        onClick={addVersion}
-                        aria-label="バージョンを追加"
-                      >
-                        <span aria-hidden>＋</span>
-                        <span>バージョンを追加</span>
-                      </button>
-                    </div>
-                  </section>
                 </div>
                 <div className="package-editor__footerRow">
                   <div className="package-editor__footerButtons">
