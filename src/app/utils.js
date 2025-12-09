@@ -552,13 +552,53 @@ async function fetchGitHubURL(github) {
     const { owner, repo, pattern } = github;
     const regex = pattern ? new RegExp(pattern) : null;
 
+    // リリースから対象アセットを選ぶ
+    const pickAssetFromRelease = (release) => {
+        if (!release || !Array.isArray(release.assets)) return null;
+        if (regex) {
+            const matched = release.assets.find(a => regex.test(a.name || ''));
+            if (matched) return matched;
+        }
+        return release.assets[0] || null;
+    };
+
+    // release一覧を走査し「最終更新日時が最も新しいアセット」を返す
+    const findLatestUpdatedAsset = (releases) => {
+        if (!Array.isArray(releases) || !releases.length) return null;
+        let best = null;
+        let bestTs = -Infinity;
+        for (const rel of releases) {
+            const assets = Array.isArray(rel?.assets) ? rel.assets : [];
+            for (const asset of assets) {
+                if (regex && !regex.test(asset?.name || '')) continue;
+                // asset.updated_at/created_at、なければ release の日付を比較
+                const ts = Date.parse(asset?.updated_at || asset?.created_at || rel?.published_at || rel?.created_at || '') || 0;
+                if (ts > bestTs) {
+                    best = asset;
+                    bestTs = ts;
+                }
+            }
+        }
+        return best;
+    };
+
     try {
+        // latest API から取得を試みる
         const res = await http.fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
         const data = await res.json().catch(() => ({}));
-        const assets = Array.isArray(data.assets) ? data.assets : [];
-        const asset = regex
-            ? assets.find(a => regex.test(a.name || '')) || assets[0]
-            : assets[0];
+        const asset = pickAssetFromRelease(data);
+        if (asset?.browser_download_url) {
+            return asset.browser_download_url;
+        }
+    } catch (e) {
+        try { await logError(`[fetchGitHubAsset] fetch latest failed: ${e?.message || e}`); } catch (_) { }
+    }
+
+    try {
+        // latest が無い場合は release 一覧から最終更新のアセットを選ぶ
+        const res = await http.fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=30`);
+        const list = await res.json().catch(() => []);
+        const asset = findLatestUpdatedAsset(list);
         return asset?.browser_download_url || '';
     } catch (e) {
         try { await logError(`[fetchGitHubAsset] fetch failed: ${e?.message || e}`); } catch (_) { }
