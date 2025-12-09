@@ -1,5 +1,5 @@
 // メインページコンポーネント
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import SortBar from '../components/SortBar.jsx';
@@ -11,6 +11,8 @@ import Icon from '../components/Icon.jsx';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { getSorter, filterByTagsAndType, matchQuery, logError, hasInstaller, runInstallerForItem } from '../app/utils.js';
 
+let savedHomeScrollTop = 0;
+
 // メインページコンポーネント
 // プラグイン一覧の表示、検索、フィルタリング、ソート機能を提供
 export default function Home() {
@@ -18,6 +20,7 @@ export default function Home() {
   const dispatch = useCatalogDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+  const mainRef = useRef(null);
   // URLパラメータから検索・フィルタ条件を取得
   const params = new URLSearchParams(location.search);
   const q = params.get('q') || '';
@@ -37,6 +40,7 @@ export default function Home() {
   const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
   const bulkLabel = bulkProgress?.label ?? '更新処理中…';
   const bulkCurrent = bulkProgress?.current ?? 0;
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // 更新対象: インストール済みかつ最新版でないプラグインのみ抽出
   const updatableItems = useMemo(() => {
@@ -44,6 +48,38 @@ export default function Home() {
   }, [items]);
 
   const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? (updatableItems.length || 0) : 0);
+
+  // スクロール位置の保存と復元
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (main) {
+      main.scrollTop = savedHomeScrollTop;
+    }
+    return () => {
+      if (main) {
+        savedHomeScrollTop = main.scrollTop;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const handleScroll = () => {
+      setShowScrollTop(main.scrollTop > 200);
+    };
+    handleScroll();
+    main.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      main.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const scrollToTop = () => {
+    const main = mainRef.current;
+    if (!main) return;
+    main.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // 基本的なフィルタリング処理（検索・タグ・種別）
   const baseList = useMemo(() => {
@@ -199,7 +235,7 @@ export default function Home() {
             ) : null}
             <FilterPanel />
           </aside>
-          <main className="route-home__main">
+          <main className="route-home__main" ref={mainRef}>
             <div className="route-home__grid grid">
               {/* 読み込み状態とエラー状態の表示 */}
               {loading && <div>読み込み中…</div>}
@@ -215,6 +251,16 @@ export default function Home() {
                 <PluginCard key={it.id} item={it} />
               ))}
             </div>
+            {showScrollTop && (
+              <button
+                type="button"
+                className="route-home__scrolltop"
+                onClick={scrollToTop}
+                aria-label="先頭に戻る"
+              >
+                <Icon name="chevron_up" size={18} />
+              </button>
+            )}
           </main>
         </div>
       </div>

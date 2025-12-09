@@ -861,6 +861,7 @@ select {
     overflow-y: auto;
     padding-right: 4px;
     overscroll-behavior: contain;
+    position: relative;
 }
 
 .route-home__grid {
@@ -874,6 +875,37 @@ select {
 
 .route-home__grid>* {
     min-width: 0;
+}
+
+.route-home__scrolltop {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
+    z-index: 30;
+}
+
+.route-home__scrolltop:hover {
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    color: var(--accent-strong, var(--accent));
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.32);
+}
+
+.route-home__scrolltop:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring), 0 10px 26px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
 @media (max-width: 900px) {

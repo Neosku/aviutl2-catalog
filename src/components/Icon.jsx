@@ -122,6 +122,11 @@ export default function Icon({ name, size = 18, className = '', strokeWidth = 2,
         return (
           <path d="M6 9l6 6 6-6" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
         );
+      case 'chevron_up':
+        // 上向き矢印
+        return (
+          <path d="M6 15l6-6 6 6" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+        );
       case 'open_in_new':
         // 外部リンクアイコン
         return (
