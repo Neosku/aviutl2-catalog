@@ -898,10 +898,12 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
         await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
         emitProgress(totalSteps, null, null, 'done');
         // 後始末: 一時作業フォルダを削除（成功時のみ）
-        // try {
-        //   const fs = await import('@tauri-apps/plugin-fs');
-        //   await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-        // } catch (_) { /* ignore cleanup errors */ }
+        if (!import.meta.env?.DEV) {
+            try {
+                const fs = await import('@tauri-apps/plugin-fs');
+                await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+            } catch (_) {}
+        }
     } catch (e) {
         const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
         try { await logError(`[installer ${item.id}] error: ${detail}`); } catch (_) { }
