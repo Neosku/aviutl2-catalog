@@ -2443,7 +2443,7 @@ body.route-submit--package {
     display: flex;
     align-items: flex-end;
     gap: 16px;
-    padding: 12px 20px 20px;
+    padding: 12px 20px 5px;
     border-top: 1px solid rgba(148, 163, 184, 0.35);
     flex-wrap: wrap;
 }
@@ -2456,8 +2456,20 @@ body.route-submit--package {
     gap: 10px;
 }
 
-.package-editor__sender input {
+.package-editor__senderField {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.package-editor__senderField input {
+    flex: 1;
+}
+
+.package-editor__senderHint {
+    font-size: 12px;
+    color: var(--muted);
 }
 
 .package-editor__footerButtons {
@@ -2931,6 +2943,50 @@ body.route-submit--package {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.checkbox {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-rows: auto auto;
+    justify-items: center;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--chip-bg);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    user-select: none;
+    cursor: pointer;
+    width: fit-content;
+    justify-self: center;
+}
+
+.checkbox span {
+    order: 1;
+}
+
+.checkbox input[type="checkbox"] {
+    order: 2;
+    width: 22px;
+    height: 22px;
+    accent-color: var(--accent);
+    transform: translateY(0);
+    margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+    .package-card__fields--run {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        align-items: stretch;
+    }
+    .package-card__fields--run .checkbox {
+        justify-self: flex-start;
+        align-items: flex-start;
+    }
 }
 
 /* モダンスイッチ */
@@ -4376,6 +4432,11 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 .package-card__fields--tight {
     gap: 6px;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.package-card__fields--run {
+    grid-template-columns: minmax(240px, 1.05fr) minmax(360px, 1.75fr) auto;
+    align-items: center;
 }
 
 

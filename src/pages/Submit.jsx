@@ -668,9 +668,17 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
                   </div>
                 </div>
                 {!isSpecialAction && step.action === 'run' && (
-                  <div className="package-card__fields package-card__fields--tight">
+                  <div className="package-card__fields package-card__fields--tight package-card__fields--run">
                     <label>パス<input value={step.path} onChange={e => updateInstallStep(step.key, 'path', e.target.value)} placeholder="{tmp}/setup.exe" /></label>
                     <label>引数(コンマ区切り)<input value={step.argsText} onChange={e => updateInstallStep(step.key, 'argsText', e.target.value)} placeholder="--silent, --option" /></label>
+                    <label className="checkbox">
+                      <span>管理者権限で実行</span>
+                      <input
+                        type="checkbox"
+                        checked={!!step.elevate}
+                        onChange={e => updateInstallStep(step.key, 'elevate', e.target.checked)}
+                      />
+                    </label>
                   </div>
                 )}
                 {!isSpecialAction && step.action === 'copy' && (
@@ -723,10 +731,20 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
                     <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
                   </div>
                 </div>
-                <div className="package-card__fields package-card__fields--tight">
+                <div className={`package-card__fields package-card__fields--tight${step.action === 'run' ? ' package-card__fields--run' : ''}`}>
                   <label>パス<input value={step.path} onChange={e => updateUninstallStep(step.key, 'path', e.target.value)} placeholder={step.action === 'delete' ? '(例: {pluginsDir}/example.auo2)' : '(例: {appDir}/uninstall.exe)'} /></label>
                   {step.action === 'run' && (
-                    <label>引数(カンマ区切り)<input value={step.argsText} onChange={e => updateUninstallStep(step.key, 'argsText', e.target.value)} placeholder="(例: /VERYSILENT)" /></label>
+                    <>
+                      <label>引数(カンマ区切り)<input value={step.argsText} onChange={e => updateUninstallStep(step.key, 'argsText', e.target.value)} placeholder="(例: /VERYSILENT)" /></label>
+                      <label className="checkbox">
+                        <span>管理者権限で実行</span>
+                        <input
+                          type="checkbox"
+                          checked={!!step.elevate}
+                          onChange={e => updateUninstallStep(step.key, 'elevate', e.target.checked)}
+                        />
+                      </label>
+                    </>
                   )}
                 </div>
               </div>
@@ -1016,6 +1034,7 @@ function parseInstallerSource(installer = {}) {
       argsText: Array.isArray(step?.args) ? step.args.map(arg => String(arg || '')).filter(Boolean).join(', ') : '',
       from: String(step?.from || ''),
       to: String(step?.to || ''),
+      elevate: !!step?.elevate,
     };
   });
   const uninstallSteps = Array.isArray(installer.uninstall) ? installer.uninstall : [];
@@ -1024,6 +1043,7 @@ function parseInstallerSource(installer = {}) {
     action: UNINSTALL_ACTIONS.includes(step?.action) ? step.action : 'delete',
     path: String(step?.path || ''),
     argsText: Array.isArray(step?.args) ? step.args.map(arg => String(arg || '')).filter(Boolean).join(', ') : '',
+    elevate: !!step?.elevate,
   }));
   return next;
 }
@@ -1152,8 +1172,11 @@ function serializeInstallStep(step) {
   if (step.path && step.path.trim()) {
     payload.path = step.path.trim();
   }
-  if (step.action === 'run' && step.argsText) {
-    payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
+  if (step.action === 'run') {
+    if (step.argsText) {
+      payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
+    }
+    if (step.elevate) payload.elevate = true;
   }
   if (step.from && step.from.trim()) {
     payload.from = step.from.trim();
@@ -1171,6 +1194,7 @@ function serializeUninstallStep(step) {
     if (step.argsText) {
       payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
     }
+    if (step.elevate) payload.elevate = true;
   } else if (step.action === 'delete' && step.path) {
     payload.path = step.path;
   }
@@ -1348,6 +1372,9 @@ function validatePackageForm(form) {
     }
     if (step.action === 'run') {
       if (!step.path.trim()) return 'run の path は必須です';
+      if (step.elevate && typeof step.elevate !== 'boolean') return 'run の elevate は true/false で指定してください';
+    } else if (step.elevate) {
+      return 'elevate は action: run のときのみ指定できます';
     }
     if (step.action === 'copy') {
       if (!step.from.trim() || !step.to.trim()) return 'copy の from / to は必須です';
@@ -1359,6 +1386,9 @@ function validatePackageForm(form) {
     }
     if (step.action === 'run') {
       if (!step.path.trim()) return 'uninstall run の path は必須です';
+      if (step.elevate && typeof step.elevate !== 'boolean') return 'uninstall run の elevate は true/false で指定してください';
+    } else if (step.elevate) {
+      return 'uninstall の elevate は action: run のときのみ指定できます';
     }
   }
   if (!form.versions.length) return 'バージョン情報を最低1件追加してください';
@@ -1769,7 +1799,7 @@ export default function Submit() {
       ...prev,
       installer: {
         ...prev.installer,
-        installSteps: [...prev.installer.installSteps, { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '' }],
+        installSteps: [...prev.installer.installSteps, { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '', elevate: false }],
       },
     }));
   }, []);
@@ -1779,7 +1809,14 @@ export default function Submit() {
       ...prev,
       installer: {
         ...prev.installer,
-        installSteps: prev.installer.installSteps.map(step => (step.key === key ? { ...step, [field]: value } : step)),
+        installSteps: prev.installer.installSteps.map(step => {
+          if (step.key !== key) return step;
+          const next = { ...step, [field]: value };
+          if (field === 'action' && value !== 'run') {
+            next.elevate = false;
+          }
+          return next;
+        }),
       },
     }));
   }, []);
@@ -1799,7 +1836,7 @@ export default function Submit() {
       ...prev,
       installer: {
         ...prev.installer,
-        uninstallSteps: [...prev.installer.uninstallSteps, { key: generateKey(), action: 'delete', path: '', argsText: '' }],
+        uninstallSteps: [...prev.installer.uninstallSteps, { key: generateKey(), action: 'delete', path: '', argsText: '', elevate: false }],
       },
     }));
   }, []);
@@ -1943,7 +1980,14 @@ export default function Submit() {
       ...prev,
       installer: {
         ...prev.installer,
-        uninstallSteps: prev.installer.uninstallSteps.map(step => (step.key === key ? { ...step, [field]: value } : step)),
+        uninstallSteps: prev.installer.uninstallSteps.map(step => {
+          if (step.key !== key) return step;
+          const next = { ...step, [field]: value };
+          if (field === 'action' && value !== 'run') {
+            next.elevate = false;
+          }
+          return next;
+        }),
       },
     }));
   }, []);
@@ -2518,13 +2562,13 @@ export default function Submit() {
 
               <section className="package-editor__form">
                 <div className="package-editor__formScroll">
-                    <div className="visibility-note visibility-note--package">
-                      <VisibilityBadge type="public" />
-                      <div>
-                        このフォームに入力するプラグイン情報はすべて公開されます。<br />
-                        パッケージ登録は作者本人でなくてもどなたでも行えます。
-                      </div>
+                  <div className="visibility-note visibility-note--package">
+                    <VisibilityBadge type="public" />
+                    <div>
+                      このフォームに入力するプラグイン情報はすべて公開されます。<br />
+                      パッケージ登録は作者本人でなくてもどなたでも行えます。
                     </div>
+                  </div>
                   <div className="form__grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
                     <label>ID*<input name="id" value={packageForm.id} onChange={e => updatePackageField('id', e.target.value)} required placeholder="英数字と記号( .  -  _  )のみ　(例: Kenkun.AviUtlExEdit2)" /></label>
                     <label>パッケージ名*<input name="name" value={packageForm.name} onChange={e => updatePackageField('name', e.target.value)} required placeholder="(例: AviUtl2)" /></label>
@@ -2536,7 +2580,7 @@ export default function Submit() {
                     <div style={{ gridColumn: '1 / -1' }}>
                       <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={handleTagsChange} />
                     </div>
-                    
+
                     <label style={{ gridColumn: '1 / -1' }}>概要*<input name="summary" value={packageForm.summary} maxLength={55} onChange={e => updatePackageField('summary', e.target.value)} required placeholder="概要を55文字以内で入力してください" /></label>
                     <label htmlFor="description-textarea" style={{ gridColumn: '1 / -1' }}>詳細説明*</label>
                     <div className="tab-container" style={{ gridColumn: '1 / -1' }}>
@@ -2637,13 +2681,16 @@ export default function Submit() {
                       </a>
                     )}
                     <div className="package-editor__sender">
-                      <input
-                        type="text"
-                        value={packageSender}
-                        onChange={e => setPackageSender(e.target.value)}
-                        placeholder="送信者のニックネーム(任意・公開)"
-                        aria-label="送信者のニックネーム(任意・公開)"
-                      />
+                      <div className="package-editor__senderField">
+                        <input
+                          type="text"
+                          value={packageSender}
+                          onChange={e => setPackageSender(e.target.value)}
+                          placeholder="送信者のニックネーム(任意・公開)"
+                          aria-label="送信者のニックネーム(任意・公開)"
+                        />
+                        <div className="package-editor__senderHint">GitHub IDを入力していただけると、問題があった際のやり取りがスムーズになります</div>
+                      </div>
                     </div>
                     <button type="submit" className="btn btn--primary" disabled={submitting}>
                       {submitting ? '送信中…' : '送信'}
