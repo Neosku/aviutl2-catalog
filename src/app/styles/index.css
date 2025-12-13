@@ -207,6 +207,7 @@ body {
 body {
     margin: 0;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     color: var(--text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -804,6 +805,48 @@ select {
     display: grid;
     gap: 6px;
     margin: 16px 0;
+}
+
+.license-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.license-chip:hover,
+.license-chip:focus-visible {
+    background: var(--surface);
+    border-color: var(--card-border-hover);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.license-chip__type {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.license-chip__tag {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.license-chip--compact {
+    padding: 6px 10px;
+    font-size: 0.95rem;
+}
+
+.sideitem__value--licenses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 /* メイン + サイドバーレイアウト */
@@ -2097,9 +2140,6 @@ body.is-modal-open .modal {
     font-size: 13px;
     color: var(--muted);
 }
-.dependencies-field {
-    align-self: flex-start;
-}
 
 .form input,
 .form textarea,
@@ -2659,6 +2699,9 @@ body.route-submit--package {
 
 .modal__pre {
     margin: 0;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-all;
     border: 1px solid var(--border);
@@ -3891,6 +3934,139 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     padding: 6px 12px;
 }
 
+.license-editor {
+    display: grid;
+    gap: 12px;
+}
+
+.license-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.license-card__label {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.license-card__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.license-card__custom {
+    display: grid;
+    gap: 6px;
+}
+
+.license-card__hint {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.license-card__copyrights {
+    display: grid;
+    gap: 8px;
+}
+
+.license-card__type-select {
+    display: grid;
+    gap: 6px;
+    width: min(360px, 100%);
+}
+
+.license-card__type-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.license-card__type-select .action-select {
+    width: 100%;
+}
+
+.license-card__type-select .action-select__button {
+    width: 100%;
+}
+
+.license-card__custom {
+    display: grid;
+    gap: 6px;
+    align-items: start;
+    align-self: start;
+    padding-top: 22px;
+}
+
+.license-copy-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    align-items: end;
+}
+
+.license-copy-row label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.license-card__preview {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 10px;
+    display: grid;
+    gap: 6px;
+}
+
+.license-card__preview-summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.license-card__preview summary::-webkit-details-marker {
+    display: none;
+}
+
+.license-card__preview summary::before {
+    content: '▸';
+    display: inline-block;
+    transform: rotate(0deg);
+    transition: transform .15s ease;
+}
+
+.license-card__preview[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.license-card__preview-title {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--muted);
+}
+
+.license-card__preview-body {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.95rem;
+}
+
+.license-copy-row .btn--icon {
+    align-self: center;
+}
+
 .image-upload-grid {
     display: grid;
     grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
@@ -4239,12 +4415,12 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 8px 12px;
+    padding: 5px 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
-      linear-gradient(120deg, rgba(59, 130, 246, 0.06), rgba(37, 87, 214, 0.04));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+        linear-gradient(120deg, rgba(59, 130, 246, 0.06), rgba(37, 87, 214, 0.04));
     color: var(--text);
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
     cursor: pointer;
@@ -4253,7 +4429,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 
 .action-select__button:hover {
     border-color: var(--btn-hover-border);
-    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.12);
+    box-shadow: 0 7px 10px rgba(26, 90, 193, 0.1);
 }
 
 .action-select__button:focus-visible {
@@ -4284,8 +4460,8 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 
 :root[data-theme='lightmode'] .action-select__button {
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.92)),
-      linear-gradient(120deg, rgba(59, 130, 246, 0.04), rgba(37, 87, 214, 0.03));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.92)),
+        linear-gradient(120deg, rgba(59, 130, 246, 0.04), rgba(37, 87, 214, 0.03));
     color: #0f172a;
     border-color: #d4d9e3;
     box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
@@ -4299,7 +4475,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 .action-select__option {
     width: 100%;
     text-align: left;
-    padding: 5px 12px;
+    padding: 4px 12px;
     border-radius: 8px;
     border: 1px solid transparent;
     background: transparent;
@@ -4321,6 +4497,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 :root[data-theme='lightmode'] .action-select__option {
     color: #0f172a;
 }
+
 .package-card__toolbar {
     display: inline-flex;
     gap: 6px;
@@ -4671,6 +4848,7 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     padding: 0 10px;
     min-height: 22px;
     border-radius: 999px;

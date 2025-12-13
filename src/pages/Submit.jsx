@@ -6,6 +6,7 @@ import Icon from '../components/Icon.jsx';
 import { collectDeviceInfo, readAppLog, loadInstalledMap } from '../app/utils.js';
 import { renderMarkdown } from '../app/markdown.js';
 import { useCatalog } from '../app/store/catalog.jsx';
+import { LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../constants/licenseTemplates.js';
 
 // インストーラ関連で許可されるアクションやラベル定義
 const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];
@@ -118,7 +119,9 @@ function basename(path) {
 const ActionSelect = memo(function ActionSelect({ value, onChange, options, ariaLabel }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(opt => opt.value === value) || options[0];
+  const normalized = Array.isArray(options) ? options : [];
+  const selected = normalized.find(opt => opt.value === value) || normalized[0] || { value: '', label: '' };
+  const dropdownOptions = normalized.filter(opt => opt.value !== '');
 
   useEffect(() => {
     // ドロップダウン外をクリックしたら閉じる
@@ -131,9 +134,14 @@ const ActionSelect = memo(function ActionSelect({ value, onChange, options, aria
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  function choose(val) {
-    onChange?.(val);
+  useEffect(() => {
+    // 選択値が変わったらドロップダウンを閉じる
     setOpen(false);
+  }, [value]);
+
+  function choose(val) {
+    setOpen(false);
+    onChange?.(val);
   }
 
   function onKeyDown(e) {
@@ -157,14 +165,14 @@ const ActionSelect = memo(function ActionSelect({ value, onChange, options, aria
       </button>
       {open && (
         <div className="action-select__dropdown" role="listbox">
-          {options.map(opt => (
+          {dropdownOptions.map(opt => (
             <button
               type="button"
               key={opt.value}
               className={`action-select__option${opt.value === value ? ' is-active' : ''}`}
               role="option"
               aria-selected={opt.value === value}
-              onClick={() => choose(opt.value)}
+              onMouseDown={e => { e.preventDefault(); choose(opt.value); }}
             >
               {opt.label}
             </button>
@@ -211,6 +219,24 @@ function createEmptyVersion() {
   };
 }
 
+function createEmptyCopyright() {
+  return {
+    key: generateKey(),
+    years: '',
+    holder: '',
+  };
+}
+
+function createEmptyLicense() {
+  return {
+    key: generateKey(),
+    type: '',
+    isCustom: false,
+    licenseBody: '',
+    copyrights: [createEmptyCopyright()],
+  };
+}
+
 function createEmptyPackageForm() {
   return {
     id: '',
@@ -222,7 +248,7 @@ function createEmptyPackageForm() {
     descriptionText: '',
     descriptionPath: '',
     repoURL: '',
-    license: '',
+    licenses: [createEmptyLicense()],
     dependenciesText: '',
     installer: createEmptyInstaller(),
     versions: [],
@@ -321,7 +347,6 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
             </button>
           </span>
         ))}
-        {!tags.length && !inputValue && <span className="tag-editor__empty">タグが未設定です</span>}
         <input
           ref={inputRef}
           name="tags"
@@ -329,8 +354,8 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           onKeyDown={handleTagInputKeyDown}
-          aria-label="タグを追加"
-          placeholder="タグを追加"
+          aria-label="タグを入力"
+          placeholder="タグを入力"
         />
       </div>
       {suggestions.length > 0 && (
@@ -358,6 +383,98 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
     </div>
   );
 });
+
+const PackageLicenseSection = memo(function PackageLicenseSection({
+  license,
+  onUpdateLicenseField,
+  onToggleTemplate,
+  onUpdateCopyright,
+}) {
+  const activeLicense = license || createEmptyLicense();
+  const type = activeLicense.type;
+  const isCustomType = type === 'カスタムライセンス';
+  const isUnknown = type === '不明';
+  const forceBodyInput = isCustomType;
+  const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
+  const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
+  const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
+  return (
+    <section className="package-section">
+      <div className="package-section__header">
+        <h2>ライセンス</h2>
+      </div>
+      <div className="license-editor">
+        <div key={activeLicense.key} className="license-card">
+          <div className="license-card__fields">
+            <label className="license-card__type-select">
+              <span className="license-card__type-label">種類*</span>
+              <ActionSelect
+                value={activeLicense.type}
+                onChange={val => onUpdateLicenseField(activeLicense.key, 'type', val)}
+                options={[{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS]}
+                ariaLabel="ライセンスの種類を選択"
+              />
+            </label>
+            {!isUnknown && !isCustomType && (
+              <div className="license-card__custom">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={useTemplate}
+                    onChange={e => onToggleTemplate(activeLicense.key, e.target.checked)}
+                    disabled={forceBodyInput}
+                  />
+                  <span className="switch__slider" aria-hidden></span>
+                  <span className="switch__label">ライセンスのテンプレートを使用する</span>
+                </label>
+              </div>
+            )}
+          </div>
+          {showBodyInput ? (
+            <label>
+              ライセンス本文{forceBodyInput ? '*' : ''}
+              <textarea
+                className="textarea--lg"
+                value={activeLicense.licenseBody}
+                onChange={e => onUpdateLicenseField(activeLicense.key, 'licenseBody', e.target.value)}
+                placeholder="ライセンス本文を入力してください"
+                style={{ minHeight: 140 }}
+                required={forceBodyInput}
+              />
+            </label>
+          ) : isUnknown ? (
+            null
+          ) : (
+            <p className="license-card__hint">テンプレートを使用します。著作権年と著作権者を入力してください。</p>
+          )}
+          {useTemplate && (
+            <div className="license-card__copyrights">
+              {activeLicense.copyrights.map(copyright => (
+                <div key={copyright.key} className="license-copy-row">
+                  <label>著作権年<input value={copyright.years} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)} placeholder="(例:2025)" /></label>
+                  <label>著作権者<input value={copyright.holder} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)} placeholder="(例:KENくん)" /></label>
+                </div>
+              ))}
+              <details className="license-card__preview">
+                <summary className="license-card__preview-summary">プレビュー</summary>
+                {templatePreview ? (
+                  <pre className="license-card__preview-body">{templatePreview}</pre>
+                ) : (
+                  <p className="license-card__hint">プレビューは種類と著作権者を入力すると表示されます。</p>
+                )}
+              </details>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}, (prev, next) => (
+  prev.license === next.license
+  && prev.onUpdateLicenseField === next.onUpdateLicenseField
+  && prev.onToggleTemplate === next.onToggleTemplate
+  && prev.onUpdateCopyright === next.onUpdateCopyright
+));
 
 const PackageImagesSection = memo(function PackageImagesSection({
   images,
@@ -954,6 +1071,38 @@ function parseImages(rawImages, baseUrl = '') {
   return { thumbnail, info };
 }
 
+function parseLicenses(rawLicenses, legacyLicense = '') {
+  const list = Array.isArray(rawLicenses) ? rawLicenses : [];
+  const target = list[0];
+  if (target) {
+    const type = String(target?.type || '');
+    const licenseBody = typeof target?.licenseBody === 'string' ? target.licenseBody : '';
+    const isCustom = !!target?.isCustom || type === '不明' || type === 'カスタムライセンス' || !!licenseBody.trim();
+    const copyrights = Array.isArray(target?.copyrights) && target.copyrights.length
+      ? target.copyrights.slice(0, 1).map(c => ({
+        key: generateKey(),
+        years: String(c?.years || ''),
+        holder: String(c?.holder || ''),
+      }))
+      : [createEmptyCopyright()];
+    return [{
+      key: generateKey(),
+      type,
+      isCustom,
+      licenseBody,
+      copyrights,
+    }];
+  }
+  if (legacyLicense) {
+    return [{
+      ...createEmptyLicense(),
+      type: String(legacyLicense || ''),
+      isCustom: false,
+    }];
+  }
+  return [createEmptyLicense()];
+}
+
 function entryToForm(item, baseUrl = '') {
   if (!item || typeof item !== 'object') return createEmptyPackageForm();
   const form = createEmptyPackageForm();
@@ -966,7 +1115,7 @@ function entryToForm(item, baseUrl = '') {
   form.descriptionPath = typeof item.description === 'string' ? item.description : '';
   form.descriptionText = (typeof item.description === 'string' && !isMarkdownPath(item.description)) ? item.description : '';
   form.repoURL = String(item.repoURL || '');
-  form.license = String(item.license || '');
+  form.licenses = parseLicenses(item.licenses, item.license);
   form.tagsText = arrayToCommaList(item.tags);
   form.dependenciesText = arrayToCommaList(item.dependencies);
   form.installer = parseInstallerSource(item.installer);
@@ -1037,10 +1186,38 @@ function buildInstallerPayload(form) {
   };
 }
 
+function buildLicensesPayload(form) {
+  return (form.licenses || [])
+    .map(license => {
+      const type = String(license.type || '').trim();
+      const licenseBody = String(license.licenseBody || '').trim();
+      const isCustom = license.isCustom
+        || type === '不明'
+        || type === 'カスタムライセンス'
+        || licenseBody.length > 0;
+      const copyrights = Array.isArray(license.copyrights)
+        ? license.copyrights
+          .map(c => ({
+            years: String(c?.years || '').trim(),
+            holder: String(c?.holder || '').trim(),
+          }))
+          .filter(c => c.years && c.holder)
+        : [];
+      if (!type) return null;
+      return {
+        type,
+        isCustom,
+        copyrights,
+        licenseBody: isCustom ? licenseBody : null,
+      };
+    })
+    .filter(Boolean);
+}
+
 // 画像設定を index.json 用の構造に変換
 function buildImagesPayload(form) {
   const id = form.id.trim();
-  const group = { thumbnail: '', infoImg: [] };
+  const group = {};
   if (form.images.thumbnail) {
     if (form.images.thumbnail.file) {
       const ext = getFileExtension(form.images.thumbnail.file.name) || 'png';
@@ -1049,14 +1226,19 @@ function buildImagesPayload(form) {
       group.thumbnail = form.images.thumbnail.existingPath;
     }
   }
+  const infoImg = [];
   form.images.info.forEach((entry, idx) => {
     if (entry.file) {
       const ext = getFileExtension(entry.file.name) || 'png';
-      group.infoImg.push(`./image/${id}_${idx + 1}.${ext}`);
+      infoImg.push(`./image/${id}_${idx + 1}.${ext}`);
     } else if (entry.existingPath) {
-      group.infoImg.push(entry.existingPath);
+      infoImg.push(entry.existingPath);
     }
   });
+  if (infoImg.length) {
+    group.infoImg = infoImg;
+  }
+  if (!group.thumbnail && !group.infoImg) return [];
   return [group];
 }
 
@@ -1108,7 +1290,7 @@ function buildPackageEntry(form, tags) {
     originalAuthor: form.originalAuthor.trim(),
     repoURL: form.repoURL.trim(),
     'latest-version': computeLatestVersion(form),
-    license: form.license.trim(),
+    licenses: buildLicensesPayload(form),
     tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
     dependencies: commaListToArray(form.dependenciesText),
     images: buildImagesPayload(form),
@@ -1117,7 +1299,7 @@ function buildPackageEntry(form, tags) {
   };
   if (!entry.originalAuthor) delete entry.originalAuthor;
   if (!entry.repoURL) entry.repoURL = '';
-  if (!entry.license) entry.license = '';
+  if (!entry.licenses.length) entry.licenses = [];
   if (!entry.tags.length) entry.tags = [];
   if (!entry.dependencies.length) entry.dependencies = [];
   return entry;
@@ -1132,7 +1314,19 @@ function validatePackageForm(form) {
   if (!form.summary.trim()) return '概要は必須です';
   if (form.summary.trim().length > 55) return '概要は55文字以内で入力してください';
   if (!form.descriptionText.trim()) return '詳細を入力してください';
-  if (!form.license.trim()) return 'ライセンスは必須です';
+  if (!form.licenses.length) return 'ライセンスを1件以上追加してください';
+  for (const license of form.licenses) {
+    const type = String(license.type || '').trim();
+    if (!type) return 'ライセンスの種類を選択してください';
+    const needsCustomBody = type === 'カスタムライセンス' || (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
+    if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'カスタムライセンスの本文を入力してください';
+    const usesTemplate = type !== '不明' && type !== 'カスタムライセンス' && !license.isCustom;
+    if (usesTemplate) {
+      const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
+      const hasCopyright = entries.some(c => String(c?.years || '').trim() && String(c?.holder || '').trim());
+      if (!hasCopyright) return '標準ライセンスを使用する場合は著作権者を入力してください';
+    }
+  }
   const sourceType = form.installer.sourceType;
   if (sourceType === 'direct') {
     if (!form.installer.directUrl.trim()) return 'installer.source の direct URL を入力してください';
@@ -1359,6 +1553,9 @@ export default function Submit() {
         const first = list[0];
         setSelectedPackageId(first?.id || '');
         const form = entryToForm(first, base);
+        const initialTagList = commaListToArray(form.tagsText);
+        setInitialTags(initialTagList);
+        tagListRef.current = initialTagList;
         setPackageForm(prev => {
           cleanupImagePreviews(prev.images);
           return form;
@@ -1480,6 +1677,87 @@ export default function Submit() {
 
   const updatePackageField = useCallback((field, value) => {
     setPackageForm(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const updateLicenseField = useCallback((key, field, value) => {
+    setPackageForm(prev => ({
+      ...prev,
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => {
+        if (license.key !== key) return license;
+        const next = { ...license, [field]: value };
+        if (field === 'type') {
+          const nextType = String(value || '');
+          let nextBody = next.licenseBody;
+          let nextCopy = next.copyrights;
+          if (nextType === '不明' || nextType === 'カスタムライセンス') {
+            next.isCustom = nextType === 'カスタムライセンス';
+            if (nextType === '不明') {
+              nextBody = '';
+            }
+            nextCopy = [createEmptyCopyright()];
+          } else if (!String(next.licenseBody || '').trim()) {
+            next.isCustom = false;
+            nextCopy = nextCopy.length ? nextCopy : [createEmptyCopyright()];
+          }
+          next.licenseBody = nextBody;
+          next.copyrights = nextCopy;
+        }
+        if (field === 'licenseBody' && value && String(value).trim().length > 0) {
+          next.isCustom = true;
+        }
+        return next;
+      }),
+    }));
+  }, []);
+
+  const toggleLicenseTemplate = useCallback((key, useTemplate) => {
+    setPackageForm(prev => ({
+      ...prev,
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => {
+        if (license.key !== key) return license;
+        const forcedCustom = license.type === 'カスタムライセンス';
+        const forcedUnknown = license.type === '不明';
+        if (forcedUnknown) {
+          return {
+            ...license,
+            isCustom: false,
+            licenseBody: '',
+          };
+        }
+        if (forcedCustom) {
+          return {
+            ...license,
+            isCustom: true,
+            licenseBody: license.licenseBody || '',
+          };
+        }
+        if (useTemplate) {
+          return {
+            ...license,
+            isCustom: false,
+            licenseBody: '',
+            copyrights: license.copyrights.length ? license.copyrights : [createEmptyCopyright()],
+          };
+        }
+        return {
+          ...license,
+          isCustom: true,
+          licenseBody: license.licenseBody || '',
+        };
+      }),
+    }));
+  }, []);
+
+  const updateCopyright = useCallback((licenseKey, copyrightKey, field, value) => {
+    setPackageForm(prev => ({
+      ...prev,
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => (license.key === licenseKey
+        ? {
+          ...license,
+          copyrights: (license.copyrights.length ? license.copyrights : [createEmptyCopyright()]).map(c => (c.key === copyrightKey ? { ...c, [field]: value } : c)),
+        }
+        : license)),
+    }));
   }, []);
 
   const updateInstallerField = useCallback((field, value) => {
@@ -2087,7 +2365,7 @@ export default function Submit() {
                   タイトル* <VisibilityBadge type="public" />
                   <input name="title" value={bug.title} onChange={handleBugChange} required placeholder="タイトルを入力してください。" />
                 </label>
-                <label>連絡先(任意)<input name="contact" value={bug.contact} onChange={handleBugChange} placeholder="メールや X/Twitter など(必要に応じて)" /></label>
+                <label>連絡先(任意)<input name="contact" value={bug.contact} onChange={handleBugChange} placeholder="メールや X/Twitter など" /></label>
                 <label style={{ gridColumn: '1 / -1' }}>
                   詳細* <VisibilityBadge type="public" />
                   <textarea className="textarea--lg" name="detail" value={bug.detail} onChange={handleBugChange} required placeholder="発生状況や再現手順などを入力してください。" />
@@ -2169,7 +2447,7 @@ export default function Submit() {
               </div>
               <div className="form__grid">
                 <label>タイトル*<input name="title" value={inq.title} onChange={handleInqChange} required placeholder="タイトルを入力してください。" /></label>
-                <label>連絡先(任意)<input name="contact" value={inq.contact} onChange={handleInqChange} placeholder="メールや X/Twitter など(必要に応じて)" /></label>
+                <label>連絡先(任意)<input name="contact" value={inq.contact} onChange={handleInqChange} placeholder="メールや X/Twitter など" /></label>
                 <label style={{ gridColumn: '1 / -1' }}>意見・問い合わせの詳細*<textarea className="textarea--lg" name="detail" value={inq.detail} onChange={handleInqChange} required placeholder="意見・問い合わせの詳細を入力してください。" /></label>
               </div>
 
@@ -2240,17 +2518,27 @@ export default function Submit() {
 
               <section className="package-editor__form">
                 <div className="package-editor__formScroll">
-                  <div className="visibility-note visibility-note--package">
-                    <VisibilityBadge type="public" />
-                    <div>このフォームに入力するプラグイン情報はすべて公開されます。</div>
-                  </div>
+                    <div className="visibility-note visibility-note--package">
+                      <VisibilityBadge type="public" />
+                      <div>
+                        このフォームに入力するプラグイン情報はすべて公開されます。<br />
+                        パッケージ登録は作者本人でなくてもどなたでも行えます。
+                      </div>
+                    </div>
                   <div className="form__grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-                    <label>ID*<input name="id" value={packageForm.id} onChange={e => updatePackageField('id', e.target.value)} required placeholder="英数字と記号(. - _)のみ(例: Kenkun.AviUtlExEdit2)" /></label>
+                    <label>ID*<input name="id" value={packageForm.id} onChange={e => updatePackageField('id', e.target.value)} required placeholder="英数字と記号( .  -  _  )のみ　(例: Kenkun.AviUtlExEdit2)" /></label>
                     <label>パッケージ名*<input name="name" value={packageForm.name} onChange={e => updatePackageField('name', e.target.value)} required placeholder="(例: AviUtl2)" /></label>
                     <label>作者名*<input name="author" value={packageForm.author} onChange={e => updatePackageField('author', e.target.value)} required placeholder="(例: KENくん)" /></label>
                     <label>オリジナル作者名(任意)<input name="originalAuthor" value={packageForm.originalAuthor} onChange={e => updatePackageField('originalAuthor', e.target.value)} /></label>
                     <label>種類*<input name="type" value={packageForm.type} onChange={e => updatePackageField('type', e.target.value)} required placeholder="入力プラグイン/スクリプト/言語ファイルなど" /></label>
+                    <label>パッケージのサイト<input name="repoURL" value={packageForm.repoURL} onChange={e => updatePackageField('repoURL', e.target.value)} placeholder="パッケージのメインページ" /></label>
+                    <label>依存パッケージ(現在非対応)<input name="dependencies" value={packageForm.dependenciesText} onChange={e => updatePackageField('dependenciesText', e.target.value)} placeholder="パッケージIDを書いてください" /></label>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={handleTagsChange} />
+                    </div>
+                    
                     <label style={{ gridColumn: '1 / -1' }}>概要*<input name="summary" value={packageForm.summary} maxLength={55} onChange={e => updatePackageField('summary', e.target.value)} required placeholder="概要を55文字以内で入力してください" /></label>
+                    <label htmlFor="description-textarea" style={{ gridColumn: '1 / -1' }}>詳細説明*</label>
                     <div className="tab-container" style={{ gridColumn: '1 / -1' }}>
                       <div className="tab-container__tabs" role="tablist" aria-label="詳細入力タブ">
                         <button
@@ -2276,25 +2564,28 @@ export default function Submit() {
                         <div className="tab-panel">
                           {descriptionTab === 'edit' ? (
                             <textarea
+                              id="description-textarea"
                               className="textarea--lg"
                               value={packageForm.descriptionText}
-                          onChange={e => updatePackageField('descriptionText', e.target.value)}
-                          required
-                          placeholder="パッケージについての詳細情報を入力してください。Markdown形式で記述できます。"
-                          style={{ minHeight: 280, resize: 'vertical' }}
-                        />
-                      ) : (
-                        <div className="markdown-preview tab-panel__preview md" dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }} />
-                      )}
+                              onChange={e => updatePackageField('descriptionText', e.target.value)}
+                              required
+                              placeholder="パッケージについての詳細情報を入力してください。Markdown形式で記述できます。"
+                              style={{ minHeight: 280, resize: 'vertical' }}
+                            />
+                          ) : (
+                            <div className="markdown-preview tab-panel__preview md" dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }} />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                    </div>
 
-                    <label>パッケージのサイト<input name="repoURL" value={packageForm.repoURL} onChange={e => updatePackageField('repoURL', e.target.value)} placeholder="パッケージのメインページ" /></label>
-                  <label>ライセンス*<input name="license" value={packageForm.license} onChange={e => updatePackageField('license', e.target.value)} required placeholder="(例: MIT)" /></label>
-                  <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={handleTagsChange} />
-                  <label className="dependencies-field">依存パッケージ(現在非対応)<input name="dependencies" value={packageForm.dependenciesText} onChange={e => updatePackageField('dependenciesText', e.target.value)} placeholder="パッケージIDを書いてください" /></label>
-                </div>
+                  <PackageLicenseSection
+                    license={packageForm.licenses[0]}
+                    onUpdateLicenseField={updateLicenseField}
+                    onToggleTemplate={toggleLicenseTemplate}
+                    onUpdateCopyright={updateCopyright}
+                  />
 
                   <PackageImagesSection
                     images={renderImages}

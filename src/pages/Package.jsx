@@ -9,6 +9,7 @@ import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, r
 import { renderMarkdown } from '../app/markdown.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
+import { buildLicenseBody } from '../constants/licenseTemplates.js';
 
 // パスがmdファイルパスかどうか判定
 function isMarkdownFilePath(path) {
@@ -31,6 +32,31 @@ function resolveMarkdownURL(path, baseUrl) {
     return new URL(trimmed, baseUrl).toString();
   } catch (_) { }
   throw new Error('Unable to resolve markdown path');
+}
+
+function LicenseModal({ license, onClose }) {
+  if (!license) return null;
+  const body = license.body ?? buildLicenseBody(license);
+  return (
+    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="license-modal-title">
+      <div className="modal__backdrop" onClick={onClose} />
+      <div className="modal__dialog">
+        <div className="modal__header">
+          <h3 id="license-modal-title" className="modal__title">ライセンス: {license.type || '不明'}</h3>
+        </div>
+        <div className="modal__body modal__body--compact">
+          {body ? (
+            <pre className="modal__pre pre--wrap pre--scroll">{body}</pre>
+          ) : (
+            <div className="note">ライセンス本文がありません。</div>
+          )}
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose}>閉じる</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // パッケージ詳細ページコンポーネント
@@ -82,6 +108,7 @@ export default function Package() {
   ));
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
+  const [openLicense, setOpenLicense] = useState(null);
 
   const baseURL = "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/"
   // MarkdownファイルのベースURL（相対パス解決用）
@@ -138,6 +165,32 @@ export default function Package() {
   const updateRatio = updateProgress?.ratio ?? 0;
   const updatePercent = updateProgress?.percent ?? Math.round(updateRatio * 100);
   const updateLabel = updateProgress?.label ?? '準備中…';
+  const licenseEntries = useMemo(() => {
+    if (!item) return [];
+    const rawLicenses = Array.isArray(item.licenses) ? item.licenses : [];
+    const entries = rawLicenses.map((license, idx) => ({
+      ...license,
+      key: `${license.type || 'license'}-${idx}`,
+      body: buildLicenseBody(license),
+    }));
+    if (!entries.length && item.license) {
+      const fallback = { type: item.license, isCustom: false, licenseBody: '', copyrights: [] };
+      entries.push({
+        ...fallback,
+        key: 'legacy-license',
+        body: buildLicenseBody(fallback),
+      });
+    }
+    return entries;
+  }, [item]);
+  const renderableLicenses = useMemo(() => licenseEntries.filter(entry => entry.body), [licenseEntries]);
+  const licenseTypesLabel = useMemo(() => {
+    const types = Array.isArray(item?.licenses)
+      ? item.licenses.map(l => l?.type).filter(Boolean)
+      : [];
+    if (!types.length && item?.license) types.push(item.license);
+    return types.length ? types.join(', ') : '?';
+  }, [item]);
 
   // アイテムが見つからない場合のエラー表示
   if (!item) {
@@ -281,7 +334,26 @@ export default function Package() {
             <div className="sideitem"><span className="sideitem__label">更新日</span><span className="sideitem__value">{updated}</span></div>
             <div className="sideitem"><span className="sideitem__label">最新バージョン</span><span className="sideitem__value">{latest}</span></div>
             <div className="sideitem"><span className="sideitem__label">現在のバージョン</span><span className="sideitem__value">{item.installedVersion || '未インストール'}</span></div>
-            <div className="sideitem"><span className="sideitem__label">ライセンス</span><span className="sideitem__value">{item.license || '?'}</span></div>
+            <div className="sideitem">
+              <span className="sideitem__label">ライセンス</span>
+              <span className="sideitem__value sideitem__value--licenses">
+                {renderableLicenses.length ? (
+                  renderableLicenses.map(license => (
+                    <button
+                      type="button"
+                      key={license.key}
+                      className="license-chip license-chip--compact"
+                      onClick={() => setOpenLicense(license)}
+                      aria-label={`ライセンス ${license.type || '不明'} の本文を表示`}
+                    >
+                      <span className="license-chip__type">{license.type || '不明'}</span>
+                    </button>
+                  ))
+                ) : (
+                  <span>{licenseTypesLabel}</span>
+                )}
+              </span>
+            </div>
             {item.repoURL ? (
               <div className="sideitem"><span className="sideitem__label">リポジトリ</span><a className="sideitem__value link" href={item.repoURL} target="_blank" rel="noopener noreferrer"><span aria-hidden><Icon name="open_in_new" size={16} /></span> {item.repoURL}</a></div>
             ) : null}
@@ -327,6 +399,9 @@ export default function Package() {
           </div>
         </aside>
       </main>
+      {openLicense && (
+        <LicenseModal license={openLicense} onClose={() => setOpenLicense(null)} />
+      )}
       {/* エラーダイアログ（インストール/更新/削除時の失敗表示） */}
       <ErrorDialog open={!!error} message={error} onClose={() => setError('')} />
     </div>
