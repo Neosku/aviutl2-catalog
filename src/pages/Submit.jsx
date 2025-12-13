@@ -1415,7 +1415,7 @@ export default function Submit() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const [bug, setBug] = useState({ title: '', detail: '', contact: '', includeDevice: true, includeLog: true });
+  const [bug, setBug] = useState({ title: '', detail: '', contact: '', includeApp: true, includeDevice: true, includeLog: true });
   const [device, setDevice] = useState(null);
   const [pluginsPreview, setPluginsPreview] = useState('');
   const [appLog, setAppLog] = useState('');
@@ -2258,21 +2258,21 @@ export default function Submit() {
         let cpuStr = '';
         let gpuStr = '';
         let installedStr = '';
-        if (bug.includeDevice) {
-          osStr = `${device?.os?.name || ''} ${device?.os?.version || ''} (${device?.os?.arch || ''})`.trim();
-          cpuStr = `${device?.cpu?.model || ''}${device?.cpu?.cores ? ` / Cores: ${device.cpu.cores}` : ''}`.trim();
-          gpuStr = `${device?.gpu?.vendor || ''} ${device?.gpu?.renderer || ''} ${device?.gpu?.driver || ''}`.trim();
-        }
-        if (pluginsPreview) {
-          installedStr = pluginsPreview;
-        }
+      if (bug.includeDevice) {
+        osStr = `${device?.os?.name || ''} ${device?.os?.version || ''} (${device?.os?.arch || ''})`.trim();
+        cpuStr = `${device?.cpu?.model || ''}${device?.cpu?.cores ? ` / Cores: ${device.cpu.cores}` : ''}`.trim();
+        gpuStr = `${device?.gpu?.vendor || ''} ${device?.gpu?.renderer || ''} ${device?.gpu?.driver || ''}`.trim();
+      }
+      if (bug.includeApp && pluginsPreview) {
+        installedStr = pluginsPreview;
+      }
         payload = {
           action: SUBMIT_ACTIONS.bug,
           title: `不具合報告: ${bug.title.trim()}`,
           body: lines.join('\n'),
           labels: ['bug', 'from-client'],
           contact: bug.contact.trim() || undefined,
-          appVersion: appVersion || undefined,
+          appVersion: bug.includeApp ? (appVersion || undefined) : undefined,
           os: osStr || undefined,
           cpu: cpuStr || undefined,
           gpu: gpuStr || undefined,
@@ -2441,7 +2441,7 @@ export default function Submit() {
                 <div className="sidebar__header">アプリ情報</div>
                 <div className="sidebar__group">
                   <label className="switch">
-                    <input type="checkbox" name="includeApp" checked={inq.includeApp} onChange={handleInqChange} />
+                    <input type="checkbox" name="includeApp" checked={bug.includeApp} onChange={handleBugChange} />
                     <span className="switch__slider" aria-hidden></span>
                     <span className="switch__label">アプリ情報を添付する</span>
                   </label>
