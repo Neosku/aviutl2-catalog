@@ -86,7 +86,7 @@ export default function FilterPanel() {
             className={'chip chip--block' + (installedOnly ? ' is-selected' : '')}
             aria-pressed={installedOnly}
             onClick={toggleInstalled}
-          >インストール済みのみ</button>
+          >インストール済み</button>
         </div>
       </div>
 
