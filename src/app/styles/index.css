@@ -4193,10 +4193,26 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 .license-card__preview-summary {
     cursor: pointer;
     list-style: none;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
     font-weight: 600;
+    width: 100%;
+}
+
+.license-card__preview-summary-text {
+    margin-right: auto;
+}
+
+.license-card__preview-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.license-card__preview-copied {
+    font-size: 0.8rem;
+    color: var(--muted);
 }
 
 .license-card__preview summary::-webkit-details-marker {

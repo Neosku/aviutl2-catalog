@@ -398,8 +398,26 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
   const isUnknown = type === '不明';
   const forceBodyInput = isOtherType;
   const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
+  const needsCopyrightInput = useTemplate && type !== 'CC0-1.0';
   const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
   const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setCopied(false);
+  }, [templatePreview, activeLicense.key]);
+
+  // クリップボードにプレビュー本文をコピー
+  async function handleCopyPreview(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!templatePreview) return;
+    try {
+      await navigator.clipboard.writeText(templatePreview);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) { }
+  }
   return (
     <section className="package-section">
       <div className="package-section__header">
@@ -459,18 +477,45 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
           ) : isUnknown ? (
             null
           ) : (
-            <p className="license-card__hint">テンプレートを使用します。著作権年と著作権者を入力してください。</p>
+            needsCopyrightInput ? (
+              <p className="license-card__hint">テンプレートを使用します。著作権年と著作権者を入力してください。</p>
+            ) : null
           )}
           {useTemplate && (
             <div className="license-card__copyrights">
-              {activeLicense.copyrights.map(copyright => (
-                <div key={copyright.key} className="license-copy-row">
-                  <label>著作権年<input value={copyright.years} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)} placeholder="(例:2025)" /></label>
-                  <label>著作権者<input value={copyright.holder} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)} placeholder="(例:KENくん)" /></label>
-                </div>
-              ))}
+              {needsCopyrightInput && (
+                activeLicense.copyrights.map(copyright => (
+                  <div key={copyright.key} className="license-copy-row">
+                    <label>著作権年<input value={copyright.years} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)} placeholder="(例:2025)" /></label>
+                    <label>著作権者<input value={copyright.holder} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)} placeholder="(例:KENくん)" /></label>
+                  </div>
+                ))
+              )}
               <details className="license-card__preview">
-                <summary className="license-card__preview-summary">プレビュー</summary>
+                <summary className="license-card__preview-summary">
+                  <span className="license-card__preview-summary-text">プレビュー</span>
+                  <span
+                    className="license-card__preview-actions"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+                    onMouseDown={e => e.preventDefault()}
+                  >
+                    {copied && <span className="license-card__preview-copied" aria-live="polite">コピーしました</span>}
+                    <button
+                      type="button"
+                      className="btn btn--icon btn--ghost license-card__preview-copy"
+                      onClick={handleCopyPreview}
+                      onMouseDown={e => e.preventDefault()}
+                      disabled={!templatePreview}
+                      aria-label={copied ? 'コピーしました' : 'ライセンス本文をコピー'}
+                      title={copied ? 'コピーしました' : 'ライセンス本文をコピー'}
+                    >
+                      <svg className="icon" width="15" height="15" viewBox="0 0 20 20" fill="none" role="presentation">
+                        <path d="M7.5 5.5A2.5 2.5 0 0 1 10 3h5a2.5 2.5 0 0 1 2.5 2.5v5A2.5 2.5 0 0 1 15 13H10a2.5 2.5 0 0 1-2.5-2.5v-5Z" stroke="currentColor" strokeWidth="1.4" />
+                        <path d="M4.5 7.25H4A2.25 2.25 0 0 0 1.75 9.5v5.25A2.25 2.25 0 0 0 4 17h5.25A2.25 2.25 0 0 0 11.5 14.75V14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </span>
+                </summary>
                 {templatePreview ? (
                   <pre className="license-card__preview-body">{templatePreview}</pre>
                 ) : (
@@ -1373,7 +1418,8 @@ function validatePackageForm(form) {
     const needsCustomBody = type === 'その他' || (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
     if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'ライセンス本文を入力してください';
     const usesTemplate = type !== '不明' && type !== 'その他' && !license.isCustom;
-    if (usesTemplate) {
+    const requiresCopyright = usesTemplate && type !== 'CC0-1.0';
+    if (requiresCopyright) {
       const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
       const hasCopyright = entries.some(c => String(c?.years || '').trim() && String(c?.holder || '').trim());
       if (!hasCopyright) return '標準ライセンスを使用する場合は著作権者を入力してください';
@@ -2286,14 +2332,14 @@ export default function Submit() {
         let cpuStr = '';
         let gpuStr = '';
         let installedStr = '';
-      if (bug.includeDevice) {
-        osStr = `${device?.os?.name || ''} ${device?.os?.version || ''} (${device?.os?.arch || ''})`.trim();
-        cpuStr = `${device?.cpu?.model || ''}${device?.cpu?.cores ? ` / Cores: ${device.cpu.cores}` : ''}`.trim();
-        gpuStr = `${device?.gpu?.vendor || ''} ${device?.gpu?.renderer || ''} ${device?.gpu?.driver || ''}`.trim();
-      }
-      if (bug.includeApp && pluginsPreview) {
-        installedStr = pluginsPreview;
-      }
+        if (bug.includeDevice) {
+          osStr = `${device?.os?.name || ''} ${device?.os?.version || ''} (${device?.os?.arch || ''})`.trim();
+          cpuStr = `${device?.cpu?.model || ''}${device?.cpu?.cores ? ` / Cores: ${device.cpu.cores}` : ''}`.trim();
+          gpuStr = `${device?.gpu?.vendor || ''} ${device?.gpu?.renderer || ''} ${device?.gpu?.driver || ''}`.trim();
+        }
+        if (bug.includeApp && pluginsPreview) {
+          installedStr = pluginsPreview;
+        }
         payload = {
           action: SUBMIT_ACTIONS.bug,
           title: `不具合報告: ${bug.title.trim()}`,
