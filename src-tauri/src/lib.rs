@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
-use tauri::{Emitter, Manager};
+use tauri::{webview::PageLoadEvent, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use url::Url;
 use walkdir::WalkDir;
 
@@ -231,6 +231,266 @@ async fn download_file_to_path(window: tauri::Window, url: String, dest_path: St
             let msg = format!("write error: {}", e);
             let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
             log_error(&app, &format!("download failed (url={}): {}", url, msg));
+            msg
+        })?;
+        written += chunk.len() as u64;
+        let _ = window.emit(
+            "download:progress",
+            serde_json::json!({
+                "taskId": task_id,
+                "read": written,
+                "total": total_opt,
+            }),
+        );
+    }
+
+    let final_path_str = final_path.to_string_lossy().to_string();
+    let _ = window.emit(
+        "download:done",
+        serde_json::json!({
+            "taskId": task_id,
+            "path": final_path_str,
+        }),
+    );
+
+    Ok(final_path_str)
+}
+
+// -------------------------
+// BOOTH認証用ウィンドウ管理とダウンロード処理
+// -------------------------
+
+// BOOTHのログイン系パス判定
+fn is_booth_login_path(path: &str) -> bool {
+    let p = path.trim_end_matches('/');
+    p.starts_with("/users/sign_in") || p.starts_with("/users/sign_in_by_password") || p.starts_with("/users/password/new") || p.starts_with("/users/unlock/new")
+}
+
+// booth.pm かつログイン画面系のURLかの判定
+fn is_booth_login_url(url: &Url) -> bool {
+    let host = url.host_str().unwrap_or("");
+    host.ends_with("booth.pm") && is_booth_login_path(url.path())
+}
+
+// booth.pm かつログイン画面系以外のURLかの判定
+fn is_booth_logged_in_url(url: &Url) -> bool {
+    let host = url.host_str().unwrap_or("");
+    host.ends_with("booth.pm") && !is_booth_login_path(url.path())
+}
+
+// BOOTH認証用ウィンドウの管理
+#[tauri::command]
+async fn ensure_booth_auth_window(app: tauri::AppHandle) -> Result<(), String> {
+    let app_handle = app.clone();
+    // WebView2 の既知のデッドロック回避のため別スレッドで作成
+    tauri::async_runtime::spawn_blocking(move || {
+        // BOOTHログインURLとデータディレクトリを準備
+        let login_url = Url::parse("https://booth.pm/users/sign_in").map_err(|e| e.to_string())?;
+        let data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?.join("booth-auth");
+        // プロファイルを固定してログイン状態を維持
+        let _ = std::fs::create_dir_all(&data_dir);
+        // 既存ウィンドウがあれば再利用
+        if let Some(window) = app_handle.get_webview_window("booth-auth") {
+            let should_navigate = match window.url() {
+                Ok(current_url) => {
+                    let is_blank = current_url.as_str().eq_ignore_ascii_case("about:blank");
+                    let is_booth = current_url.host_str().map(|h| h.ends_with("booth.pm")).unwrap_or(false);
+                    is_blank || !is_booth
+                }
+                Err(_) => true,
+            };
+            if let Ok(current_url) = window.url() {
+                if is_booth_logged_in_url(&current_url) {
+                    // 既にログイン済みなら通知して隠す
+                    let _ = app_handle.emit("booth-auth:login-complete", serde_json::json!({ "url": current_url.as_str() }));
+                    let _ = window.hide();
+                    return Ok(());
+                }
+            }
+            let _ = window.hide();
+            if should_navigate {
+                let _ = window.navigate(login_url.clone());
+            }
+            if let Ok(current_url) = window.url() {
+                if is_booth_login_url(&current_url) {
+                    // ログイン画面のみ表示
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            return Ok(());
+        }
+        // 新規ウィンドウを作成
+        let app_for_event = app_handle.clone();
+        let _window = WebviewWindowBuilder::new(&app_handle, "booth-auth", WebviewUrl::External(login_url))
+            .title("BOOTH ログイン")
+            .inner_size(900.0, 720.0)
+            .resizable(true)
+            .visible(false)
+            .data_directory(data_dir)
+            .on_page_load(move |window, payload| {
+                if payload.event() != PageLoadEvent::Finished {
+                    return;
+                }
+                let url = payload.url();
+                if is_booth_logged_in_url(url) {
+                    // ログイン完了を検知したら通知して非表示
+                    let _ = app_for_event.emit("booth-auth:login-complete", serde_json::json!({ "url": url.as_str() }));
+                    let _ = window.hide();
+                    return;
+                }
+                if is_booth_login_url(url) {
+                    // ログイン画面のみ表示
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            })
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+// BOOTH認証用ウィンドウを閉じる
+#[tauri::command]
+fn close_booth_auth_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("booth-auth") {
+        // セッション破棄ではなくウィンドウクローズのみ
+        let _ = window.close();
+    }
+    Ok(())
+}
+
+// ファイルダウンロード（BOOTH認証セッション対応版）
+#[tauri::command]
+async fn download_file_to_path_booth(
+    window: tauri::Window,
+    url: String,
+    dest_path: String,
+    task_id: Option<String>,
+    session_window_label: Option<String>,
+) -> Result<String, String> {
+    use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE, COOKIE};
+    use std::fs::{create_dir_all, OpenOptions};
+    use std::io::Write;
+
+    if !url.trim_start().to_ascii_lowercase().starts_with("https://") {
+        return Err("Only https:// is permitted".to_string());
+    }
+    if dest_path.trim().is_empty() {
+        return Err("dest_path must not be empty".to_string());
+    }
+
+    let app = window.app_handle();
+    let task_id = task_id.unwrap_or_else(|| format!("download-{}", chrono::Utc::now().timestamp_micros()));
+    let dest_dir = resolve_rel_to_app_config(&app, &dest_path);
+    if let Err(e) = create_dir_all(&dest_dir) {
+        let msg = format!("failed to prepare destination directory: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        return Err(msg);
+    }
+
+    let parsed_url = Url::parse(&url).map_err(|e| {
+        let msg = format!("invalid url: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        msg
+    })?;
+
+    let session_label = session_window_label.unwrap_or_else(|| "booth-auth".to_string()).trim().to_string();
+    let session_label = if session_label.is_empty() { "booth-auth".to_string() } else { session_label };
+    let session_window = match app.get_webview_window(&session_label) {
+        Some(w) => w,
+        None => {
+            let msg = "AUTH_WINDOW_MISSING".to_string();
+            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+            return Err(msg);
+        }
+    };
+
+    // Webview の Cookie を Rust 側リクエストに引き継ぐ
+    let cookies = session_window.cookies_for_url(parsed_url.clone()).map_err(|e| {
+        let msg = format!("AUTH_COOKIE_FETCH_FAILED: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        msg
+    })?;
+    let cookie_header = cookies.iter().map(|c| format!("{}={}", c.name(), c.value())).collect::<Vec<_>>().join("; ");
+
+    // URL末尾から推定したファイル名を安全化
+    let file_name_raw = parsed_url
+        .path_segments()
+        .and_then(|segments| segments.filter(|s| !s.is_empty()).last().map(|s| s.to_string()))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "download.bin".to_string());
+    let file_name = percent_decode_str(&file_name_raw).decode_utf8_lossy().to_string();
+    let final_name = sanitize_filename(&file_name);
+    let final_path = dest_dir.join(final_name);
+
+    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| {
+        let msg = format!("failed to build http client: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        msg
+    })?;
+
+    let mut req = client.get(&url);
+    if !cookie_header.is_empty() {
+        req = req.header(COOKIE, cookie_header);
+    }
+
+    let mut response = req.send().await.map_err(|e| {
+        let msg = format!("network error: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("booth download failed (url={}): {}", url, e));
+        msg
+    })?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let msg = format!("HTTP_ERROR:{} {}", status.as_u16(), status);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("booth download failed (url={}): {}", url, msg));
+        return Err(msg);
+    }
+
+    let final_url = response.url().clone();
+    // 未ログインのリダイレクトは保存しない
+    if is_booth_login_url(&final_url) {
+        let msg = "AUTH_REQUIRED".to_string();
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        return Err(msg);
+    }
+
+    let content_type = response.headers().get(CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_ascii_lowercase();
+    let content_disposition = response.headers().get(CONTENT_DISPOSITION);
+    // HTML かつ Content-Disposition が無い場合はログイン画面とみなす
+    if content_type.contains("text/html") && content_disposition.is_none() {
+        let msg = "AUTH_REQUIRED".to_string();
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        return Err(msg);
+    }
+
+    // 認証チェック後にのみファイルを作成
+    let total_opt = response.content_length();
+    let mut file = OpenOptions::new().create(true).truncate(true).write(true).open(&final_path).map_err(|e| {
+        let msg = format!("failed to open destination file: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("booth download failed (url={}): {}", url, msg));
+        msg
+    })?;
+
+    let mut written: u64 = 0;
+    while let Some(chunk) = response.chunk().await.map_err(|e| {
+        let msg = format!("read error: {}", e);
+        let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+        log_error(&app, &format!("booth download failed (url={}): {}", url, msg));
+        msg
+    })? {
+        file.write_all(&chunk).map_err(|e| {
+            let msg = format!("write error: {}", e);
+            let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
+            log_error(&app, &format!("booth download failed (url={}): {}", url, msg));
             msg
         })?;
         written += chunk.len() as u64;
@@ -1069,6 +1329,17 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                // メイン終了時に認証用ウィンドウも閉じて後処理する
+                if let Some(booth) = window.app_handle().get_webview_window("booth-auth") {
+                    let _ = booth.close();
+                }
+            }
+        })
         .setup(|app| {
             // 起動時に app.log を最新 1000 行に削減
             paths::init_settings(&app.handle())?;
@@ -1097,6 +1368,9 @@ pub fn run() {
             remove_installed_id_cmd,
             drive_download_to_file,
             download_file_to_path,
+            download_file_to_path_booth,
+            ensure_booth_auth_window,
+            close_booth_auth_window,
             expand_macros,
             copy_item_js,
             is_aviutl_running,

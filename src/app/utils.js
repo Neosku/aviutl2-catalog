@@ -656,6 +656,104 @@ export async function downloadFileFromUrl(url, destPath, options = {}) {
     }
 }
 
+// -------------------------
+// BOOTH認証ウィンドウ管理・ダウンロード
+// -------------------------
+// BOOTH認証ウィンドウのラベルとイベント名
+const BOOTH_AUTH_WINDOW_LABEL = 'booth-auth';
+const BOOTH_LOGIN_COMPLETE_EVENT = 'booth-auth:login-complete';
+// 認証ウィンドウの作成
+async function ensureBoothAuthWindow() {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('ensure_booth_auth_window');
+}
+// 認証ウィンドウを閉じる
+async function closeBoothAuthWindow() {
+    try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('close_booth_auth_window');
+    } catch (_) { }
+}
+// 認証完了イベントを待機
+async function prepareBoothLoginWait() {
+    const { listen } = await import('@tauri-apps/api/event');
+    let resolveFn;
+    // 1回だけ解決するPromiseを作る
+    const done = new Promise((resolve) => {
+        resolveFn = resolve;
+    });
+    const unlisten = await listen(BOOTH_LOGIN_COMPLETE_EVENT, (evt) => {
+        try { unlisten(); } catch (_) { }
+        resolveFn(evt?.payload);
+    });
+    return done;
+}
+
+// BOOTH 直リンク用ダウンロード（Rust経由 + Cookie）
+// ファイルのダウンロード（BOOTHから）
+export async function downloadFileFromBoothUrl(url, destPath, options = {}) {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+
+    const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+    // タスクIDを決定
+    const taskId = options.taskId
+        || (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `dl-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+    const unlisteners = [];
+    const registerListener = async (eventName, handler) => {
+        const unlisten = await listen(eventName, (evt) => {
+            const payload = evt?.payload;
+            if (!payload || payload.taskId !== taskId) return;
+            handler(payload);
+        });
+        unlisteners.push(unlisten);
+    };
+
+    if (onProgress) {
+        await registerListener('download:progress', (payload) => {
+            const read = typeof payload.read === 'number' ? payload.read : 0;
+            const total = typeof payload.total === 'number' ? payload.total : null;
+            onProgress({ read, total });
+        });
+    }
+
+    // Rust側のBOOTHダウンロードを呼び出す
+    const invokeDownload = () => invoke('download_file_to_path_booth', {
+        url,
+        destPath,
+        taskId,
+        sessionWindowLabel: BOOTH_AUTH_WINDOW_LABEL,
+    });
+
+    try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const finalPath = await invokeDownload();
+                return finalPath;
+            } catch (e) {
+                const detail = e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)) || 'unknown error';
+                const needsAuth = detail.includes('AUTH_REQUIRED') || detail.includes('AUTH_WINDOW_MISSING');
+                if (needsAuth && attempt === 0) {
+                    // 未ログイン時のみ、ログイン完了イベントを待って再試行
+                    const waitLogin = prepareBoothLoginWait();
+                    await ensureBoothAuthWindow();
+                    await waitLogin;
+                    continue;
+                }
+                throw new Error(`downloadFileFromBoothUrl failed (url=${url}): ${detail}`);
+            }
+        }
+        throw new Error(`downloadFileFromBoothUrl failed (url=${url}): AUTH_REQUIRED`);
+    } finally {
+        for (const unlisten of unlisteners) {
+            try { unlisten(); } catch (_) { }
+        }
+    }
+}
+
 // ZIPファイルを展開（Rust）
 async function extractZip(zipPath, destPath) {
     try {
@@ -809,12 +907,35 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
                             logInfo(`[installer ${item.id}] downloading from Google Drive fileId=${src.GoogleDrive.id} to ${tmpDir}`);
                             break;
                         }
+                        // 2. BOOTH 直リンクの場合
+                        if (typeof src.booth === 'string' && src.booth) {
+                            const boothUrl = src.booth;
+                            logInfo(`[installer ${item.id}] downloading from BOOTH ${boothUrl} to ${tmpDir}`);
+                            const stepSpan = 1 - STEP_PROGRESS_OFFSET;
+                            const startUnits = runningUnits;
+                            const maxUnits = idx + 1 - 0.01;
+                            let unknownUnits = startUnits;
+                            ctx.downloadPath = await downloadFileFromBoothUrl(boothUrl, tmpDir, {
+                                onProgress: ({ read, total }) => {
+                                    if (typeof total === 'number' && total > 0) {
+                                        const ratio = Math.min(1, Math.max(0, total ? read / total : 0));
+                                        const units = startUnits + stepSpan * ratio;
+                                        emitProgress(units, step, idx, 'running');
+                                    } else if (typeof read === 'number' && read > 0) {
+                                        const increment = stepSpan * 0.05;
+                                        unknownUnits = Math.min(maxUnits, unknownUnits + increment);
+                                        emitProgress(unknownUnits, step, idx, 'running');
+                                    }
+                                },
+                            });
+                            break;
+                        }
                         let url = "";
-                        // 2. GitHubの場合
+                        // 3. GitHubの場合
                         if (src.github && src.github.owner && src.github.repo) {
                             url = await fetchGitHubURL(src.github);
                         }
-                        // 3. 直接URLの場合
+                        // 4. 直接URLの場合
                         if (typeof src.direct === 'string' && src.direct) {
                             url = src.direct;
                         }
@@ -902,12 +1023,14 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
             try {
                 const fs = await import('@tauri-apps/plugin-fs');
                 await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-            } catch (_) {}
+            } catch (_) { }
         }
     } catch (e) {
         const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
         try { await logError(`[installer ${item.id}] error: ${detail}`); } catch (_) { }
         throw e;
+    } finally {
+        await closeBoothAuthWindow();
     }
 }
 
