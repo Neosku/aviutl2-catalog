@@ -7,9 +7,9 @@ import appIcon from '../../src-tauri/icons/icon.png';
 import Icon from './Icon.jsx';
 import ErrorDialog from './ErrorDialog.jsx';
 
-export default function Header() {
+export default function Header({ searchOverride }) {
   const location = useLocation();
-  const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
+  const [q, setQ] = useState(() => new URLSearchParams(searchOverride ?? location.search).get('q') || '');
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState('');
@@ -17,13 +17,13 @@ export default function Header() {
 
   // URLの検索クエリ変更時に入力欄も同期
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(searchOverride ?? location.search);
     setQ(params.get('q') || '');
-  }, [location.search]);
+  }, [location.search, searchOverride]);
 
   // 入力に応じて ?q=... を更新（空なら削除・同値なら遷移しない）
   function updateQuery(next, replace = true) {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(searchOverride ?? location.search);
     const trimmed = next.trim();
     const current = params.get('q') || '';
     if (!trimmed) {

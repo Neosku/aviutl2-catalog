@@ -12,6 +12,8 @@ import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { getSorter, filterByTagsAndType, matchQuery, logError, hasInstaller, runInstallerForItem } from '../app/utils.js';
 
 let savedHomeScrollTop = 0;
+let savedHomeSearch = '';
+let restoreHomeSearch = false;
 
 // メインページコンポーネント
 // プラグイン一覧の表示、検索、フィルタリング、ソート機能を提供
@@ -21,8 +23,15 @@ export default function Home() {
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef = useRef(null);
+  const shouldRestoreHome = location.pathname === '/' && !location.search && restoreHomeSearch && savedHomeSearch;
+  const effectiveSearch = shouldRestoreHome ? savedHomeSearch : location.search;
+  const latestSearchRef = useRef(effectiveSearch);
+  const prevSearchRef = useRef(effectiveSearch);
+  const pendingScrollRef = useRef(false);
+  latestSearchRef.current = effectiveSearch;
+
   // URLパラメータから検索・フィルタ条件を取得
-  const params = new URLSearchParams(location.search);
+  const params = new URLSearchParams(effectiveSearch);
   const q = params.get('q') || '';
   const sortKey = params.get('sort') || 'newest';
   const dir = params.get('dir') || (sortKey === 'name' ? 'asc' : 'desc');
@@ -31,8 +40,6 @@ export default function Home() {
   const types = selectedType ? [selectedType] : [];
   const installedOnly = params.get('installed') === '1';
 
-  // Tauri側の検索結果IDリスト
-  const [ids, setIds] = useState([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkError, setBulkError] = useState('');
   const [bulkProgress, setBulkProgress] = useState(null);
@@ -62,6 +69,7 @@ export default function Home() {
     };
   }, []);
 
+  // スクロール位置に応じた「先頭に戻る」ボタンの表示制御
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
@@ -75,6 +83,15 @@ export default function Home() {
     };
   }, []);
 
+  // ホーム内でのクエリ変更時は先頭へ戻す（ページ遷移直後は除外）
+  useEffect(() => {
+    const prevSearch = prevSearchRef.current;
+    if (location.pathname === '/' && prevSearch !== effectiveSearch) {
+      pendingScrollRef.current = true;
+    }
+    prevSearchRef.current = effectiveSearch;
+  }, [effectiveSearch, location.pathname]);
+
   const scrollToTop = () => {
     const main = mainRef.current;
     if (!main) return;
@@ -83,15 +100,9 @@ export default function Home() {
 
   // 基本的なフィルタリング処理（検索・タグ・種別）
   const baseList = useMemo(() => {
-    if (ids && ids.length) {
-      // Tauri側での検索結果がある場合はそのIDに基づいて一覧を生成
-      const map = new Map(items.map(it => [it.id, it]));
-      return ids.map(id => map.get(id)).filter(Boolean);
-    }
-    // Fallback: JavaScript側での検索・フィルタリング
     const base = q ? items.filter(it => matchQuery(it, q)) : items;
     return filterByTagsAndType(base, tags, types);
-  }, [items, ids.join('|'), q, tags.join(','), types.join(',')]);
+  }, [items, q, tags.join(','), types.join(',')]);
 
   // インストール済みのみ表示フィルタ
   const filtered = useMemo(() => {
@@ -103,27 +114,59 @@ export default function Home() {
     return [...filtered].sort(getSorter(sortKey, dir));
   }, [filtered, sortKey, dir]);
 
-  // Tauri側での検索処理を実行
+  // 絞り込み結果の描画が反映された後にスクロールする
+  useLayoutEffect(() => {
+    if (location.pathname !== '/') return;
+    if (!pendingScrollRef.current) return;
+    const main = mainRef.current;
+    if (!main) return;
+    pendingScrollRef.current = false;
+    main.scrollTop = 0;
+  }, [sorted, location.pathname]);
+
+  // ホームを離れる前のクエリを保存し、戻ったら復元する
+  useLayoutEffect(() => {
+    if (location.pathname !== '/') return;
+    if (shouldRestoreHome) {
+      navigate(`${location.pathname}${savedHomeSearch}`, { replace: true });
+    }
+  }, [location.pathname, navigate, shouldRestoreHome]);
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const res = await invoke('query_catalog_index', {
-          q,
-          tags,
-          types,
-          sort: sortKey,
-          dir,
-        });
-        if (!cancelled && Array.isArray(res)) setIds(res);
-      } catch (_) {
-        // エラーが発生した場合は空のリストに設定
-        if (!cancelled) setIds([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [q, tags.join(','), types.join(','), sortKey, dir]);
+    if (location.pathname !== '/') return;
+    if (restoreHomeSearch && location.search === savedHomeSearch) {
+      restoreHomeSearch = false;
+    }
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    return () => {
+      restoreHomeSearch = true;
+      savedHomeSearch = latestSearchRef.current;
+    };
+  }, []);
+
+  // Rust側インデックス検索（未使用）（JSのほうが速い）
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       const { invoke } = await import('@tauri-apps/api/core');
+  //       const res = await invoke('query_catalog_index', {
+  //         q,
+  //         tags,
+  //         types,
+  //         sort: sortKey,
+  //         dir,
+  //       });
+  //       if (!cancelled && Array.isArray(res)) setIds(res);
+  //     } catch (_) {
+  //       // エラーが発生した場合は空のリストに設定
+  //       if (!cancelled) setIds([]);
+  //     }
+  //   })();
+  //   return () => { cancelled = true; };
+  // }, [q, tags.join(','), types.join(','), sortKey, dir]);
 
   // 更新があるプラグインをまとめてインストール処理
   async function handleBulkUpdate() {
@@ -183,10 +226,10 @@ export default function Home() {
 
   return (
     <div className="route-home">
-      <Header />
+      <Header searchOverride={effectiveSearch || undefined} />
       <div className="route-home__body">
         <div className="sortbar-container container">
-          <SortBar value={sortKey} />
+          <SortBar value={sortKey} searchOverride={effectiveSearch || undefined} />
           <div className="bulk-card-container" aria-live="polite">
             <div className="bulk-card">
               <div className="bulk-card__main">
@@ -226,14 +269,12 @@ export default function Home() {
         <div className="container layout-two">
           <aside className="route-home__aside">
             {/* 検索結果表示エリア */}
-            {q ? (
-              <div className="sidebar" aria-live="polite">
-                <div className="sidebar__group">
-                  <span className="badge badge--sidebar">検索結果: {sorted.length}件</span>
-                </div>
+            <div className="sidebar" aria-live="polite">
+              <div className="sidebar__group">
+                <span className="badge badge--sidebar">表示件数: {sorted.length}件</span>
               </div>
-            ) : null}
-            <FilterPanel />
+            </div>
+            <FilterPanel searchOverride={effectiveSearch || undefined} />
           </aside>
           <main className="route-home__main" ref={mainRef}>
             <div className="route-home__grid grid">

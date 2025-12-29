@@ -5,17 +5,18 @@ import Icon from './Icon.jsx';
 
 // ソートバーコンポーネント
 // 新着順・名前順の並び替えボタンを表示
-export default function SortBar({ value }) {
+export default function SortBar({ value, searchOverride }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const url = new URLSearchParams(location.search);
+  const currentSearch = searchOverride ?? location.search;
+  const url = new URLSearchParams(currentSearch);
   // 現在のソート種別を取得
   const current = value || url.get('sort') || 'newest';
   // 現在のソート方向を取得。名前順はデフォルト昇順、新着順はデフォルト降順
   const dir = url.get('dir') || (current === 'name' ? 'asc' : 'desc');
   // ソート設定を適用してページ遷移
   function applySort(s, d) {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(currentSearch);
     params.set('sort', s);
     params.set('dir', d);
     navigate(`${location.pathname}?${params.toString()}`);

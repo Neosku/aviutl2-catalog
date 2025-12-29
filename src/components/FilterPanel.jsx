@@ -4,11 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../app/store/catalog.jsx';
 
 // インストール済み / 種類(type) / タグ のフィルターパネル
-export default function FilterPanel() {
+export default function FilterPanel({ searchOverride }) {
   const { allTypes, allTags } = useCatalog();
   const location = useLocation();
   const navigate = useNavigate();
-  const params = new URLSearchParams(location.search);
+  const currentSearch = searchOverride ?? location.search;
+  const params = new URLSearchParams(currentSearch);
 
   const installedOnly = params.get('installed') === '1';
   const selectedType = params.get('type') || '';
@@ -30,20 +31,15 @@ export default function FilterPanel() {
 
   // インストール済み
   function toggleInstalled() {
-    const p = new URLSearchParams(location.search);
+    const p = new URLSearchParams(currentSearch);
     if (installedOnly) p.delete('installed'); else p.set('installed', '1');
     applyParams(p);
   }
 
   // 種類（単一選択）
   function toggleType(val) {
-    const p = new URLSearchParams(location.search);
+    const p = new URLSearchParams(currentSearch);
     if (selectedType === val) p.delete('type'); else p.set('type', val);
-    applyParams(p);
-  }
-  function clearType() {
-    const p = new URLSearchParams(location.search);
-    p.delete('type');
     applyParams(p);
   }
 
@@ -52,22 +48,23 @@ export default function FilterPanel() {
     const set = new Set(selectedTags);
     if (set.has(val)) set.delete(val); else set.add(val);
     const next = Array.from(set);
-    const p = new URLSearchParams(location.search);
+    const p = new URLSearchParams(currentSearch);
     if (next.length) p.set('tags', next.join(',')); else p.delete('tags');
     applyParams(p);
   }
   function clearTags() {
-    const p = new URLSearchParams(location.search);
+    const p = new URLSearchParams(currentSearch);
     p.delete('tags');
     applyParams(p);
   }
 
   // すべてクリア
   function clearAll() {
-    const p = new URLSearchParams(location.search);
+    const p = new URLSearchParams(currentSearch);
     p.delete('installed');
     p.delete('type');
     p.delete('tags');
+    p.delete('q');
     applyParams(p);
   }
 
