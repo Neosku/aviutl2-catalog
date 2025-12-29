@@ -321,6 +321,9 @@ export default function SettingsDialog({ open, onClose }) {
           <div style={{ marginTop: 8, color: 'var(--muted)' }}>
             アプリのバージョン: {appVersion || '取得中…'}
           </div>
+          <div style={{ marginTop: 12, color: 'var(--muted)' , fontSize: '12px' }}>
+            本ソフトウェアは MIT License に基づき提供されます。ライセンス全文は LICENSE.txt をご参照ください。
+          </div>
         </div>
 
         <div className="modal__actions">

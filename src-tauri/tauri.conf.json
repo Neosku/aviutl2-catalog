@@ -20,6 +20,7 @@
       "icons/icon.ico"
     ],
     "createUpdaterArtifacts": true,
+    "licenseFile": "./eula.txt",
     "windows": {
       "certificateThumbprint": null,
       "timestampUrl": null,
