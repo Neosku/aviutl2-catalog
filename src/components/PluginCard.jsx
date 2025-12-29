@@ -144,9 +144,7 @@ export default function PluginCard({ item }) {
             <span className="meta"><span className="meta__icon" aria-hidden><Icon name="calendar" /></span>{item.updatedAt ? formatDate(item.updatedAt) : '?'}</span>
             {item.installedVersion ? (
               <span className="meta" title="現在のバージョン"><span className="meta__icon" aria-hidden><Icon name="check_circle" /></span>{item.installedVersion}</span>
-            ) : (
-              <span className="meta" title="未インストール">未インストール</span>
-            )}
+            ) : null}
           </div>
           {/* 操作ボタン群：インストール済みなら 更新/削除、未インストールなら ダウンロード */}
           <div className="card__actions">

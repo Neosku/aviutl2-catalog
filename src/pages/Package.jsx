@@ -333,7 +333,9 @@ export default function Package() {
             <div className="sideitem"><span className="sideitem__label">作者</span><span className="sideitem__value">{item.author || '?'}</span></div>
             <div className="sideitem"><span className="sideitem__label">更新日</span><span className="sideitem__value">{updated}</span></div>
             <div className="sideitem"><span className="sideitem__label">最新バージョン</span><span className="sideitem__value">{latest}</span></div>
-            <div className="sideitem"><span className="sideitem__label">現在のバージョン</span><span className="sideitem__value">{item.installedVersion || '未インストール'}</span></div>
+            {item.installedVersion ? (
+              <div className="sideitem"><span className="sideitem__label">現在のバージョン</span><span className="sideitem__value">{item.installedVersion}</span></div>
+            ) : null}
             <div className="sideitem">
               <span className="sideitem__label">ライセンス</span>
               <span className="sideitem__value sideitem__value--licenses">
