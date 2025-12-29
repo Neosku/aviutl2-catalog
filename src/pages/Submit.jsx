@@ -23,9 +23,10 @@ const ACTION_LABELS = {
   run_auo_setup: 'auo_setup2.exeを実行',
 };
 const INSTALLER_SOURCES = [
-  { value: 'direct', label: '直接URLからダウンロード' },
+  { value: 'direct', label: '直接URL' },
   { value: 'github', label: 'GitHub Release' },
   { value: 'GoogleDrive', label: 'Google Drive' },
+  { value: 'booth', label: 'BOOTH' },
 ];
 const SUBMIT_ACTIONS = {
   bug: 'issues',
@@ -193,6 +194,7 @@ function createEmptyInstaller() {
   return {
     sourceType: 'direct',
     directUrl: '',
+    boothUrl: '',
     githubOwner: '',
     githubRepo: '',
     githubPattern: '',
@@ -663,7 +665,10 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
           </div>
         </div>
         {installer.sourceType === 'direct' && (
-          <label>ダウンロードURL<input value={installer.directUrl} onChange={e => updateInstallerField('directUrl', e.target.value)} placeholder="ダウンロード先のURLを入れてください" /></label>
+          <label>ダウンロードURL<input value={installer.directUrl} onChange={e => updateInstallerField('directUrl', e.target.value)} placeholder="ダウンロードURLを入力してください" /></label>
+        )}
+        {installer.sourceType === 'booth' && (
+          <label>ダウンロードURL<input value={installer.boothUrl} onChange={e => updateInstallerField('boothUrl', e.target.value)} placeholder="ダウンロードURLを入力してください（https://booth.pm/downloadables/で始まるもの）" /></label>
         )}
         {installer.sourceType === 'github' && (
           <div className="form__grid package-grid">
@@ -1068,7 +1073,10 @@ function parseInstallerSource(installer = {}) {
   if (!installer || typeof installer !== 'object') return createEmptyInstaller();
   const next = createEmptyInstaller();
   const source = installer.source || {};
-  if (source.direct) {
+  if (source.booth) {
+    next.sourceType = 'booth';
+    next.boothUrl = String(source.booth || '');
+  } else if (source.direct) {
     next.sourceType = 'direct';
     next.directUrl = String(source.direct || '');
   } else if (source.github) {
@@ -1224,6 +1232,8 @@ function extractInstallerSource(form) {
   const source = {};
   if (form.installer.sourceType === 'direct' && form.installer.directUrl.trim()) {
     source.direct = form.installer.directUrl.trim();
+  } else if (form.installer.sourceType === 'booth' && form.installer.boothUrl.trim()) {
+    source.booth = form.installer.boothUrl.trim();
   } else if (form.installer.sourceType === 'github') {
     const owner = form.installer.githubOwner.trim();
     const repo = form.installer.githubRepo.trim();
@@ -1428,6 +1438,8 @@ function validatePackageForm(form) {
   const sourceType = form.installer.sourceType;
   if (sourceType === 'direct') {
     if (!form.installer.directUrl.trim()) return 'installer.source の direct URL を入力してください';
+  } else if (sourceType === 'booth') {
+    if (!form.installer.boothUrl.trim()) return 'installer.source の booth URL を入力してください';
   } else if (sourceType === 'github') {
     if (!form.installer.githubOwner.trim() || !form.installer.githubRepo.trim() || !form.installer.githubPattern.trim()) {
       return 'installer.source github の owner/repo/pattern は全て必須です';

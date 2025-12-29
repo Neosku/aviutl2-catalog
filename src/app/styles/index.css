@@ -4085,13 +4085,14 @@ html.init-setup *::-webkit-scrollbar-thumb:hover {
 .package-section__label {
     font-weight: 600;
     font-size: 0.95rem;
-    display: inline-block;
-    margin-bottom: 4px;
+    margin-left:8px;
+    margin-right:10px;
 }
 
 .package-section__source {
     flex-wrap: wrap;
     gap: 6px;
+    margin: 0 !important;
 }
 
 .package-section__source .btn {
