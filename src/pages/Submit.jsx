@@ -6,7 +6,7 @@ import Icon from '../components/Icon.jsx';
 import { collectDeviceInfo, readAppLog, loadInstalledMap } from '../app/utils.js';
 import { renderMarkdown } from '../app/markdown.js';
 import { useCatalog } from '../app/store/catalog.jsx';
-import { LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../constants/licenseTemplates.js';
+import { LICENSE_TEMPLATES, LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../constants/licenseTemplates.js';
 
 // インストーラ関連で許可されるアクションやラベル定義
 const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];
@@ -33,6 +33,7 @@ const SUBMIT_ACTIONS = {
   package: 'plugin',
 };
 const PACKAGE_GUIDE_FALLBACK_URL = 'https://github.com/Neosku/aviutl2-catalog-data/blob/main/register-package.md';
+const LICENSE_TEMPLATE_TYPES = new Set(Object.keys(LICENSE_TEMPLATES));
 // ステップ選択で使う選択肢（ラベルを毎回手書きしないために先に展開）
 const INSTALL_ACTION_OPTIONS = INSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
 const UNINSTALL_ACTION_OPTIONS = UNINSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
@@ -231,6 +232,7 @@ function createEmptyLicense() {
   return {
     key: generateKey(),
     type: '',
+    licenseName: '',
     isCustom: false,
     licenseBody: '',
     copyrights: [createEmptyCopyright()],
@@ -392,9 +394,9 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
 }) {
   const activeLicense = license || createEmptyLicense();
   const type = activeLicense.type;
-  const isCustomType = type === 'カスタムライセンス';
+  const isOtherType = type === 'その他';
   const isUnknown = type === '不明';
-  const forceBodyInput = isCustomType;
+  const forceBodyInput = isOtherType;
   const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
   const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
   const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
@@ -415,7 +417,19 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
                 ariaLabel="ライセンスの種類を選択"
               />
             </label>
-            {!isUnknown && !isCustomType && (
+            {isOtherType && (
+              <label className="license-card__type-select">
+                <span className="license-card__type-label">ライセンス名*</span>
+                <input
+                  value={activeLicense.licenseName}
+                  onChange={e => onUpdateLicenseField(activeLicense.key, 'licenseName', e.target.value)}
+                  placeholder="ライセンス名を入力してください"
+                  required
+                />
+                <p className="license-card__hint" style={{ fontSize: '0.8rem' }}>カスタムライセンスの場合は「カスタムライセンス」と入力してください。</p>
+              </label>
+            )}
+            {!isUnknown && !isOtherType && (
               <div className="license-card__custom">
                 <label className="switch">
                   <input
@@ -1095,9 +1109,13 @@ function parseLicenses(rawLicenses, legacyLicense = '') {
   const list = Array.isArray(rawLicenses) ? rawLicenses : [];
   const target = list[0];
   if (target) {
-    const type = String(target?.type || '');
+    const rawType = String(target?.type || '');
+    const isUnknown = rawType === '不明';
+    const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
+    const type = (isUnknown || isTemplateType) ? rawType : 'その他';
+    const licenseName = (!isUnknown && !isTemplateType) ? rawType : '';
     const licenseBody = typeof target?.licenseBody === 'string' ? target.licenseBody : '';
-    const isCustom = !!target?.isCustom || type === '不明' || type === 'カスタムライセンス' || !!licenseBody.trim();
+    const isCustom = !!target?.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
     const copyrights = Array.isArray(target?.copyrights) && target.copyrights.length
       ? target.copyrights.slice(0, 1).map(c => ({
         key: generateKey(),
@@ -1108,15 +1126,22 @@ function parseLicenses(rawLicenses, legacyLicense = '') {
     return [{
       key: generateKey(),
       type,
+      licenseName,
       isCustom,
       licenseBody,
       copyrights,
     }];
   }
   if (legacyLicense) {
+    const rawType = String(legacyLicense || '');
+    const isUnknown = rawType === '不明';
+    const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
+    const type = (isUnknown || isTemplateType) ? rawType : 'その他';
+    const licenseName = (!isUnknown && !isTemplateType) ? rawType : '';
     return [{
       ...createEmptyLicense(),
-      type: String(legacyLicense || ''),
+      type,
+      licenseName,
       isCustom: false,
     }];
   }
@@ -1214,10 +1239,12 @@ function buildLicensesPayload(form) {
   return (form.licenses || [])
     .map(license => {
       const type = String(license.type || '').trim();
+      const licenseName = String(license.licenseName || '').trim();
+      const resolvedType = type === 'その他' ? licenseName : type;
       const licenseBody = String(license.licenseBody || '').trim();
       const isCustom = license.isCustom
         || type === '不明'
-        || type === 'カスタムライセンス'
+        || type === 'その他'
         || licenseBody.length > 0;
       const copyrights = Array.isArray(license.copyrights)
         ? license.copyrights
@@ -1227,9 +1254,9 @@ function buildLicensesPayload(form) {
           }))
           .filter(c => c.years && c.holder)
         : [];
-      if (!type) return null;
+      if (!resolvedType) return null;
       return {
-        type,
+        type: resolvedType,
         isCustom,
         copyrights,
         licenseBody: isCustom ? licenseBody : null,
@@ -1342,9 +1369,10 @@ function validatePackageForm(form) {
   for (const license of form.licenses) {
     const type = String(license.type || '').trim();
     if (!type) return 'ライセンスの種類を選択してください';
-    const needsCustomBody = type === 'カスタムライセンス' || (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
-    if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'カスタムライセンスの本文を入力してください';
-    const usesTemplate = type !== '不明' && type !== 'カスタムライセンス' && !license.isCustom;
+    if (type === 'その他' && !String(license.licenseName || '').trim()) return 'ライセンス名を入力してください';
+    const needsCustomBody = type === 'その他' || (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
+    if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'ライセンス本文を入力してください';
+    const usesTemplate = type !== '不明' && type !== 'その他' && !license.isCustom;
     if (usesTemplate) {
       const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
       const hasCopyright = entries.some(c => String(c?.years || '').trim() && String(c?.holder || '').trim());
@@ -1719,8 +1747,8 @@ export default function Submit() {
           const nextType = String(value || '');
           let nextBody = next.licenseBody;
           let nextCopy = next.copyrights;
-          if (nextType === '不明' || nextType === 'カスタムライセンス') {
-            next.isCustom = nextType === 'カスタムライセンス';
+          if (nextType === '不明' || nextType === 'その他') {
+            next.isCustom = nextType === 'その他';
             if (nextType === '不明') {
               nextBody = '';
             }
@@ -1745,7 +1773,7 @@ export default function Submit() {
       ...prev,
       licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => {
         if (license.key !== key) return license;
-        const forcedCustom = license.type === 'カスタムライセンス';
+        const forcedCustom = license.type === 'その他';
         const forcedUnknown = license.type === '不明';
         if (forcedUnknown) {
           return {

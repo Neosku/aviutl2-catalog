@@ -153,7 +153,7 @@ export const LICENSE_TYPE_OPTIONS = [
   { value: 'Apache-2.0', label: 'Apache-2.0' },
   { value: 'BSD-2-Clause', label: 'BSD-2-Clause' },
   { value: 'BSD-3-Clause', label: 'BSD-3-Clause' },
-  { value: 'カスタムライセンス', label: 'カスタムライセンス' },
+  { value: 'その他', label: 'その他' },
   { value: '不明', label: '不明' },
 ];
 
