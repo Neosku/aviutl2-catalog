@@ -3733,6 +3733,28 @@ body.route-submit--package {
     line-height: 1.5;
 }
 
+.settings-backup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.settings-backup__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.settings-backup__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.settings-backup__actions .btn {
+    flex: 1;
+}
+
 .setup-checkbox {
     display: flex;
     flex-direction: column;

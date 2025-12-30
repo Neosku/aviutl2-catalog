@@ -1,7 +1,7 @@
 // 設定ダイアログコンポーネント
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getSettings, detectInstalledVersionsMap, logError } from '../app/utils.js';
+import { getSettings, detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot, runInstallerForItem, runUninstallerForItem, hasInstaller, logError } from '../app/utils.js';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { invoke } from '@tauri-apps/api/core';
 import Icon from './Icon.jsx';
@@ -38,6 +38,192 @@ export default function SettingsDialog({ open, onClose }) {
   const [appVersion, setAppVersion] = useState('');
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const themeDropdownRef = useRef(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
+
+  // インストール状態インポートデータの正規化
+  function normalizeInstalledImport(data) {
+    if (Array.isArray(data)) {
+      const out = {};
+      data.forEach((id) => {
+        const key = String(id || '').trim();
+        if (key) out[key] = '';
+      });
+      return out;
+    }
+    if (!data || typeof data !== 'object') {
+      throw new Error('インポートファイルの形式が正しくありません。');
+    }
+    const out = {};
+    for (const [rawKey, rawValue] of Object.entries(data)) {
+      const key = String(rawKey || '').trim();
+      if (!key) continue;
+      out[key] = rawValue == null ? '' : String(rawValue);
+    }
+    return out;
+  }
+  // エクスポートボタン押下時の処理
+  async function handleExport() {
+    if (syncBusy) return;
+    setError('');
+    setSyncBusy(true);
+    setSyncStatus('エクスポート先を選択しています…');
+    try {
+      const dialog = await import('@tauri-apps/plugin-dialog');
+      const now = new Date();
+      const stamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+      ].join('');
+      const defaultPath = `installed-export-${stamp}.json`;
+      const outPath = await dialog.save({
+        title: 'パッケージ一覧のエクスポート',
+        defaultPath,
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      const savePath = Array.isArray(outPath) ? outPath[0] : outPath;
+      if (!savePath) return;
+      setSyncStatus('エクスポートを作成中…');
+      const installed = await loadInstalledMap();
+      const fs = await import('@tauri-apps/plugin-fs');
+      const payload = JSON.stringify(installed || {}, null, 2);
+      await fs.writeTextFile(String(savePath), payload);
+      try {
+        await dialog.message('エクスポートを保存しました。', { title: 'エクスポート', kind: 'info' });
+      } catch (_) { }
+    } catch (e) {
+      setError('エクスポートに失敗しました。\n権限や保存先を確認してください。');
+      try { await logError(`[settings] export failed: ${e?.message || e}`); } catch (_) { }
+    } finally {
+      setSyncBusy(false);
+      setSyncStatus('');
+    }
+  }
+
+  // インポートボタン押下時の処理
+  async function handleImport() {
+    if (syncBusy) return;
+    setError('');
+    setSyncBusy(true);
+    setSyncStatus('インポート準備中…');
+    try {
+      const dialog = await import('@tauri-apps/plugin-dialog');
+      const ok = await dialog.confirm(
+        'インポート内容に合わせてパッケージをインストール/削除します。\n続行しますか？',
+        { title: 'インポート', kind: 'warning' },
+      );
+      if (!ok) return;
+      setSyncStatus('インポートファイルを選択しています…');
+      const filePath = await dialog.open({
+        title: 'インポートファイルを選択',
+        multiple: false,
+        directory: false,
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      const selectedPath = Array.isArray(filePath) ? filePath[0] : filePath;
+      if (!selectedPath) return;
+
+      setSyncStatus('インポートファイルを読み込み中…');
+      const fs = await import('@tauri-apps/plugin-fs');
+      const raw = await fs.readTextFile(String(selectedPath));
+      let parsed;
+      try {
+        parsed = JSON.parse(raw || '{}');
+      } catch (e) {
+        throw new Error('インポートファイルのJSONを読み込めませんでした。');
+      }
+      const targetMap = normalizeInstalledImport(parsed);
+      const targetIds = Object.keys(targetMap);
+      if (!targetIds.length) throw new Error('インポートファイルの内容が空です。');
+      const targetIdSet = new Set(targetIds);
+
+      const catalogItems = Array.isArray(items) ? items : [];
+      if (!catalogItems.length) throw new Error('カタログ情報が読み込まれていません。');
+
+      const idToItem = new Map(catalogItems.map((item) => [String(item.id), item]));
+      const unknownIds = targetIds.filter(id => !idToItem.has(id));
+
+      setSyncStatus('インストール状態を検出中…');
+      const detected = await detectInstalledVersionsMap(catalogItems);
+      const currentIds = Object.entries(detected || {})
+        .filter(([, v]) => v)
+        .map(([id]) => id);
+
+      const toInstall = targetIds.filter(id => idToItem.has(id) && !detected?.[id]);
+      const toRemove = currentIds.filter(id => !targetIdSet.has(id));
+
+      const skippedInstall = [];
+      const skippedRemove = [];
+      const failedInstall = [];
+      const failedRemove = [];
+      let installedCount = 0;
+      let removedCount = 0;
+
+      for (let i = 0; i < toInstall.length; i++) {
+        const id = toInstall[i];
+        const item = idToItem.get(id);
+        if (!item || !hasInstaller(item)) {
+          skippedInstall.push(id);
+          continue;
+        }
+        const label = item?.name ? `${item.name} (${id})` : id;
+        setSyncStatus(`インストール中… (${i + 1}/${toInstall.length}) ${label}`);
+        try {
+          await runInstallerForItem(item, dispatch);
+          installedCount += 1;
+        } catch (e) {
+          failedInstall.push(`${id}: ${e?.message || e}`);
+        }
+      }
+
+      for (let i = 0; i < toRemove.length; i++) {
+        const id = toRemove[i];
+        const item = idToItem.get(id);
+        if (!item || !Array.isArray(item?.installer?.uninstall) || item.installer.uninstall.length === 0) {
+          skippedRemove.push(id);
+          continue;
+        }
+        const label = item?.name ? `${item.name} (${id})` : id;
+        setSyncStatus(`アンインストール中… (${i + 1}/${toRemove.length}) ${label}`);
+        try {
+          await runUninstallerForItem(item, dispatch);
+          removedCount += 1;
+        } catch (e) {
+          failedRemove.push(`${id}: ${e?.message || e}`);
+        }
+      }
+
+      setSyncStatus('インストール状態を更新中…');
+      const finalDetected = await detectInstalledVersionsMap(catalogItems);
+      dispatch({ type: 'SET_DETECTED_MAP', payload: finalDetected });
+      const snap = await saveInstalledSnapshot(finalDetected);
+      dispatch({ type: 'SET_INSTALLED_MAP', payload: snap });
+
+      const summary = [
+        `インストール: ${installedCount}/${toInstall.length}件`,
+        `削除: ${removedCount}/${toRemove.length}件`,
+      ];
+      if (unknownIds.length) summary.push(`未登録ID: ${unknownIds.join(', ')}`);
+      if (skippedInstall.length) summary.push(`インストール不可: ${skippedInstall.join(', ')}`);
+      if (skippedRemove.length) summary.push(`削除不可: ${skippedRemove.join(', ')}`);
+      if (failedInstall.length) summary.push(`インストール失敗: ${failedInstall.join(', ')}`);
+      if (failedRemove.length) summary.push(`削除失敗: ${failedRemove.join(', ')}`);
+      const hasIssues = unknownIds.length || skippedInstall.length || skippedRemove.length || failedInstall.length || failedRemove.length;
+      try {
+        await dialog.message(summary.join('\n'), {
+          title: 'インポート結果',
+          kind: hasIssues ? 'warning' : 'info',
+        });
+      } catch (_) { }
+    } catch (e) {
+      setError(e?.message ? String(e.message) : 'インポートに失敗しました。');
+      try { await logError(`[settings] import failed: ${e?.message || e}`); } catch (_) { }
+    } finally {
+      setSyncBusy(false);
+      setSyncStatus('');
+    }
+  }
 
   function applyThemeAttr(theme) {
     const root = document?.documentElement;
@@ -197,6 +383,7 @@ export default function SettingsDialog({ open, onClose }) {
   if (!open) return null;
 
   function handleClose() {
+    if (saving || syncBusy) return;
     if (!didSaveRef.current) {
       try { applyThemeAttr(initialThemeAttrRef.current); } catch (_) { }
     }
@@ -316,19 +503,42 @@ export default function SettingsDialog({ open, onClose }) {
                 </div>
               </div>
             </label>
+
+            <div className="settings-backup" role="group" aria-labelledby="settings-backup-label">
+              <div className="settings-backup__label" id="settings-backup-label">パッケージ一覧のエクスポート/インポート</div>
+              <div className="settings-backup__actions">
+                <button className="btn" type="button" onClick={handleExport} disabled={saving || syncBusy}>
+                  {syncBusy ? (<><span className="spinner" aria-hidden></span>実行中…</>) : 'エクスポート'}
+                </button>
+                <button className="btn" type="button" onClick={handleImport} disabled={saving || syncBusy}>
+                  インポート
+                </button>
+              </div>
+              {!syncBusy && (
+                <span className="form__help">
+                  インポート時は一覧のパッケージのインストールと一覧にないパッケージの削除を行います。
+                </span>
+              )}
+              {syncStatus && (
+                <span className="form__help">
+                  {syncBusy && <span className="spinner" aria-hidden></span>}
+                  {syncStatus}
+                </span>
+              )}
+            </div>
           </div>
 
           <div style={{ marginTop: 8, color: 'var(--muted)' }}>
             アプリのバージョン: {appVersion || '取得中…'}
           </div>
-          <div style={{ marginTop: 12, color: 'var(--muted)' , fontSize: '12px' }}>
+          <div style={{ marginTop: 12, color: 'var(--muted)', fontSize: '12px' }}>
             本ソフトウェアは MIT License に基づき提供されます。ライセンス全文は LICENSE.txt をご参照ください。
           </div>
         </div>
 
         <div className="modal__actions">
-          <button className="btn" onClick={handleClose}>閉じる</button>
-          <button className="btn btn--primary" onClick={onSave} disabled={saving}>
+          <button className="btn" onClick={handleClose} disabled={saving || syncBusy}>閉じる</button>
+          <button className="btn btn--primary" onClick={onSave} disabled={saving || syncBusy}>
             {saving ? (<><span className="spinner" aria-hidden></span> 保存中…</>) : '保存'}
           </button>
         </div>
