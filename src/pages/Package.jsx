@@ -1,9 +1,9 @@
 // パッケージの詳細ページコンポーネント
 import React, { useMemo, useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import Header from '../components/Header.jsx';
+import { useParams, Link } from 'react-router-dom';
+import { open } from '@tauri-apps/plugin-shell';
 import ImageCarousel from '../components/ImageCarousel.jsx';
-import Icon from '../components/Icon.jsx';
+import { CheckCircle2, Download, ExternalLink, RefreshCw, Trash2, User, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
 import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, removeInstalledId, latestVersionOf, loadInstalledMap } from '../app/utils.js';
 import { renderMarkdown } from '../app/markdown.js';
@@ -38,20 +38,20 @@ function LicenseModal({ license, onClose }) {
   if (!license) return null;
   const body = license.body ?? buildLicenseBody(license);
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="license-modal-title">
-      <div className="modal__backdrop" onClick={onClose} />
-      <div className="modal__dialog">
-        <div className="modal__header">
-          <h3 id="license-modal-title" className="modal__title">ライセンス: {license.type || '不明'}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="license-modal-title">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <h3 id="license-modal-title" className="text-lg font-bold">ライセンス: {license.type || '不明'}</h3>
         </div>
-        <div className="modal__body modal__body--compact">
+        <div className="px-6 py-4">
           {body ? (
-            <pre className="modal__pre pre--wrap pre--scroll">{body}</pre>
+            <pre className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200">{body}</pre>
           ) : (
-            <div className="note">ライセンス本文がありません。</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">ライセンス本文がありません。</div>
           )}
         </div>
-        <div className="modal__actions">
+        <div className="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           <button type="button" className="btn btn--secondary" onClick={onClose}>閉じる</button>
         </div>
       </div>
@@ -65,11 +65,6 @@ export default function Package() {
   const { id } = useParams();
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
-
-  useEffect(() => {
-    document.body.classList.add('route-package');
-    return () => { document.body.classList.remove('route-package'); };
-  }, []);
 
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find(i => i.id === id), [items, id]);
@@ -195,9 +190,8 @@ export default function Package() {
   // アイテムが見つからない場合のエラー表示
   if (!item) {
     return (
-      <div>
-        <Header />
-        <main className="container"><div className="error">パッケージが見つかりませんでした。</div></main>
+      <div className="max-w-3xl mx-auto">
+        <div className="error">パッケージが見つかりませんでした。</div>
       </div>
     );
   }
@@ -264,147 +258,202 @@ export default function Package() {
   }
 
   // 表示用のフォーマット済み情報を準備
-  const updated = item.updatedAt ? formatDate(item.updatedAt) : '?';
+  const updated = item.updatedAt ? formatDate(item.updatedAt).replace(/-/g, '/') : '?';
   const latest = latestVersionOf(item) || '?';
 
   return (
-    <div>
-      <Header />
-      <main className="container package__layout">
-        <div className="package__main">
-          {/* メイン情報エリア（タイトル、概要、スクリーンショット） */}
-          <section className={"package__hero" + (heroImage ? " has-thumb" : "")} data-type={item.type || ''}>
-            {heroImage ? <div className="package__hero-bg" style={{ backgroundImage: `url(${heroImage})` }} aria-hidden /> : null}
-            <div className="package__hero-top">
-              <h1 className="package__title">{item.name}</h1>
+    <div className="space-y-6 max-w-6xl mx-auto min-h-[calc(100vh-6rem)] flex flex-col">
+      <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+        <Link to="/" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+          パッケージ一覧
+        </Link>
+        <ChevronRight size={16} className="mx-2" />
+        <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
+          {item.name}
+        </span>
+      </nav>
+
+      <section className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${heroImage ? 'min-h-[160px]' : ''}`}>
+        {heroImage && (
+          <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${heroImage})` }} aria-hidden />
+        )}
+        <div className="relative p-6 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                {item.type || '未分類'}
+              </span>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{item.name}</h1>
+              {item.summary && <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">{item.summary}</p>}
             </div>
-            {item.summary && <p className="package__summary">{item.summary}</p>}
-          </section>
-
-          {/* スクリーンショット表示エリア */}
-          {carouselImages.length ? (
-            <section>
-              <h2>スクリーンショット</h2>
-              <ImageCarousel images={carouselImages} />
-            </section>
+            {item.installed && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                <CheckCircle2 size={14} /> 導入済
+              </span>
+            )}
+          </div>
+          {item.tags?.length ? (
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+              {item.tags.map((tag) => (
+                <span key={tag} className="rounded-full border border-slate-200 px-2 py-1 dark:border-slate-700">
+                  #{tag}
+                </span>
+              ))}
+            </div>
           ) : null}
+        </div>
+      </section>
 
-          {/* 基本概要セクション */}
-          <section>
-            <h2>概要</h2>
-            <p>{item.summary || '?'}</p>
+      {carouselImages.length ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold">スクリーンショット</h2>
+          <ImageCarousel images={carouselImages} />
+        </section>
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] flex-1">
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-lg font-bold mb-2">概要</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{item.summary || '?'}</p>
           </section>
 
-          {/* 詳細説明セクション */}
           {item.description && (
-            <section>
-              <h2>詳細説明</h2>
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="text-lg font-bold mb-3">詳細説明</h2>
               {descriptionLoading ? (
-                <p>詳細説明を読み込み中です…</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">詳細説明を読み込み中です…</p>
               ) : (
-                <div className="md" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+                <div
+                  className="prose prose-slate max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                  onClick={async (e) => {
+                    const link = e.target.closest('a');
+                    if (link && link.href) {
+                      e.preventDefault();
+                      await open(link.href);
+                    }
+                  }}
+                />
               )}
               {descriptionError ? (
-                <p className="error" role="alert">{descriptionError}</p>
+                <p className="error mt-3" role="alert">{descriptionError}</p>
               ) : null}
             </section>
           )}
 
-          {/* その他の情報セクション */}
-          <section className="package__extra">
-            {item.dependencies?.length ? (
-              <div><strong>依存関係:</strong> {item.dependencies.join(', ')}</div>
-            ) : null}
-          </section>
+          {item.dependencies?.length ? (
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="text-lg font-bold mb-2">依存関係</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{item.dependencies.join(', ')}</p>
+            </section>
+          ) : null}
         </div>
 
-        {/* サイドバー（パッケージのメタ情報とアクションボタン） */}
-        <aside className="package__aside">
-          <div className="sidecard">
-            {/* パッケージのメタ情報表示 */}
-            <div className="sideitem"><span className="sideitem__label">分類</span><span className="sideitem__value">{item.type || '?'}</span></div>
-            {item.tags?.length ? (
-              <div className="sideitem"><span className="sideitem__label">タグ</span>
-                <div className="sidelist">
-                  {item.tags.map(t => <span key={t} className="sidelist__tag">{t}</span>)}
-                </div>
+        <aside className="flex flex-col gap-4 lg:gap-0 h-full">
+          <div className="contents lg:block lg:sticky lg:top-6 lg:z-10 lg:space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+              <span>作者</span>
+              <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200"><User size={14} />{item.author || '?'}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+              <span>更新日</span>
+              <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200"><Calendar size={14} />{updated}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+              <span>最新バージョン</span>
+              <span className="text-slate-800 dark:text-slate-200">{latest}</span>
+            </div>
+            {item.installedVersion ? (
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                <span>現在のバージョン</span>
+                <span className="text-slate-800 dark:text-slate-200">{item.installedVersion}</span>
               </div>
             ) : null}
-            <div className="sideitem"><span className="sideitem__label">作者</span><span className="sideitem__value">{item.author || '?'}</span></div>
-            <div className="sideitem"><span className="sideitem__label">更新日</span><span className="sideitem__value">{updated}</span></div>
-            <div className="sideitem"><span className="sideitem__label">最新バージョン</span><span className="sideitem__value">{latest}</span></div>
-            {item.installedVersion ? (
-              <div className="sideitem"><span className="sideitem__label">現在のバージョン</span><span className="sideitem__value">{item.installedVersion}</span></div>
-            ) : null}
-            <div className="sideitem">
-              <span className="sideitem__label">ライセンス</span>
-              <span className="sideitem__value sideitem__value--licenses">
+            <div className="space-y-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">ライセンス</span>
+              <div className="flex flex-wrap gap-2">
                 {renderableLicenses.length ? (
-                  renderableLicenses.map(license => (
+                  renderableLicenses.map((license) => (
                     <button
                       type="button"
                       key={license.key}
-                      className="license-chip license-chip--compact"
+                      className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
                       onClick={() => setOpenLicense(license)}
                       aria-label={`ライセンス ${license.type || '不明'} の本文を表示`}
                     >
-                      <span className="license-chip__type">{license.type || '不明'}</span>
+                      {license.type || '不明'}
                     </button>
                   ))
                 ) : (
-                  <span>{licenseTypesLabel}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{licenseTypesLabel}</span>
                 )}
-              </span>
+              </div>
             </div>
             {item.repoURL ? (
-              <div className="sideitem"><span className="sideitem__label">リポジトリ</span><a className="sideitem__value link" href={item.repoURL} target="_blank" rel="noopener noreferrer"><span aria-hidden><Icon name="open_in_new" size={16} /></span> {item.repoURL}</a></div>
+              <a className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline dark:text-blue-400 break-all" href={item.repoURL} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={16} className="shrink-0" /> {item.repoURL}
+              </a>
             ) : null}
-            {/* アクションボタンエリア（インストール・更新・削除） */}
-            <div className="sideactions">
-              {item.installed ? (
-                <>
-                  {item.isLatest ? (
-                    <div className="sideactions__status" aria-live="polite">
-                      <span className="pill pill--ok pill--block sideactions__btn"><Icon name="check_circle" size={18} />最新{item.installedVersion ? `（${item.installedVersion}）` : ''}</span>
-                    </div>
-                  ) : (
-                    <button className="btn btn--primary sideactions__btn" onClick={onUpdate} disabled={!canInstall || updating}>
-                      {updating ? (
-                        <span className="action-progress" aria-live="polite">
-                          <ProgressCircle value={updateRatio} size={20} strokeWidth={3} ariaLabel={`${updateLabel} ${updatePercent}%`} />
-                          <span className="action-progress__label">{updateLabel} {`${updatePercent}%`}</span>
-                        </span>
-                      ) : (
-                        <>
-                          <Icon name="refresh" size={18} /> 更新
-                        </>
-                      )}
-                    </button>
-                  )}
-                  <button className="btn btn--danger sideactions__btn" onClick={onRemove} disabled={removing}>{removing ? (<><span className="spinner" aria-hidden></span> 削除中…</>) : (<><Icon name="delete" size={18} /> 削除</>)}</button>
-                </>
-              ) : (
-                <button className="btn btn--primary sideactions__btn" onClick={onDownload} disabled={!canInstall || downloading}>
-                  {downloading ? (
-                    <span className="action-progress" aria-live="polite">
-                      <ProgressCircle value={downloadRatio} size={20} strokeWidth={3} ariaLabel={`${downloadLabel} ${downloadPercent}%`} />
-                      <span className="action-progress__label">{downloadLabel} {`${downloadPercent}%`}</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span aria-hidden><svg className="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><g stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 21h16" /></g></svg></span> インストール
-                    </>
-                  )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+            {item.installed ? (
+              <>
+                {item.isLatest ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                    <CheckCircle2 size={14} /> 最新{item.installedVersion ? `（${item.installedVersion}）` : ''}
+                  </div>
+                ) : (
+                  <button
+                    className="h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 w-full"
+                    onClick={onUpdate}
+                    disabled={!canInstall || updating}
+                    type="button"
+                  >
+                    {updating ? (
+                      <span className="flex items-center gap-2">
+                        <ProgressCircle value={updateRatio} size={20} strokeWidth={3} className="text-amber-600 dark:text-amber-400" ariaLabel={`${updateLabel} ${updatePercent}%`} />
+                        {updateLabel} {`${updatePercent}%`}
+                      </span>
+                    ) : (
+                      <>
+                        <RefreshCw size={18} /> 更新
+                      </>
+                    )}
+                  </button>
+                )}
+                <button className="btn btn--danger w-full" onClick={onRemove} disabled={removing} type="button">
+                  {removing ? '削除中…' : (<><Trash2 size={18} /> 削除</>)}
                 </button>
-              )}
-            </div>
+              </>
+            ) : (
+              <button className="btn btn--primary w-full" onClick={onDownload} disabled={!canInstall || downloading} type="button">
+                {downloading ? (
+                  <span className="flex items-center gap-2">
+                    <ProgressCircle value={downloadRatio} size={20} strokeWidth={3} ariaLabel={`${downloadLabel} ${downloadPercent}%`} />
+                    {downloadLabel} {`${downloadPercent}%`}
+                  </span>
+                ) : (
+                  <>
+                    <Download size={18} /> インストール
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          </div>
+          <div className="contents lg:block lg:sticky lg:bottom-0 lg:z-10 lg:mt-auto lg:pt-4">
+            <Link to="/" className="btn btn--secondary w-full justify-center flex items-center gap-2">
+              <ArrowLeft size={18} /> パッケージ一覧に戻る
+            </Link>
           </div>
         </aside>
-      </main>
-      {openLicense && (
-        <LicenseModal license={openLicense} onClose={() => setOpenLicense(null)} />
-      )}
-      {/* エラーダイアログ（インストール/更新/削除時の失敗表示） */}
+      </div>
+
+      {openLicense && <LicenseModal license={openLicense} onClose={() => setOpenLicense(null)} />}
       <ErrorDialog open={!!error} message={error} onClose={() => setError('')} />
     </div>
   );

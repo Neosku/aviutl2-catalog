@@ -1,16 +1,13 @@
-// エラーダイアログコンポーネント
 import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Copy, Check } from 'lucide-react';
 
-// エラーを表示するダイアログコンポーネント
 export default function ErrorDialog({ open, title = 'エラーが発生しました', message = '', onClose }) {
-  const [copied, setCopied] = useState(false);  // コピー状態を管理
-  useEffect(() => { if (open) setCopied(false); }, [open]); // ダイアログが開かれたらコピー状態をリセット
-  if (!open) return null; // openがfalseなら何も表示しない
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { if (open) setCopied(false); }, [open]);
+  if (!open) return null;
 
-  // コピーボタンを押したときの処理
   async function onCopy() {
     try {
-      // クリップボードにコピー
       await navigator.clipboard.writeText(String(message || ''));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -18,51 +15,36 @@ export default function ErrorDialog({ open, title = 'エラーが発生しまし
   }
 
   return (
-    <div
-      className="modal"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="error-title"
-      aria-describedby="error-message"
-    >
-      <div className="modal__backdrop" onClick={onClose} />
-      <div className="modal__dialog modal__dialog--error">
-        <div className="modal__header modal__header--error">
-          <div className="error-dialog__title">
-            <span className="error-dialog__icon" aria-hidden>
-              <svg className="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" role="presentation">
-                <path d="M12.86 3.41 21 18.77c.37.7.12 1.57-.58 1.94-.2.1-.43.16-.66.16H4.24c-.79 0-1.43-.64-1.43-1.43 0-.24.06-.46.17-.67l8.15-15.36c.37-.7 1.24-.96 1.93-.58.23.13.43.32.56.58Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                <path d="M12 9v4.5m0 2.75h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-              </svg>
-            </span>
-            <div className="error-dialog__text">
-              <p className="error-dialog__eyebrow">Error</p>
-              <h3 id="error-title" className="modal__title">{title}</h3>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+            <AlertTriangle size={20} />
           </div>
-          <div className="error-dialog__copyWrap">
-            <button
-              className="btn btn--icon btn--ghost error-dialog__copy"
-              onClick={onCopy}
-              aria-label={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
-              title={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
-            >
-              <svg className="icon" width="15" height="15" viewBox="0 0 20 20" fill="none" role="presentation">
-                <path d="M7.5 5.5A2.5 2.5 0 0 1 10 3h5a2.5 2.5 0 0 1 2.5 2.5v5A2.5 2.5 0 0 1 15 13H10a2.5 2.5 0 0 1-2.5-2.5v-5Z" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M4.5 7.25H4A2.25 2.25 0 0 0 1.75 9.5v5.25A2.25 2.25 0 0 0 4 17h5.25A2.25 2.25 0 0 0 11.5 14.75V14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
-            </button>
-            {copied && <span className="error-dialog__copied" aria-live="polite">コピーしました</span>}
+          <div className="flex-1">
+            <p className="text-xs uppercase tracking-widest text-red-500">Error</p>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="error-title">{title}</h3>
           </div>
+          <button
+            className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            onClick={onCopy}
+            aria-label={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
+            title={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
+            type="button"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+          </button>
         </div>
-        <div className="modal__body modal__body--error">
-          <pre id="error-message" className="modal__pre modal__pre--error" aria-live="polite"><code>{String(message || '')}</code></pre>
+        <div className="px-6 py-4">
+          <pre className="max-h-64 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200" aria-live="polite">
+            <code>{String(message || '')}</code>
+          </pre>
         </div>
-        <div className="modal__actions">
-          <button className="btn btn--primary" onClick={onClose}>閉じる</button>
+        <div className="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+          <button className="btn btn--primary" onClick={onClose} type="button">閉じる</button>
         </div>
       </div>
     </div>
   );
 }
-

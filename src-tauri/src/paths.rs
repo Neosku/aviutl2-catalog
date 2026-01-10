@@ -22,6 +22,7 @@ pub struct Settings {
     pub aviutl2_root: PathBuf,     // AviUtl2 のルートディレクトリ
     pub is_portable_mode: bool,    // ポータブルモードかどうか
     pub theme: String,             // テーマ
+    pub package_state_opt_out: bool, // 匿名統計の送信を無効化する
     pub app_version: String,       // 本アプリのバージョン(UpdateCheckerの更新で使用)
     pub catalog_exe_path: PathBuf, // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
 }
@@ -156,14 +157,29 @@ fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &P
 // "init-setup" ウィンドウを開く
 fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
     if app.get_webview_window("init-setup").is_none() {
-        WebviewWindowBuilder::new(app, "init-setup", WebviewUrl::App("/".into()))
+        let mut builder = WebviewWindowBuilder::new(app, "init-setup", WebviewUrl::App("/".into()))
             .title("セットアップ")
-            .inner_size(900.0, 640.0)
+            .inner_size(850.0, 640.0)
             .resizable(true)
             .decorations(false)
-            .visible(false)
-            .build()
-            .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+            .visible(false);
+
+        #[cfg(target_os = "windows")]
+        {
+            builder = builder.initialization_script(
+                r#"
+                window.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+                        if (e.code === 'KeyP' || e.code === 'KeyJ') {
+                            e.preventDefault();
+                        }
+                    }
+                }, true);
+                "#,
+            );
+        }
+
+        builder.build().map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     } else if let Some(window) = app.get_webview_window("init-setup") {
         let _ = window.show();
         let _ = window.set_focus();
@@ -176,18 +192,35 @@ fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
 fn open_main_window(app: &AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         window.show().map_err(|e| e.to_string())?;
+        let _ = window.maximize();
         let _ = window.set_focus();
         return Ok(());
     }
 
-    let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
+    let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
         .title("AviUtl2 カタログ")
-        .inner_size(1100.0, 760.0)
+        .inner_size(950.0, 760.0)
         .resizable(true)
         .decorations(false)
-        .visible(false)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .visible(false);
+
+    #[cfg(target_os = "windows")]
+    {
+        builder = builder.initialization_script(
+            r#"
+            window.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+                    if (e.code === 'KeyP' || e.code === 'KeyJ') {
+                        e.preventDefault();
+                    }
+                }
+            }, true);
+            "#,
+        );
+    }
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    let _ = window.maximize();
     let _ = window.set_focus();
     Ok(())
 }
@@ -204,7 +237,7 @@ pub async fn complete_initial_setup(app: AppHandle) -> Result<(), String> {
 
 // aviutl2_rootを保存し、APP_DIRを更新
 #[tauri::command]
-pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_mode: bool, theme: String) -> Result<(), String> {
+pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_mode: bool, theme: String, package_state_opt_out: bool) -> Result<(), String> {
     let trimmed = aviutl2_root.trim();
     if trimmed.is_empty() {
         return Err(String::from("AviUtl2 のフォルダを選択してください。"));
@@ -220,6 +253,7 @@ pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_m
     settings.aviutl2_root = root_path;
     settings.is_portable_mode = is_portable_mode;
     settings.theme = theme.to_string();
+    settings.package_state_opt_out = package_state_opt_out;
     finalize_settings(&app, &mut settings, &settings_path, &catalog_config_dir).map_err(|e| e.to_string())
 }
 

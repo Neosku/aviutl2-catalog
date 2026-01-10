@@ -27,6 +27,11 @@ function cmpNameAsc(a, b) {
     return x < y ? -1 : (x > y ? 1 : 0);
 }
 
+function toFiniteNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+}
+
 // タイムスタンプから "YYYY-MM-DD" の形式に変換する関数
 // 無効な値(null, undefined, NaNなど)や不正な日付は空文字列を返す
 // 必要か要件等
@@ -64,12 +69,35 @@ export function filterByTagsAndType(items, tags = [], types = []) {
 }
 
 // ソート基準と方向に応じて比較結果を返す関数
-// key='name'なら名前の昇順/降順で比較、key='newest'なら更新日時の昇順(古い順)/降順(新しい順)で比較
+// key='name'なら名前の昇順/降順、key='newest'なら更新日時、key='popularity'なら人気順で比較
 // updatedAtがnullのものは常に末尾に回し、同値の場合は名前順で判定する
 export function getSorter(key = 'newest', dir = 'desc') {
     if (key === 'name') {
         if (dir === 'desc') return (a, b) => -cmpNameAsc(a, b);
         return cmpNameAsc;
+    }
+    if (key === 'popularity') {
+        const compareByUpdatedAt = (a, b) => {
+            const d = ((b.updatedAt == null ? Number.NEGATIVE_INFINITY : b.updatedAt) -
+                (a.updatedAt == null ? Number.NEGATIVE_INFINITY : a.updatedAt));
+            return d || cmpNameAsc(a, b);
+        };
+        if (dir === 'asc') {
+            return (a, b) => {
+                const ap = toFiniteNumber(a.popularityScore ?? a.popularity);
+                const bp = toFiniteNumber(b.popularityScore ?? b.popularity);
+                const d = ((ap == null ? Number.POSITIVE_INFINITY : ap) -
+                    (bp == null ? Number.POSITIVE_INFINITY : bp));
+                return d || compareByUpdatedAt(a, b);
+            };
+        }
+        return (a, b) => {
+            const ap = toFiniteNumber(a.popularityScore ?? a.popularity);
+            const bp = toFiniteNumber(b.popularityScore ?? b.popularity);
+            const d = ((bp == null ? Number.NEGATIVE_INFINITY : bp) -
+                (ap == null ? Number.NEGATIVE_INFINITY : ap));
+            return d || compareByUpdatedAt(a, b);
+        };
     }
     if (dir === 'asc') {
         return (a, b) => {
@@ -336,6 +364,263 @@ export async function getSettings() {
         } catch (_) { /* ログ失敗時は無視 */ }
         return {};
     }
+}
+
+// -------------------------
+// パッケージ状態の統計送信
+// -------------------------
+
+const PACKAGE_STATE_ENDPOINT = (import.meta.env.VITE_PACKAGE_STATE_ENDPOINT || '').trim();
+const PACKAGE_STATE_PENDING_FILE = 'pending_events.json';
+const PACKAGE_STATE_META_FILE = 'package_state.json';
+const PACKAGE_STATE_SNAPSHOT_INTERVAL_SEC = 60 * 60 * 24 * 7;
+
+let packageStateQueueOp = Promise.resolve();
+let packageStateClientVersion = null;
+// キュー操作を直列化して実行
+function runPackageStateQueueOp(task) {
+    packageStateQueueOp = packageStateQueueOp.then(task, task);
+    return packageStateQueueOp;
+}
+// 現在のUnix秒を取得
+function nowUnixSeconds() {
+    return Math.floor(Date.now() / 1000);
+}
+// UUIDv4を生成
+function generateUuidV4() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const buf = new Uint8Array(16);
+        crypto.getRandomValues(buf);
+        buf[6] = (buf[6] & 0x0f) | 0x40;
+        buf[8] = (buf[8] & 0x3f) | 0x80;
+        const hex = Array.from(buf, b => b.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+    return `uuid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+// バージョンをキャッシュ付きで取得
+async function getClientVersionCached() {
+    if (typeof packageStateClientVersion === 'string') return packageStateClientVersion;
+    try {
+        const app = await import('@tauri-apps/api/app');
+        const v = (app?.getVersion) ? await app.getVersion() : '';
+        packageStateClientVersion = String(v || '');
+    } catch (e) {
+        packageStateClientVersion = '';
+        try { await logError(`[package-state] getVersion failed: ${e?.message || e}`); } catch (_) { }
+    }
+    return packageStateClientVersion;
+}
+// JSONファイルを読み込み
+async function readAppConfigJson(relPath, fallback) {
+    const fs = await import('@tauri-apps/plugin-fs');
+    try {
+        const exists = await fs.exists(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+        if (!exists) return fallback;
+        const raw = await fs.readTextFile(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+        const trimmed = typeof raw === 'string' ? raw.trim() : '';
+        if (!trimmed) return fallback;
+        const parsed = JSON.parse(raw);
+        return parsed ?? fallback;
+    } catch (e) {
+        try { await logError(`[package-state] read ${relPath} failed: ${e?.message || e}`); } catch (_) { }
+        return fallback;
+    }
+}
+// JSONファイルを書き込み
+async function writeAppConfigJson(relPath, data) {
+    const fs = await import('@tauri-apps/plugin-fs');
+    try {
+        await fs.writeTextFile(relPath, JSON.stringify(data, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
+    } catch (e) {
+        try { await logError(`[package-state] write ${relPath} failed: ${e?.message || e}`); } catch (_) { }
+    }
+}
+// JSONファイルを削除
+async function removeAppConfigFile(relPath) {
+    const fs = await import('@tauri-apps/plugin-fs');
+    try {
+        const exists = await fs.exists(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+        if (!exists) return;
+        await fs.remove(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+    } catch (e) {
+        try { await logError(`[package-state] remove ${relPath} failed: ${e?.message || e}`); } catch (_) { }
+    }
+}
+// メタ情報を正規化
+function normalizePackageStateMeta(raw) {
+    const uid = (raw && typeof raw.uid === 'string') ? raw.uid : '';
+    const ts = Number.isFinite(raw?.last_snapshot_ts) ? raw.last_snapshot_ts : 0;
+    return { uid, last_snapshot_ts: ts };
+}
+// メタ情報を読み込み・保存
+async function loadPackageStateMeta() {
+    const raw = await readAppConfigJson(PACKAGE_STATE_META_FILE, {});
+    return normalizePackageStateMeta(raw);
+}
+// メタ情報を保存
+async function savePackageStateMeta(meta) {
+    const normalized = normalizePackageStateMeta(meta || {});
+    await writeAppConfigJson(PACKAGE_STATE_META_FILE, normalized);
+    return normalized;
+}
+// キューを読み込み・保存
+async function loadPackageStateQueue() {
+    const raw = await readAppConfigJson(PACKAGE_STATE_PENDING_FILE, []);
+    return Array.isArray(raw) ? raw : [];
+}
+// キューを保存
+async function savePackageStateQueue(queue) {
+    const list = Array.isArray(queue) ? queue : [];
+    if (!list.length) {
+        await removeAppConfigFile(PACKAGE_STATE_PENDING_FILE);
+        return [];
+    }
+    await writeAppConfigJson(PACKAGE_STATE_PENDING_FILE, list);
+    return list;
+}
+// 現在のウィンドウラベルを取得
+async function getCurrentWindowLabel() {
+    try {
+        const mod = await import('@tauri-apps/api/window');
+        const getCurrent = typeof mod.getCurrent === 'function'
+            ? mod.getCurrent
+            : (typeof mod.getCurrentWindow === 'function' ? mod.getCurrentWindow : null);
+        const win = getCurrent ? getCurrent() : (mod.appWindow || null);
+        if (!win) return '';
+        if (typeof win.label === 'string') return win.label;
+        if (typeof win.label === 'function') return await win.label();
+    } catch (e) {
+        try { await logError(`[package-state] getCurrentWindowLabel failed: ${e?.message || e}`); } catch (_) { }
+    }
+    return '';
+}
+// 送信をスキップすべきか判定
+async function shouldSkipPackageState() {
+    if (!PACKAGE_STATE_ENDPOINT) return true;
+    try {
+        const settings = await getSettings();
+        if (settings?.package_state_opt_out) return true;
+    } catch (_) { }
+    const label = await getCurrentWindowLabel();
+    return label === 'init-setup';
+}
+// UIDを取得・生成
+async function getOrCreatePackageStateUid() {
+    const meta = await loadPackageStateMeta();
+    if (meta.uid) return meta.uid;
+    meta.uid = generateUuidV4();
+    await savePackageStateMeta(meta);
+    return meta.uid;
+}
+// パッケージ状態イベントを作成
+async function createPackageStateEvent(type, extra) {
+    const uid = await getOrCreatePackageStateUid();
+    const event_id = generateUuidV4();
+    const ts = nowUnixSeconds();
+    const client_version = await getClientVersionCached();
+    return { uid, event_id, ts, type, client_version, ...(extra || {}) };
+}
+// パッケージ状態イベントを送信
+async function postPackageStateEvent(event) {
+    const res = await fetch(PACKAGE_STATE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+    });
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
+}
+// パッケージ状態イベントの説明を生成
+function describePackageStateEvent(event) {
+    const type = event?.type ? String(event.type) : 'unknown';
+    if (type === 'snapshot') {
+        const count = Array.isArray(event?.installed) ? event.installed.length : 0;
+        return `type=snapshot installed=${count}`;
+    }
+    const pkg = event?.package_id ? String(event.package_id) : '';
+    return pkg ? `type=${type} package_id=${pkg}` : `type=${type}`;
+}
+// キューをフラッシュ（送信）する内部関数
+async function flushPackageStateQueueInternal(preloadedQueue) {
+    if (await shouldSkipPackageState()) return;
+    let queue = Array.isArray(preloadedQueue) ? preloadedQueue : await loadPackageStateQueue();
+    if (!queue.length) return;
+
+    const remaining = [];
+    for (let i = 0; i < queue.length; i++) {
+        const event = queue[i];
+        try {
+            await postPackageStateEvent(event);
+            try { await logInfo(`[package-state] sent ${describePackageStateEvent(event)}`); } catch (_) { }
+            if (event?.type === 'snapshot' && Number.isFinite(event?.ts)) {
+                const meta = await loadPackageStateMeta();
+                if (event.ts > meta.last_snapshot_ts) {
+                    meta.last_snapshot_ts = event.ts;
+                    await savePackageStateMeta(meta);
+                }
+            }
+        } catch (e) {
+            remaining.push(event, ...queue.slice(i + 1));
+            try { await logError(`[package-state] send failed: ${e?.message || e}`); } catch (_) { }
+            break;
+        }
+    }
+    await savePackageStateQueue(remaining);
+}
+// パッケージ状態イベントをキューに追加
+async function enqueuePackageStateEvent(event) {
+    const queue = await loadPackageStateQueue();
+    queue.push(event);
+    await savePackageStateQueue(queue);
+    await flushPackageStateQueueInternal(queue);
+}
+// パッケージ状態キューを送信
+export async function flushPackageStateQueue() {
+    return runPackageStateQueueOp(() => flushPackageStateQueueInternal());
+}
+// パッケージ状態のローカル状態をリセット
+export async function resetPackageStateLocalState() {
+    return runPackageStateQueueOp(async () => {
+        await removeAppConfigFile(PACKAGE_STATE_PENDING_FILE);
+        const meta = await loadPackageStateMeta();
+        meta.last_snapshot_ts = 0;
+        await savePackageStateMeta(meta);
+    });
+}
+// パッケージ状態イベントを記録
+export async function recordPackageStateEvent(type, packageId) {
+    return runPackageStateQueueOp(async () => {
+        if (await shouldSkipPackageState()) return;
+        const id = String(packageId || '').trim();
+        if (!id) return;
+        const event = await createPackageStateEvent(type, { package_id: id });
+        await enqueuePackageStateEvent(event);
+    });
+}
+// インストール済みパッケージのスナップショットを記録
+export async function maybeSendPackageStateSnapshot(detectedMap) {
+    return runPackageStateQueueOp(async () => {
+        if (await shouldSkipPackageState()) return;
+        const installed = Object.entries(detectedMap || {})
+            .filter(([, v]) => v)
+            .map(([id]) => String(id));
+        const now = nowUnixSeconds();
+        const meta = await loadPackageStateMeta();
+        const queue = await loadPackageStateQueue();
+        const hasPendingSnapshot = queue.some(evt => evt && evt.type === 'snapshot');
+        const due = !meta.last_snapshot_ts || (now - meta.last_snapshot_ts) >= PACKAGE_STATE_SNAPSHOT_INTERVAL_SEC;
+        if (!hasPendingSnapshot && due) {
+            const event = await createPackageStateEvent('snapshot', { installed });
+            queue.push(event);
+            await savePackageStateQueue(queue);
+        }
+        await flushPackageStateQueueInternal(queue);
+    });
 }
 
 
@@ -1016,6 +1301,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
             const detected = String((map && map[item.id]) || '');
             dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
         }
+        try { await recordPackageStateEvent('install', item.id); } catch (_) { }
         await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
         emitProgress(totalSteps, null, null, 'done');
         // 後始末: 一時作業フォルダを削除（成功時のみ）
@@ -1128,5 +1414,6 @@ export async function runUninstallerForItem(item, dispatch) {
         const detected = String((map && map[item.id]) || '');
         dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
     }
+    try { await recordPackageStateEvent('uninstall', item.id); } catch (_) { }
     await logInfo(`[uninstall ${item.id}] completed`);
 }

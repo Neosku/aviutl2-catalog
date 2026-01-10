@@ -7,6 +7,7 @@ export default function ProgressCircle({
   strokeWidth = 4,
   showValue = false,
   ariaLabel,
+  className,
 }) {
   const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
   const radius = Math.max((size - strokeWidth) / 2, strokeWidth / 2);
@@ -17,7 +18,7 @@ export default function ProgressCircle({
 
   return (
     <span
-      className="progress-circle"
+      className={`relative inline-flex items-center justify-center ${className || ''}`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -26,7 +27,7 @@ export default function ProgressCircle({
       style={{ width: `${size}px`, height: `${size}px` }}
     >
       <svg
-        className="progress-circle__svg"
+        className="-rotate-90"
         viewBox={`0 0 ${size} ${size}`}
         width={size}
         height={size}
@@ -34,15 +35,16 @@ export default function ProgressCircle({
         aria-hidden="true"
       >
         <circle
-          className="progress-circle__track"
+          className="text-slate-200 dark:text-slate-700"
           cx={size / 2}
           cy={size / 2}
           r={radius}
           strokeWidth={strokeWidth}
+          stroke="currentColor"
           fill="none"
         />
         <circle
-          className="progress-circle__indicator"
+          className={className ? "" : "text-blue-600"}
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -50,11 +52,12 @@ export default function ProgressCircle({
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
+          stroke="currentColor"
           fill="none"
         />
       </svg>
       {showValue ? (
-        <span className="progress-circle__value">{percent}</span>
+        <span className="absolute text-[10px] font-semibold text-slate-600 dark:text-slate-200">{percent}</span>
       ) : null}
     </span>
   );

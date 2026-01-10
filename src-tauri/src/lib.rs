@@ -322,7 +322,7 @@ async fn ensure_booth_auth_window(app: tauri::AppHandle) -> Result<(), String> {
         }
         // 新規ウィンドウを作成
         let app_for_event = app_handle.clone();
-        let _window = WebviewWindowBuilder::new(&app_handle, "booth-auth", WebviewUrl::External(login_url))
+        let mut builder = WebviewWindowBuilder::new(&app_handle, "booth-auth", WebviewUrl::External(login_url))
             .title("BOOTH ログイン")
             .inner_size(900.0, 720.0)
             .resizable(true)
@@ -344,9 +344,24 @@ async fn ensure_booth_auth_window(app: tauri::AppHandle) -> Result<(), String> {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-            })
-            .build()
-            .map_err(|e| e.to_string())?;
+            });
+
+        #[cfg(target_os = "windows")]
+        {
+            builder = builder.initialization_script(
+                r#"
+                window.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+                        if (e.code === 'KeyP' || e.code === 'KeyJ') {
+                            e.preventDefault();
+                        }
+                    }
+                }, true);
+                "#,
+            );
+        }
+
+        let _window = builder.build().map_err(|e| e.to_string())?;
 
         Ok(())
     })
@@ -1315,6 +1330,24 @@ fn is_aviutl_running() -> bool {
     sys.processes().values().any(|proc| proc.name().eq_ignore_ascii_case("aviutl2.exe"))
 }
 
+#[tauri::command]
+fn launch_aviutl2(app: tauri::AppHandle) -> Result<(), String> {
+    let dirs = paths::dirs();
+    let exe_path = dirs.aviutl2_root.join("aviutl2.exe");
+    if !exe_path.exists() {
+        return Err(format!("aviutl2.exe が見つかりませんでした: {}", exe_path.display()));
+    }
+    
+    // 現在のディレクトリを aviutl2_root にして起動
+    std::process::Command::new(&exe_path)
+        .current_dir(&dirs.aviutl2_root)
+        .spawn()
+        .map_err(|e| format!("起動に失敗しました: {}", e))?;
+        
+    log_info(&app, &format!("Launched AviUtl2: {}", exe_path.display()));
+    Ok(())
+}
+
 // -----------------------
 // Tauriアプリケーションのセットアップと起動
 // -----------------------
@@ -1374,6 +1407,7 @@ pub fn run() {
             expand_macros,
             copy_item_js,
             is_aviutl_running,
+            launch_aviutl2,
             run_auo_setup,
             paths::complete_initial_setup,
             paths::update_settings,

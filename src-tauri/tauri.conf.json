@@ -17,7 +17,7 @@
       "nsis"
     ],
     "icon": [
-      "icons/icon.ico"
+      "icons/icon.svg"
     ],
     "createUpdaterArtifacts": true,
     "licenseFile": "./eula.txt",

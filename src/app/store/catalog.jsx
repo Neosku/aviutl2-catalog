@@ -21,6 +21,12 @@ function toUpdatedAt(pkg) {
   return Number.isFinite(ts) ? ts : null;
 }
 
+// popularity の数値化（無効値は null）
+function toPopularity(pkg) {
+  const score = Number(pkg?.popularity);
+  return Number.isFinite(score) ? score : null;
+}
+
 // 検索・ソート用の派生フィールドを付与
 // - updatedAt: 日付の数値化
 // - nameKey/authorKey/summaryKey: 正規化キー（部分一致検索に利用）
@@ -28,6 +34,7 @@ function enrich(item) {
   return {
     ...item,
     updatedAt: toUpdatedAt(item),
+    popularityScore: toPopularity(item),
     nameKey: normalize(item.name || ''),
     authorKey: normalize(item.author || ''),
     summaryKey: normalize(item.summary || ''),

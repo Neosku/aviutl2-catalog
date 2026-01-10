@@ -1,41 +1,30 @@
 // アプリケーションのルーティング設定
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import Icon from '../components/Icon.jsx';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import AppShell from './AppShell.jsx';
 
-// 遅延読み込み（Code Splitting）でページコンポーネントを定義
-// const Home = lazy(() => import('../pages/Home.jsx'));
 import Home from '../pages/Home.jsx';
 const Package = lazy(() => import('../pages/Package.jsx'));
-const Submit = lazy(() => import('../pages/Submit.jsx'));
+const Updates = lazy(() => import('../pages/Updates.jsx'));
+const Settings = lazy(() => import('../pages/Settings.jsx'));
+const Register = lazy(() => import('../pages/Register.jsx'));
+const Feedback = lazy(() => import('../pages/Feedback.jsx'));
 
-// メインルーターコンポーネント
-// アプリケーション全体のルーティングとナビゲーションを管理
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="container" style={{ padding: '16px' }}>読み込み中…</div>}>
+      <Suspense fallback={<div className="p-6">読み込み中…</div>}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/package/:id" element={<Package />} />
-          <Route path="/submit" element={<Submit />} />
+          <Route element={<AppShell />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/updates" element={<Updates />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/package/:id" element={<Package />} />
+          </Route>
         </Routes>
       </Suspense>
-      <FloatingHomeButtonInline />
     </BrowserRouter>
-  );
-}
-
-// フローティングホームボタンコンポーネント
-// ホーム以外のページで表示される固定位置のホームボタン
-function FloatingHomeButtonInline() {
-  const { pathname } = useLocation();
-  // ホームページの場合はボタンを表示しない
-  if (pathname === '/') return null;
-  return (
-    <Link to="/" className="fab fab--home" aria-label="ホームに戻る" title="ホームに戻る">
-      <span aria-hidden><Icon name="home" /></span>
-      <span>ホームに戻る</span>
-    </Link>
   );
 }

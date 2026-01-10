@@ -1,17 +1,13 @@
-// 画像を表示するコンポーネント
 import React, { useRef, useEffect, useState } from 'react';
-import Icon from './Icon.jsx';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ImageCarousel({ images = [] }) {
-  // スクロールコンテナへの参照（現在位置の取得・スクロール制御に使用）
   const ref = useRef(null);
-  // 現在のスライド位置
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // スクロール量から現在ページを概算
     const onScroll = () => {
       const i = Math.round(el.scrollLeft / el.clientWidth);
       setIndex(Math.min(Math.max(i, 0), images.length - 1));
@@ -20,51 +16,63 @@ export default function ImageCarousel({ images = [] }) {
     return () => el.removeEventListener('scroll', onScroll);
   }, [images.length]);
 
-  // 指定インデックスまでスムーススクロール
   function scrollTo(i) {
     const el = ref.current;
     if (!el) return;
     el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
   }
 
-  // キーボード操作（左右の矢印）
   function onKey(e) {
     if (e.key === 'ArrowRight') scrollTo(Math.min(index + 1, images.length - 1));
     if (e.key === 'ArrowLeft') scrollTo(Math.max(index - 1, 0));
   }
 
-  // 画像が無い場合は何も描画しない
   if (!images.length) return null;
   const hasPrev = index > 0;
   const hasNext = index < images.length - 1;
+
   return (
-    <div className="carousel__wrap" onKeyDown={onKey} tabIndex={0} aria-roledescription="carousel">
-      <div className="carousel" ref={ref}>
+    <div className="relative" onKeyDown={onKey} tabIndex={0} aria-roledescription="carousel">
+      <div className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory gap-4" ref={ref}>
         {images.map((img, i) => (
-          <img key={i} src={img.src} alt={img.alt || ''} />
+          <img
+            key={i}
+            src={img.src}
+            alt={img.alt || ''}
+            className="w-full flex-none snap-center rounded-2xl border border-slate-200 dark:border-slate-800 object-contain"
+          />
         ))}
       </div>
-      {/* 先頭/末尾では矢印を消す */}
-      {hasPrev ? (
-        <button className="carousel__nav prev" onClick={() => scrollTo(index - 1)} aria-label="前の画像へ">
-          <Icon name="chevron_left" size={20} />
+      {hasPrev && (
+        <button
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 text-slate-700 shadow-md hover:bg-white dark:bg-slate-900/80 dark:text-slate-100"
+          onClick={() => scrollTo(index - 1)}
+          aria-label="前の画像へ"
+          type="button"
+        >
+          <ChevronLeft size={18} className="mx-auto" />
         </button>
-      ) : null}
-      {hasNext ? (
-        <button className="carousel__nav next" onClick={() => scrollTo(index + 1)} aria-label="次の画像へ">
-          <Icon name="chevron_right" size={20} />
+      )}
+      {hasNext && (
+        <button
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 text-slate-700 shadow-md hover:bg-white dark:bg-slate-900/80 dark:text-slate-100"
+          onClick={() => scrollTo(index + 1)}
+          aria-label="次の画像へ"
+          type="button"
+        >
+          <ChevronRight size={18} className="mx-auto" />
         </button>
-      ) : null}
-      {/* 現在位置を表示するナビゲーター */}
-      <div className="carousel__dots" role="tablist">
+      )}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1" role="tablist">
         {images.map((_, i) => (
           <button
             key={i}
-            className={'dot' + (i === index ? ' is-active' : '')}
+            className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-white' : 'bg-white/40'}`}
             aria-selected={i === index}
             aria-label={`スライド ${i + 1}/${images.length}`}
             role="tab"
             onClick={() => scrollTo(i)}
+            type="button"
           />
         ))}
       </div>

@@ -4,11 +4,17 @@ import AppRouter from './app/Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './app/store/catalog.jsx';
-import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData } from './app/utils.js';
+import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData, flushPackageStateQueue, maybeSendPackageStateSnapshot } from './app/utils.js';
 import { useUpdatePrompt } from './app/hooks/useUpdatePrompt.js';
 import InitSetupApp from './app/init/InitSetupApp.jsx';
 import './app/styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window'
+
+const bootRoot = document?.documentElement;
+if (bootRoot) {
+  bootRoot.classList.add('dark');
+  bootRoot.classList.add('theme-init');
+}
 
 async function showMain() {
   const win = getCurrentWindow()
@@ -106,16 +112,21 @@ function Bootstrapper() {
     let cancelled = false;
     (async () => {
       // 設定からテーマを早期に適用
+      const root = document?.documentElement;
       try {
         const s = await getSettings();
         let theme = (s && s.theme) ? String(s.theme) : '';
         if (theme === 'noir') theme = 'darkmode';
-        if (theme === 'lightmode') {
-          document.documentElement.setAttribute('data-theme', 'lightmode');
-        } else {
-          document.documentElement.removeAttribute('data-theme');
-        }
+        const isDark = theme !== 'lightmode';
+        root?.classList.toggle('dark', isDark);
       } catch (e) { try { await logError(`[bootstrap] theme apply failed: ${e?.message || e}`); } catch (_) { } }
+      root?.classList.remove('theme-init');
+      // パッケージ状態キューをフラッシュ
+      try {
+        await flushPackageStateQueue();
+      } catch (e) {
+        try { await logError(`[package-state] flush failed: ${e?.message || e}`); } catch (_) { }
+      }
 
       try {
         // インストール情報を先に読み込んでアイテムを装飾
@@ -149,6 +160,12 @@ function Bootstrapper() {
                 const snap = await saveInstalledSnapshot(detected);
                 dispatch({ type: 'SET_INSTALLED_MAP', payload: snap });
               } catch (e) { try { await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`); } catch (_) { } }
+              // パッケージ状態スナップショットを送信
+              try {
+                await maybeSendPackageStateSnapshot(detected);
+              } catch (e) {
+                try { await logError(`[package-state] snapshot failed: ${e?.message || e}`); } catch (_) { }
+              }
             }
           } catch (e) { try { await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`); } catch (_) { } }
         } else {

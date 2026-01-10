@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Copy, Minus, Square, X } from 'lucide-react';
 import { logError } from '../app/utils.js';
 
 export default function TitleBar() {
@@ -19,10 +20,37 @@ export default function TitleBar() {
   }
 
   useEffect(() => {
+    let cancelled = false;
+    const unlisten = [];
+    const syncMax = async (w) => {
+      try { if (w?.isMaximized && !cancelled) setMax(await w.isMaximized()); } catch (_) {}
+    };
+
     (async () => {
       const w = await getWindow();
-      try { if (w?.isMaximized) setMax(await w.isMaximized()); } catch (_) {}
+      await syncMax(w);
+      const subscribe = async (fn) => {
+        if (typeof fn !== 'function') return;
+        try {
+          const off = await fn(syncMax.bind(null, w));
+          if (typeof off === 'function') unlisten.push(off);
+        } catch (_) {}
+      };
+      await subscribe(w?.onResized?.bind(w));
+      await subscribe(w?.onMoved?.bind(w));
+      await subscribe(w?.onFocusChanged?.bind(w));
+      await subscribe(w?.onScaleChanged?.bind(w));
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        const onResize = () => { syncMax(w); };
+        window.addEventListener('resize', onResize);
+        unlisten.push(() => window.removeEventListener('resize', onResize));
+      }
     })();
+
+    return () => {
+      cancelled = true;
+      unlisten.forEach((off) => { try { off(); } catch (_) {} });
+    };
   }, []);
 
   async function minimize() {
@@ -44,30 +72,49 @@ export default function TitleBar() {
     try { await w?.close(); } catch (e) { try { await logError(`[titlebar] close failed: ${e?.message || e}`); } catch (_) {} }
   }
 
+  async function startDragIfAllowed(event) {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target?.closest?.('[data-no-drag="true"]')) return;
+    const w = await getWindow();
+    if (!w?.startDragging) return;
+    try {
+      event.preventDefault();
+      await w.startDragging();
+    } catch (e) {
+      try { await logError(`[titlebar] startDragging failed: ${e?.message || e}`); } catch (_) {}
+    }
+  }
+
+  async function handleDoubleClick(event) {
+    const target = event.target;
+    if (target?.closest?.('[data-no-drag="true"]')) return;
+    await toggleMaximize();
+  }
+
+  const baseBtn = 'h-8 w-12 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors';
+  const controlBtn = 'hover:bg-slate-200 dark:hover:bg-slate-800 active:bg-slate-300 dark:active:bg-slate-700';
+
   return (
-    <div className="titlebar">
-      <div className="titlebar__left">
-        <span className="titlebar__app">AviUtl2 Catalog</span>
+    <div
+      className="flex h-8 w-full flex-none items-stretch justify-between bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 pl-2 pr-0 select-none"
+      data-tauri-drag-region
+      style={{ WebkitAppRegion: 'drag' }}
+      onPointerDown={startDragIfAllowed}
+      onDoubleClick={handleDoubleClick}
+    >
+      <div className="text-xs font-semibold tracking-wide flex items-center" data-tauri-drag-region>
+        AviUtl2 Catalog
       </div>
-      <div className="titlebar__buttons">
-        <button className="titlebtn" onClick={minimize} title="最小化" aria-label="最小化">
-          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden><rect x="1.5" y="4.5" width="7" height="1" rx="0.5" fill="currentColor" /></svg>
+      <div className="flex items-stretch" data-tauri-drag-region="false" data-no-drag="true" style={{ WebkitAppRegion: 'no-drag' }}>
+        <button className={`${baseBtn} ${controlBtn}`} onClick={minimize} title="最小化" aria-label="最小化" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+          <Minus size={14} />
         </button>
-        <button className="titlebtn" onClick={toggleMaximize} onDoubleClick={toggleMaximize} title={max ? '元に戻す' : '最大化'} aria-label="最大化">
-          {max ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-              <rect x="2.3" y="2.3" width="5.4" height="5.4" fill="none" stroke="currentColor" strokeWidth="1" />
-            </svg>
-          ) : (
-            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-              <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1" />
-            </svg>
-          )}
+        <button className={`${baseBtn} ${controlBtn}`} onClick={toggleMaximize} onDoubleClick={toggleMaximize} title={max ? '元に戻す' : '最大化'} aria-label="最大化" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+          {max ? <Copy size={13} /> : <Square size={13} />}
         </button>
-        <button className="titlebtn titlebtn--close" onClick={close} title="閉じる" aria-label="閉じる">
-          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-            <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+        <button className={`${baseBtn} hover:bg-red-600 hover:text-white active:bg-red-700`} onClick={close} title="閉じる" aria-label="閉じる" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+          <X size={14} />
         </button>
       </div>
     </div>
