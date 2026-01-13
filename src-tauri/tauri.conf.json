@@ -46,7 +46,7 @@
   },
   "app": {
     "security": {
-      "csp": "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost 'self' https: http:;"
+      "csp": "default-src 'self'; img-src 'self' https: data: blob:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost 'self' https: http:;"
     },
     "windows": []
   }
