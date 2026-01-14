@@ -6,6 +6,7 @@ export default function ProgressCircle({
   size = 24,
   strokeWidth = 4,
   showValue = false,
+  showComplete = false,
   ariaLabel,
   className,
 }) {
@@ -15,6 +16,8 @@ export default function ProgressCircle({
   const dashOffset = circumference * (1 - clamped);
   const percent = Math.round(clamped * 100);
   const label = ariaLabel || `進行度 ${percent}%`;
+  const isComplete = showComplete && clamped >= 1;
+  const iconSize = Math.max(12, Math.round(size * 0.5));
 
   return (
     <span
@@ -56,8 +59,26 @@ export default function ProgressCircle({
           fill="none"
         />
       </svg>
-      {showValue ? (
+      {showValue && !isComplete ? (
         <span className="absolute text-[10px] font-semibold text-slate-600 dark:text-slate-200">{percent}</span>
+      ) : null}
+      {isComplete ? (
+        <svg
+          className="absolute"
+          viewBox="0 0 24 24"
+          width={iconSize}
+          height={iconSize}
+          aria-hidden="true"
+        >
+          <path
+            d="M20 6L9 17L4 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       ) : null}
     </span>
   );

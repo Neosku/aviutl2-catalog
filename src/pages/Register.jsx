@@ -6,9 +6,10 @@ import { open } from '@tauri-apps/plugin-shell';
 // パッケージ登録フォーム。
 import Icon from '../components/Icon.jsx';
 import PackageCard from '../components/PackageCard.jsx';
+import ProgressCircle from '../components/ProgressCircle.jsx';
 import { renderMarkdown } from '../app/markdown.js';
 import { useCatalog } from '../app/store/catalog.jsx';
-import { getSettings } from '../app/utils.js';
+import { getSettings, runInstallerForItem, runUninstallerForItem, detectInstalledVersionsMap } from '../app/utils.js';
 import { LICENSE_TEMPLATES, LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../constants/licenseTemplates.js';
 
 // インストーラ関連で許可されるアクションやラベル定義
@@ -1735,6 +1736,55 @@ function buildPackageEntry(form, tags) {
   return entry;
 }
 
+function buildInstallerTestItem(form) {
+  const id = form.id.trim() || 'installer-test';
+  return {
+    id,
+    installer: buildInstallerPayload(form),
+    'latest-version': computeLatestVersion(form),
+    versions: buildVersionPayload(form),
+  };
+}
+
+function validateInstallerForTest(form) {
+  const sourceType = form.installer.sourceType;
+  if (!form.installer.installSteps.length) return 'インストール手順を追加してください';
+  if (sourceType === 'direct') {
+    if (!form.installer.directUrl.trim()) return 'ダウンロード URL を入力してください';
+  } else if (sourceType === 'booth') {
+    if (!form.installer.boothUrl.trim()) return 'BOOTH URL を入力してください';
+  } else if (sourceType === 'github') {
+    if (!form.installer.githubOwner.trim() || !form.installer.githubRepo.trim() || !form.installer.githubPattern.trim()) {
+      return 'GitHub ID/レポジトリ名/正規表現パターンすべてを入力してください';
+    }
+  } else if (sourceType === 'GoogleDrive') {
+    if (!form.installer.googleDriveId.trim()) return 'ファイル ID を入力してください';
+  }
+  
+  for (const step of form.installer.installSteps) {
+    if (step.action === 'run') {
+      if (!step.path.trim()) return 'EXE実行の実行パスを指定してください';
+    }
+    if (step.action === 'copy') {
+      if (!step.from.trim() || !step.to.trim()) return 'コピー元/コピー先のパスを指定してください';
+    }
+  }
+  return '';
+}
+
+function validateUninstallerForTest(form) {
+  if (!form.installer.uninstallSteps.length) return 'アンインストール手順を追加してください';
+  for (const step of form.installer.uninstallSteps) {
+    if (step.action === 'run') {
+      if (!step.path.trim()) return 'EXE実行の実行パスを指定してください';
+    }
+    if (step.action === 'delete') {
+      if (!step.path.trim()) return '削除するパスを指定してください';
+    }
+  }
+  return '';
+}
+
 function validatePackageForm(form) {
   if (!form.id.trim()) return 'ID は必須です';
   if (!ID_PATTERN.test(form.id.trim())) return 'ID は英数字・ドット・アンダーバー・ハイフンのみ使用できます';
@@ -1824,6 +1874,15 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [previewDarkMode, setPreviewDarkMode] = useState(false);
+  const [installerTestRunning, setInstallerTestRunning] = useState(false);
+  const [installerTestProgress, setInstallerTestProgress] = useState(null);
+  const [installerTestError, setInstallerTestError] = useState('');
+  const [installerTestDetectedVersion, setInstallerTestDetectedVersion] = useState('');
+  const [uninstallerTestRunning, setUninstallerTestRunning] = useState(false);
+  const [uninstallerTestError, setUninstallerTestError] = useState('');
+  const [uninstallerTestDone, setUninstallerTestDone] = useState(false);
+  const installerTestTokenRef = useRef(0);
+  const uninstallerTestTokenRef = useRef(0);
 
   // カタログ一覧・フォーム状態・送信関連のステート群
   const [catalogItems, setCatalogItems] = useState([]);
@@ -1852,6 +1911,36 @@ export default function Register() {
   const renderImages = packageForm.images;
   const renderInstaller = packageForm.installer;
   const renderVersions = packageForm.versions;
+  const installerTestValidation = useMemo(() => validateInstallerForTest(packageForm), [packageForm]);
+  const installerTestRatio = installerTestProgress?.ratio ?? 0;
+  const installerTestPercent = installerTestProgress?.percent ?? Math.round(installerTestRatio * 100);
+  const installerTestLabel = installerTestProgress?.label ?? '';
+  const installerTestPhase = installerTestProgress?.phase ?? 'idle';
+  const installerTestTone = installerTestPhase === 'error'
+    ? 'text-red-600 dark:text-red-400'
+    : installerTestPhase === 'done'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-blue-600 dark:text-blue-400';
+  const uninstallerTestValidation = useMemo(() => validateUninstallerForTest(packageForm), [packageForm]);
+  const uninstallerTestPhase = uninstallerTestError
+    ? 'error'
+    : uninstallerTestRunning
+      ? 'running'
+      : uninstallerTestDone
+        ? 'done'
+        : 'idle';
+  const uninstallerTestTone = uninstallerTestPhase === 'error'
+    ? 'text-red-600 dark:text-red-400'
+    : uninstallerTestPhase === 'done'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-blue-600 dark:text-blue-400';
+  const uninstallerTestRatio = uninstallerTestPhase === 'done' ? 1 : uninstallerTestPhase === 'running' ? 0.4 : 0;
+  const uninstallerTestPercent = Math.round(uninstallerTestRatio * 100);
+  const uninstallerTestLabel = uninstallerTestPhase === 'running'
+    ? '実行中…'
+    : uninstallerTestPhase === 'done'
+      ? '完了'
+      : '';
   const tagCandidates = useMemo(() => {
     const set = new Set(allTags || []);
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), 'ja'));
@@ -1867,6 +1956,18 @@ export default function Register() {
     document.body.classList.add('route-register');
     return () => { document.body.classList.remove('route-register'); };
   }, []);
+
+  useEffect(() => {
+    installerTestTokenRef.current += 1;
+    uninstallerTestTokenRef.current += 1;
+    setInstallerTestRunning(false);
+    setInstallerTestProgress(null);
+    setInstallerTestError('');
+    setInstallerTestDetectedVersion('');
+    setUninstallerTestRunning(false);
+    setUninstallerTestError('');
+    setUninstallerTestDone(false);
+  }, [selectedPackageId]);
 
   // 設定からテーマを読み込んでプレビューの初期値を設定
   useEffect(() => {
@@ -2511,6 +2612,73 @@ export default function Register() {
     }
   }, []);
 
+  const handleInstallerTest = useCallback(async () => {
+    if (installerTestRunning) return;
+    setInstallerTestError('');
+    setInstallerTestDetectedVersion('');
+    const validation = validateInstallerForTest(packageForm);
+    if (validation) {
+      return;
+    }
+    const testItem = buildInstallerTestItem(packageForm);
+    const token = installerTestTokenRef.current + 1;
+    installerTestTokenRef.current = token;
+    setInstallerTestRunning(true);
+    setInstallerTestProgress({ ratio: 0, percent: 0, label: '準備中…', phase: 'init' });
+    try {
+      await runInstallerForItem(testItem, null, (progress) => {
+        if (installerTestTokenRef.current !== token) return;
+        setInstallerTestProgress(progress);
+      });
+      if (installerTestTokenRef.current !== token) return;
+      try {
+        const map = await detectInstalledVersionsMap([testItem]);
+        if (installerTestTokenRef.current !== token) return;
+        const detected = String((map && map[testItem.id]) || '');
+        setInstallerTestDetectedVersion(detected);
+      } catch (_) {
+        if (installerTestTokenRef.current !== token) return;
+        setInstallerTestDetectedVersion('');
+      }
+    } catch (err) {
+      if (installerTestTokenRef.current !== token) return;
+      const detail = err?.message || String(err) || '原因不明のエラー';
+      setInstallerTestError(`インストーラーテストに失敗しました。\n\n${detail}`);
+    } finally {
+      if (installerTestTokenRef.current === token) {
+        setInstallerTestRunning(false);
+      }
+    }
+  }, [installerTestRunning, packageForm]);
+
+  const handleUninstallerTest = useCallback(async () => {
+    if (uninstallerTestRunning) return;
+    setUninstallerTestError('');
+    setUninstallerTestDone(false);
+    const validation = validateUninstallerForTest(packageForm);
+    if (validation) {
+      return;
+    }
+    const testItem = buildInstallerTestItem(packageForm);
+    const token = uninstallerTestTokenRef.current + 1;
+    uninstallerTestTokenRef.current = token;
+    setUninstallerTestRunning(true);
+    try {
+      await runUninstallerForItem(testItem, null);
+      if (uninstallerTestTokenRef.current === token) {
+        setUninstallerTestDone(true);
+      }
+    } catch (err) {
+      if (uninstallerTestTokenRef.current !== token) return;
+      const detail = err?.message || String(err) || '原因不明のエラー';
+      setUninstallerTestError(`削除テストに失敗しました。\n\n${detail}`);
+    } finally {
+      if (uninstallerTestTokenRef.current === token) {
+        setUninstallerTestRunning(false);
+      }
+    }
+  }, [uninstallerTestRunning, packageForm]);
+
   const packageMdFilename = useMemo(() => {
     const id = packageForm.id.trim() || 'package';
     return `${id}.md`;
@@ -3007,6 +3175,121 @@ export default function Register() {
                         }}
                       />
                     </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">インストーラー / 削除テスト</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">現在の設定でインストールと削除の動作を確認します。</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-blue-500"
+                      onClick={handleInstallerTest}
+                      disabled={installerTestRunning || !!installerTestValidation}
+                      title={installerTestValidation || ''}
+                    >
+                      {installerTestRunning ? (
+                        <ProgressCircle value={installerTestRatio} size={16} strokeWidth={3} className="text-white" ariaLabel="インストーラーテストの進行度" />
+                      ) : (
+                        <Icon name="download" size={14} />
+                      )}
+                      <span>{installerTestRunning ? '実行中…' : 'インストールテスト'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-200 dark:hover:bg-red-900/30"
+                      onClick={handleUninstallerTest}
+                      disabled={uninstallerTestRunning || !!uninstallerTestValidation}
+                      title={uninstallerTestValidation || ''}
+                    >
+                      <Icon name="trash_2" size={14} />
+                      <span>{uninstallerTestRunning ? '実行中…' : '削除テスト'}</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">インストールテスト</div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <ProgressCircle value={installerTestRatio} size={32} strokeWidth={3} className={installerTestTone} ariaLabel="インストーラーテストの進行度" showComplete={installerTestPhase === 'done'} />
+                      <div className="space-y-1">
+                        {installerTestLabel && (
+                          <div className={`text-sm font-semibold ${installerTestTone}`}>{installerTestLabel}</div>
+                        )}
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{installerTestPercent}%</div>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70">
+                      <div
+                        className={`h-full rounded-full transition-all ${installerTestPhase === 'error'
+                          ? 'bg-red-500'
+                          : installerTestPhase === 'done'
+                            ? 'bg-emerald-500'
+                            : 'bg-blue-500'
+                          }`}
+                        style={{ width: `${installerTestPercent}%` }}
+                      />
+                    </div>
+                    {installerTestPhase === 'done' && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        検出バージョン:
+                        <span className="ml-1 font-mono text-slate-700 dark:text-slate-200">
+                          {installerTestDetectedVersion || '未検出'}
+                        </span>
+                      </div>
+                    )}
+                    {installerTestValidation && (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                        <Icon name="alert_circle" size={16} className="mt-0.5 flex-shrink-0" />
+                        <span className="text-xs">{installerTestValidation}</span>
+                      </div>
+                    )}
+                    {installerTestError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+                        <div className="text-xs font-semibold">エラー</div>
+                        <div className="whitespace-pre-line text-xs">{installerTestError}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">削除テスト</div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <ProgressCircle value={uninstallerTestRatio} size={32} strokeWidth={3} className={uninstallerTestTone} ariaLabel="削除テストの進行度" showComplete={uninstallerTestPhase === 'done'} />
+                      <div className="space-y-1">
+                        {uninstallerTestLabel && (
+                          <div className={`text-sm font-semibold ${uninstallerTestTone}`}>{uninstallerTestLabel}</div>
+                        )}
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{uninstallerTestPercent}%</div>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70">
+                      <div
+                        className={`h-full rounded-full transition-all ${uninstallerTestPhase === 'error'
+                          ? 'bg-red-500'
+                          : uninstallerTestPhase === 'done'
+                            ? 'bg-emerald-500'
+                            : 'bg-blue-500'
+                          }`}
+                        style={{ width: `${uninstallerTestPercent}%` }}
+                      />
+                    </div>
+                    {uninstallerTestValidation && (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                        <Icon name="alert_circle" size={16} className="mt-0.5 flex-shrink-0" />
+                        <span className="text-xs">{uninstallerTestValidation}</span>
+                      </div>
+                    )}
+                    {uninstallerTestError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+                        <div className="text-xs font-semibold">エラー</div>
+                        <div className="whitespace-pre-line text-xs">{uninstallerTestError}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
