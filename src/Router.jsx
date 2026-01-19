@@ -1,14 +1,14 @@
 // アプリケーションのルーティング設定
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AppShell from './AppShell.jsx';
+import AppShell from './components/AppShell.jsx';
 
-import Home from '../pages/Home.jsx';
-const Package = lazy(() => import('../pages/Package.jsx'));
-const Updates = lazy(() => import('../pages/Updates.jsx'));
-const Settings = lazy(() => import('../pages/Settings.jsx'));
-const Register = lazy(() => import('../pages/Register.jsx'));
-const Feedback = lazy(() => import('../pages/Feedback.jsx'));
+import Home from './pages/Home.jsx';
+const Package = lazy(() => import('./pages/Package.jsx'));
+const Updates = lazy(() => import('./pages/Updates.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const Feedback = lazy(() => import('./pages/Feedback.jsx'));
 
 export default function AppRouter() {
   return (

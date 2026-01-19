@@ -5,7 +5,7 @@
 // - allTags/allTypes: UI のフィルター候補（全件から抽出）
 // - installedMap/detectedMap: インストール情報（検出結果）
 import React, { createContext, useReducer, useContext, useMemo } from 'react';
-import { normalize, latestVersionOf } from '../utils.js';
+import { normalize, latestVersionOf } from './index.js';
 
 // 読み取り用/更新用の Context を分離して、再レンダリングを最小化
 const CatalogStateContext = createContext(null);

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Moon, Sun, FolderOpen, Download, Upload, Info, Check } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
-import { detectInstalledVersionsMap, getSettings, loadInstalledMap, logError, runInstallerForItem, runUninstallerForItem, saveInstalledSnapshot, hasInstaller, resetPackageStateLocalState } from '../app/utils.js';
+import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
+import { detectInstalledVersionsMap, getSettings, loadInstalledMap, logError, runInstallerForItem, runUninstallerForItem, saveInstalledSnapshot, hasInstaller, resetPackageStateLocalState } from '../utils/index.js';
 
 const THEME_OPTIONS = [
   { value: 'darkmode', label: 'ダークモード', icon: Moon },

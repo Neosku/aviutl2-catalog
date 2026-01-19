@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
-import { renderMarkdown } from '../app/markdown.js';
+import { renderMarkdown } from '../utils/markdown.js';
 
 export default function UpdateDialog({ open, version, notes, busy, error, onConfirm, onCancel, publishedOn }) {
   const markdownHtml = useMemo(() => (notes ? renderMarkdown(notes) : ''), [notes]);

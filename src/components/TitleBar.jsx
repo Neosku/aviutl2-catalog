@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Copy, Minus, Square, X } from 'lucide-react';
-import { logError } from '../app/utils.js';
+import { logError } from '../utils/index.js';
 
 export default function TitleBar() {
   const [max, setMax] = useState(false);

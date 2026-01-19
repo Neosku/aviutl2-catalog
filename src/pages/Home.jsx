@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Package, CheckCircle2, Filter, X, ArrowUpDown, ChevronDown, ChevronUp, Layers, Tags } from 'lucide-react';
-import { useHomeContext, SORT_OPTIONS } from '../app/AppShell.jsx';
+import { useHomeContext, SORT_OPTIONS } from '../components/AppShell.jsx';
 import PackageCard from '../components/PackageCard.jsx';
 
 export default function Home() {

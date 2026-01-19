@@ -4,12 +4,12 @@ import { useParams, Link } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-shell';
 import ImageCarousel from '../components/ImageCarousel.jsx';
 import { CheckCircle2, Download, ExternalLink, RefreshCw, Trash2, User, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
-import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
-import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, removeInstalledId, latestVersionOf, loadInstalledMap } from '../app/utils.js';
-import { renderMarkdown } from '../app/markdown.js';
+import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
+import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, removeInstalledId, latestVersionOf, loadInstalledMap } from '../utils/index.js';
+import { renderMarkdown } from '../utils/markdown.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
-import { buildLicenseBody } from '../constants/licenseTemplates.js';
+import { buildLicenseBody } from '../utils/licenseTemplates.js';
 
 // パスがmdファイルパスかどうか判定
 function isMarkdownFilePath(path) {
@@ -243,7 +243,7 @@ export default function Package() {
         await removeInstalledId(item.id);
         const installedMap = await loadInstalledMap();
         dispatch({ type: 'SET_INSTALLED_MAP', payload: installedMap });
-        const detectedMap = await import('../app/utils.js').then(m => m.detectInstalledVersionsMap([item]));
+        const detectedMap = await import('../utils/index.js').then(m => m.detectInstalledVersionsMap([item]));
         const detected = String((detectedMap && detectedMap[item.id]) || '');
         dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
       }

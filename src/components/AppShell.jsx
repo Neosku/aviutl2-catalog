@@ -22,11 +22,11 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { useCatalog } from './store/catalog.jsx';
-import { filterByTagsAndType, getSorter, matchQuery } from './utils.js';
-import ErrorDialog from '../components/ErrorDialog.jsx';
+import { useCatalog } from '../utils/catalogStore.jsx';
+import { filterByTagsAndType, getSorter, matchQuery } from '../utils/index.js';
+import ErrorDialog from './ErrorDialog.jsx';
 import aviutl2Icon from '../../src-tauri/icons/aviutl2.png';
-import appIcon from '../../src-tauri/icons/icon.png';
+import appIcon from '../../src-tauri/icons/icon.svg';
 
 export const SORT_OPTIONS = [
   { value: 'popularity_desc', label: '人気順' },

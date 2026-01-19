@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { useCatalog, useCatalogDispatch } from '../app/store/catalog.jsx';
-import { hasInstaller, latestVersionOf, logError, runInstallerForItem } from '../app/utils.js';
+import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
+import { hasInstaller, latestVersionOf, logError, runInstallerForItem } from '../utils/index.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
 

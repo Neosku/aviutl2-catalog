@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { logError } from '../utils.js';
+import { logError } from './index.js';
 
 function resolvePubDate(update) {
     if (!update || typeof update !== 'object') return { raw: '', label: '' };

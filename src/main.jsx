@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import AppRouter from './app/Router.jsx';
+import AppRouter from './Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
-import { CatalogProvider, useCatalogDispatch, initCatalog } from './app/store/catalog.jsx';
-import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData, flushPackageStateQueue, maybeSendPackageStateSnapshot } from './app/utils.js';
-import { useUpdatePrompt } from './app/hooks/useUpdatePrompt.js';
-import InitSetupApp from './app/init/InitSetupApp.jsx';
-import './app/styles/index.css';
+import { CatalogProvider, useCatalogDispatch, initCatalog } from './utils/catalogStore.jsx';
+import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData, flushPackageStateQueue, maybeSendPackageStateSnapshot } from './utils/index.js';
+import { useUpdatePrompt } from './utils/useUpdatePrompt.js';
+import InitSetupApp from './pages/InitSetupApp.jsx';
+import './styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 const bootRoot = document?.documentElement;

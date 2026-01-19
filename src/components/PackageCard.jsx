@@ -9,8 +9,8 @@ import {
   CheckCircle2,
   Calendar,
 } from 'lucide-react';
-import { formatDate, hasInstaller, removeInstalledId, runInstallerForItem, runUninstallerForItem, loadInstalledMap } from '../app/utils.js';
-import { useCatalogDispatch } from '../app/store/catalog.jsx';
+import { formatDate, hasInstaller, removeInstalledId, runInstallerForItem, runUninstallerForItem, loadInstalledMap } from '../utils/index.js';
+import { useCatalogDispatch } from '../utils/catalogStore.jsx';
 import ErrorDialog from './ErrorDialog.jsx';
 import ProgressCircle from './ProgressCircle.jsx';
 
@@ -92,7 +92,7 @@ export default function PackageCard({ item }) {
         await removeInstalledId(item.id);
         const map = await loadInstalledMap();
         dispatch({ type: 'SET_INSTALLED_MAP', payload: map });
-        const map2 = await import('../app/utils.js').then((m) => m.detectInstalledVersionsMap([item]));
+        const map2 = await import('../utils/index.js').then((m) => m.detectInstalledVersionsMap([item]));
         const v2 = String((map2 && map2[item.id]) || '');
         dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: v2 } });
       }

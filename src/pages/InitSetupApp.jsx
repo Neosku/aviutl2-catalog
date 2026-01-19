@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import TitleBar from '../../components/TitleBar.jsx';
-import Icon from '../../components/Icon.jsx';
-import ProgressCircle from '../../components/ProgressCircle.jsx';
-import UpdateDialog from '../../components/UpdateDialog.jsx';
-import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils.js';
-import { useUpdatePrompt } from '../hooks/useUpdatePrompt.js';
+import TitleBar from '../components/TitleBar.jsx';
+import Icon from '../components/Icon.jsx';
+import ProgressCircle from '../components/ProgressCircle.jsx';
+import UpdateDialog from '../components/UpdateDialog.jsx';
+import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils/index.js';
+import { useUpdatePrompt } from '../utils/useUpdatePrompt.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import AppIcon from '../../assets/app-icon.svg';
+import AppIcon from '../../src-tauri/icons/icon.svg';
 
 async function showMain() {
   const win = getCurrentWindow()

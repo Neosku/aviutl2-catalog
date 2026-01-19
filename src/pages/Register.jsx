@@ -7,10 +7,10 @@ import { open } from '@tauri-apps/plugin-shell';
 import Icon from '../components/Icon.jsx';
 import PackageCard from '../components/PackageCard.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
-import { renderMarkdown } from '../app/markdown.js';
-import { useCatalog } from '../app/store/catalog.jsx';
-import { getSettings, runInstallerForItem, runUninstallerForItem, detectInstalledVersionsMap } from '../app/utils.js';
-import { LICENSE_TEMPLATES, LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../constants/licenseTemplates.js';
+import { renderMarkdown } from '../utils/markdown.js';
+import { useCatalog } from '../utils/catalogStore.jsx';
+import { getSettings, runInstallerForItem, runUninstallerForItem, detectInstalledVersionsMap } from '../utils/index.js';
+import { LICENSE_TEMPLATES, LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../utils/licenseTemplates.js';
 
 // インストーラ関連で許可されるアクションやラベル定義
 const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];

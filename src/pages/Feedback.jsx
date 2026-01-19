@@ -11,7 +11,7 @@ import {
   FileText, 
   Trash2 
 } from 'lucide-react';
-import { collectDeviceInfo, readAppLog, loadInstalledMap } from '../app/utils.js';
+import { collectDeviceInfo, readAppLog, loadInstalledMap } from '../utils/index.js';
 
 const SUBMIT_ACTIONS = {
   bug: 'issues',
