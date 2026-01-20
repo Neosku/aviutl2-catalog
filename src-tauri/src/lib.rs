@@ -1337,13 +1337,10 @@ fn launch_aviutl2(app: tauri::AppHandle) -> Result<(), String> {
     if !exe_path.exists() {
         return Err(format!("aviutl2.exe が見つかりませんでした: {}", exe_path.display()));
     }
-    
+
     // 現在のディレクトリを aviutl2_root にして起動
-    std::process::Command::new(&exe_path)
-        .current_dir(&dirs.aviutl2_root)
-        .spawn()
-        .map_err(|e| format!("起動に失敗しました: {}", e))?;
-        
+    std::process::Command::new(&exe_path).current_dir(&dirs.aviutl2_root).spawn().map_err(|e| format!("起動に失敗しました: {}", e))?;
+
     log_info(&app, &format!("Launched AviUtl2: {}", exe_path.display()));
     Ok(())
 }
@@ -1354,8 +1351,17 @@ fn launch_aviutl2(app: tauri::AppHandle) -> Result<(), String> {
 
 // Tauriアプリケーションのメインエントリーポイント
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(target_os = "windows")]
+    {
+        // アプリの多重起動を防止
+        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}));
+    }
+
+    builder
         // フロントエンドで使用される Tauri v2 プラグインを登録
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
@@ -1374,6 +1380,13 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            #[cfg(all(debug_assertions, target_os = "windows"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                // 開発時のみ OS にスキーム登録
+                app.deep_link().register_all().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            }
+
             // 起動時に app.log を最新 1000 行に削減
             paths::init_settings(&app.handle())?;
             let _ = init_app(&app.handle());

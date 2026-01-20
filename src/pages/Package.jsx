@@ -1,6 +1,6 @@
 // パッケージの詳細ページコンポーネント
-import React, { useMemo, useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-shell';
 import ImageCarousel from '../components/ImageCarousel.jsx';
 import { CheckCircle2, Download, ExternalLink, RefreshCw, Trash2, User, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -63,7 +63,8 @@ function LicenseModal({ license, onClose }) {
 // 指定されたパッケージの詳細情報を表示し、インストール・更新・削除機能を提供
 export default function Package() {
   const { id } = useParams();
-  const { items } = useCatalog();
+  const location = useLocation();
+  const { items, loading } = useCatalog();
   const dispatch = useCatalogDispatch();
 
   // URLパラメータのIDに基づいてアイテムを検索
@@ -104,6 +105,8 @@ export default function Package() {
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
   const [openLicense, setOpenLicense] = useState(null);
+  // install=true の自動実行を1回に抑制
+  const autoInstallRef = useRef('');
 
   const baseURL = "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/"
   // MarkdownファイルのベースURL（相対パス解決用）
@@ -153,7 +156,7 @@ export default function Package() {
   }, [descriptionSource, baseURL]);
 
   // インストール可能かどうかの判定
-  const canInstall = hasInstaller(item) || !!item.downloadURL;
+  const canInstall = item ? (hasInstaller(item) || !!item.downloadURL) : false;
   const downloadRatio = downloadProgress?.ratio ?? 0;
   const downloadPercent = downloadProgress?.percent ?? Math.round(downloadRatio * 100);
   const downloadLabel = downloadProgress?.label ?? '準備中…';
@@ -187,15 +190,6 @@ export default function Package() {
     return types.length ? types.join(', ') : '?';
   }, [item]);
 
-  // アイテムが見つからない場合のエラー表示
-  if (!item) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <div className="error">パッケージが見つかりませんでした。</div>
-      </div>
-    );
-  }
-
   // ダウンロード/インストール処理
   async function onDownload() {
     try {
@@ -212,6 +206,36 @@ export default function Package() {
       setDownloading(false);
       setDownloadProgress(null);
     }
+  }
+
+  useEffect(() => {
+    if (!item) return;
+    const params = new URLSearchParams(location.search || '');
+    const installRequested = params.get('install') === 'true';
+    // インストールボタンと同じ条件で自動実行
+    if (!installRequested) return;
+    if (item.installed) return;
+    if (!canInstall || downloading) return;
+    const key = `${item.id}|${location.search || ''}`;
+    if (autoInstallRef.current === key) return;
+    autoInstallRef.current = key;
+    void onDownload();
+  }, [item, location.search, canInstall, downloading]);
+
+  // アイテムが見つからない場合のエラー表示
+  if (!item) {
+    if (loading || items.length === 0) {
+      return (
+        <div className="max-w-3xl mx-auto">
+          <div className="p-6 text-slate-500 dark:text-slate-400">読み込み中…</div>
+        </div>
+      );
+    }
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="error">パッケージが見つかりませんでした。</div>
+      </div>
+    );
   }
 
   // 更新処理（最新版で上書きインストール）

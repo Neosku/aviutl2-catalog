@@ -9,6 +9,7 @@
   ],
   "permissions": [
     "core:default",
+    "core:event:default",
     "core:window:default",
     "core:window:allow-set-focus",
     "core:window:allow-show",
@@ -44,6 +45,7 @@
     "updater:default",
     "updater:allow-check",
     "updater:allow-download-and-install",
+    "deep-link:default",
     "process:allow-restart",
     "http:default",
     "fs:default",

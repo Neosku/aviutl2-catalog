@@ -2,6 +2,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
+import DeepLinkHandler from './components/DeepLinkHandler.jsx';
 
 import Home from './pages/Home.jsx';
 const Package = lazy(() => import('./pages/Package.jsx'));
@@ -13,6 +14,7 @@ const Feedback = lazy(() => import('./pages/Feedback.jsx'));
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <DeepLinkHandler />
       <Suspense fallback={<div className="p-6">読み込み中…</div>}>
         <Routes>
           <Route element={<AppShell />}>

@@ -42,6 +42,13 @@
         "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/aviutl2_catalog_update.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDODNBNTVDRjYyNEFDNDcKUldSSHJDVDJYS1dEM09tc09VWjlzVHJaeGo1MFlJMTVOZnBGSTAvOUQ3MUZHTDM1cjZ6akVqWjEK"
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "aviutl2-catalog"
+        ]
+      }
     }
   },
   "app": {
