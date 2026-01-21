@@ -66,6 +66,23 @@ function isMarkdownPath(value) {
   return typeof value === 'string' && /\.md$/i.test(value.trim());
 }
 
+function isHttpsUrl(value) {
+  return /^https:\/\//i.test(String(value || '').trim());
+}
+
+function getDescriptionSourceUrl(form, baseUrl) {
+  if (!form || typeof form !== 'object') return '';
+  if (form.descriptionMode === 'external') {
+    const externalUrl = String(form.descriptionUrl || '').trim();
+    return isHttpsUrl(externalUrl) ? externalUrl : '';
+  }
+  const descriptionPath = String(form.descriptionPath || '').trim();
+  if (isMarkdownPath(descriptionPath) && !isHttpsUrl(descriptionPath)) {
+    return resolveRelativeUrl(descriptionPath, baseUrl);
+  }
+  return '';
+}
+
 function buildPreviewUrl(src, baseUrl) {
   if (!src) return '';
   if (!baseUrl) return src;
@@ -267,6 +284,8 @@ function createEmptyPackageForm() {
     summary: '',
     descriptionText: '',
     descriptionPath: '',
+    descriptionMode: 'inline',
+    descriptionUrl: '',
     repoURL: '',
     licenses: [createEmptyLicense()],
     dependenciesText: '',
@@ -524,7 +543,7 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
                 ))
               )}
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                <details className="group" open>
+                <details className="group">
                   <summary className="flex cursor-pointer items-center justify-between bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                     <span>プレビュー</span>
                     <div className="flex items-center gap-2">
@@ -1529,14 +1548,19 @@ function parseLicenses(rawLicenses, legacyLicense = '') {
 function entryToForm(item, baseUrl = '') {
   if (!item || typeof item !== 'object') return createEmptyPackageForm();
   const form = createEmptyPackageForm();
+  const rawDescription = typeof item.description === 'string' ? item.description : '';
+  const descriptionValue = String(rawDescription || '');
+  const isExternalDescription = isHttpsUrl(descriptionValue);
   form.id = String(item.id || '');
   form.name = String(item.name || '');
   form.author = String(item.author || '');
   form.originalAuthor = String(item.originalAuthor || '');
   form.type = String(item.type || '');
   form.summary = String(item.summary || '');
-  form.descriptionPath = typeof item.description === 'string' ? item.description : '';
-  form.descriptionText = (typeof item.description === 'string' && !isMarkdownPath(item.description)) ? item.description : '';
+  form.descriptionPath = descriptionValue;
+  form.descriptionMode = isExternalDescription ? 'external' : 'inline';
+  form.descriptionUrl = isExternalDescription ? descriptionValue : '';
+  form.descriptionText = (!isExternalDescription && descriptionValue && !isMarkdownPath(descriptionValue)) ? descriptionValue : '';
   form.repoURL = String(item.repoURL || '');
   form.licenses = parseLicenses(item.licenses, item.license);
   form.tagsText = arrayToCommaList(item.tags);
@@ -1711,12 +1735,15 @@ async function computeHashFromFile(fileOrPath) {
 // フォーム入力＋タグ配列から index.json の1エントリを構築
 function buildPackageEntry(form, tags) {
   const id = form.id.trim();
+  const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
+  const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
+  const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
   const entry = {
     id,
     name: form.name.trim(),
     type: form.type.trim(),
     summary: form.summary.trim(),
-    description: `./md/${id}.md`,
+    description: useExternalDescription ? externalDescriptionUrl : `./md/${id}.md`,
     author: form.author.trim(),
     originalAuthor: form.originalAuthor.trim(),
     repoURL: form.repoURL.trim(),
@@ -1760,7 +1787,7 @@ function validateInstallerForTest(form) {
   } else if (sourceType === 'GoogleDrive') {
     if (!form.installer.googleDriveId.trim()) return 'ファイル ID を入力してください';
   }
-  
+
   for (const step of form.installer.installSteps) {
     if (step.action === 'run') {
       if (!step.path.trim()) return 'EXE実行の実行パスを指定してください';
@@ -1793,7 +1820,13 @@ function validatePackageForm(form) {
   if (!form.type.trim()) return '種類は必須です';
   if (!form.summary.trim()) return '概要は必須です';
   if (form.summary.trim().length > 35) return '概要は35文字以内で入力してください';
-  if (!form.descriptionText.trim()) return '詳細を入力してください';
+  const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
+  if (descriptionMode === 'external') {
+    const externalUrl = String(form.descriptionUrl || '').trim();
+    if (!isHttpsUrl(externalUrl)) return '外部Markdown のURLは https:// で始まる形式で入力してください';
+  } else if (!form.descriptionText.trim()) {
+    return '詳細を入力してください';
+  }
   if (!form.licenses.length) return 'ライセンスを1件以上追加してください';
   for (const license of form.licenses) {
     const type = String(license.type || '').trim();
@@ -1907,10 +1940,20 @@ export default function Register() {
   const dragHandleRef = useRef({ active: false, type: '', index: -1 });
   const { allTags } = useCatalog();
   const [descriptionPreviewHtml, setDescriptionPreviewHtml] = useState('');
-  const deferredDescriptionText = useDeferredValue(descriptionTab === 'preview' ? packageForm.descriptionText : '');
+  const [externalDescriptionText, setExternalDescriptionText] = useState('');
+  const [externalDescriptionStatus, setExternalDescriptionStatus] = useState('idle');
   const renderImages = packageForm.images;
   const renderInstaller = packageForm.installer;
   const renderVersions = packageForm.versions;
+  const isExternalDescription = packageForm.descriptionMode === 'external';
+  const descriptionPreviewSource = isExternalDescription ? externalDescriptionText : packageForm.descriptionText;
+  const deferredDescriptionText = useDeferredValue(descriptionTab === 'preview' ? descriptionPreviewSource : '');
+  const hasExternalDescriptionUrl = isExternalDescription && isHttpsUrl(packageForm.descriptionUrl);
+  const isExternalDescriptionLoaded = hasExternalDescriptionUrl && externalDescriptionStatus === 'success';
+  const descriptionSourceUrl = useMemo(
+    () => getDescriptionSourceUrl(packageForm, catalogBaseUrl),
+    [packageForm.descriptionMode, packageForm.descriptionUrl, packageForm.descriptionPath, catalogBaseUrl]
+  );
   const installerTestValidation = useMemo(() => validateInstallerForTest(packageForm), [packageForm]);
   const installerTestRatio = installerTestProgress?.ratio ?? 0;
   const installerTestPercent = installerTestProgress?.percent ?? Math.round(installerTestRatio * 100);
@@ -2008,6 +2051,54 @@ export default function Register() {
     };
   }, [descriptionTab, deferredDescriptionText]);
 
+  // descriptionSourceUrl が変わったら内容を取得してフォームに反映
+  useEffect(() => {
+    if (!descriptionSourceUrl) {
+      setDescriptionLoading(false);
+      if (isExternalDescription) {
+        setExternalDescriptionText('');
+        setExternalDescriptionStatus('idle');
+      }
+      return;
+    }
+    let cancelled = false;
+    const targetId = packageForm.id;
+    if (isExternalDescription) {
+      setExternalDescriptionText('');
+      setExternalDescriptionStatus('loading');
+    }
+    setDescriptionLoading(true);
+    fetch(descriptionSourceUrl)
+      .then(async res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const text = await res.text();
+        if (cancelled) return;
+        if (isExternalDescription) {
+          setExternalDescriptionText(text);
+          setExternalDescriptionStatus('success');
+          return;
+        }
+        setPackageForm(prev => (prev.id === targetId ? { ...prev, descriptionText: text } : prev));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (isExternalDescription) {
+          setExternalDescriptionText('');
+          setExternalDescriptionStatus('error');
+          return;
+        }
+        setPackageForm(prev => (prev.id === targetId ? { ...prev, descriptionText: '' } : prev));
+      })
+      .finally(() => {
+        if (!cancelled) setDescriptionLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [descriptionSourceUrl, isExternalDescription, packageForm.id]);
+
   // モードごとに body クラスを付け替え（スタイル分岐用）
   useEffect(() => {
     setExpandedVersionKeys(prev => {
@@ -2052,21 +2143,6 @@ export default function Register() {
           cleanupImagePreviews(prev.images);
           return form;
         });
-        if (isMarkdownPath(form.descriptionPath)) {
-          const url = resolveRelativeUrl(form.descriptionPath, base);
-          setDescriptionLoading(true);
-          try {
-            const mdRes = await fetch(url);
-            if (mdRes.ok) {
-              const text = await mdRes.text();
-              setPackageForm(prev => (prev.id === form.id ? { ...prev, descriptionText: text } : prev));
-            }
-          } catch (_) {
-            /* ignore */
-          } finally {
-            setDescriptionLoading(false);
-          }
-        }
       } else {
         setSelectedPackageId('');
         setPackageForm(createEmptyPackageForm());
@@ -2120,23 +2196,6 @@ export default function Register() {
     });
     setDescriptionTab('edit');
     setExpandedVersionKeys(new Set());
-    if (isMarkdownPath(form.descriptionPath)) {
-      const url = resolveRelativeUrl(form.descriptionPath, catalogBaseUrl);
-      setDescriptionLoading(true);
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const text = await res.text();
-          setPackageForm(prev => (prev.id === form.id ? { ...prev, descriptionText: text } : prev));
-        } else {
-          setPackageForm(prev => (prev.id === form.id ? { ...prev, descriptionText: '' } : prev));
-        }
-      } catch (_) {
-        setPackageForm(prev => (prev.id === form.id ? { ...prev, descriptionText: '' } : prev));
-      } finally {
-        setDescriptionLoading(false);
-      }
-    }
   }, [catalogBaseUrl]);
 
   const handleStartNewPackage = useCallback(() => {
@@ -2702,8 +2761,23 @@ export default function Register() {
         setError(validation);
         return;
       }
-      const entry = buildPackageEntry(packageForm, tagListRef.current);
+      let entry = buildPackageEntry(packageForm, tagListRef.current);
+      const useExternalDescription = packageForm.descriptionMode === 'external'
+        && isHttpsUrl(packageForm.descriptionUrl);
       const existingIndex = catalogItems.findIndex(item => item.id === entry.id);
+      if (existingIndex >= 0) {
+        const existingItem = catalogItems[existingIndex];
+        const inherited = {};
+        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'popularity')) {
+          inherited.popularity = existingItem.popularity;
+        }
+        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'trend')) {
+          inherited.trend = existingItem.trend;
+        }
+        if (Object.keys(inherited).length) {
+          entry = { ...entry, ...inherited };
+        }
+      }
       const nextCatalog = existingIndex >= 0
         ? catalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
         : [...catalogItems, entry];
@@ -2713,8 +2787,10 @@ export default function Register() {
         formData.append('files[]', file, filename);
         if (countTowardsLimit) packageAttachmentCount += 1;
       };
-      const mdBlob = new Blob([packageForm.descriptionText || ''], { type: 'text/markdown' });
-      appendAsset(mdBlob, packageMdFilename);
+      if (!useExternalDescription) {
+        const mdBlob = new Blob([packageForm.descriptionText || ''], { type: 'text/markdown' });
+        appendAsset(mdBlob, packageMdFilename);
+      }
       if (packageForm.images.thumbnail?.file) {
         const ext = getFileExtension(packageForm.images.thumbnail.file.name) || 'png';
         appendAsset(packageForm.images.thumbnail.file, `${entry.id}_thumbnail.${ext}`);
@@ -2725,7 +2801,7 @@ export default function Register() {
           appendAsset(entryInfo.file, `${entry.id}_${idx + 1}.${ext}`);
         }
       });
-      if (packageAttachmentCount === 0) {
+      if (packageAttachmentCount === 0 && !useExternalDescription) {
         setError('Markdown と画像ファイルを添付してください');
         return;
       }
@@ -2792,10 +2868,9 @@ export default function Register() {
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
   // 画面描画
   const computedTitle = 'パッケージ登録';
-  const computedDescription = 'パッケージ情報を入力して送信してください。';
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-0 pb-0">
       {successDialog.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submit-success-title">
           <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={closeSuccessDialog} />
@@ -2833,9 +2908,8 @@ export default function Register() {
       )}
 
       <main className="space-y-8">
-        <header className="space-y-2 border-b border-slate-200 pb-6 dark:border-slate-800">
+        <header className="pb-2">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{computedTitle}</h1>
-          <p className="text-lg text-slate-600 dark:text-slate-400">{computedDescription}</p>
         </header>
 
         {error && (
@@ -3035,11 +3109,38 @@ export default function Register() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="description-textarea" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label
+                        htmlFor={isExternalDescription ? 'description-url' : 'description-textarea'}
+                        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
                         詳細説明 <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Markdown形式</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex rounded-lg border border-slate-200 bg-white text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                          <button
+                            type="button"
+                            className={`rounded-l-lg px-3 py-1.5 transition-colors ${!isExternalDescription
+                              ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
+                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
+                              }`}
+                            onClick={() => updatePackageField('descriptionMode', 'inline')}
+                          >
+                            アプリ内入力
+                          </button>
+                          <button
+                            type="button"
+                            className={`rounded-r-lg px-3 py-1.5 transition-colors ${isExternalDescription
+                              ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
+                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
+                              }`}
+                            onClick={() => updatePackageField('descriptionMode', 'external')}
+                          >
+                            外部MDリンク
+                          </button>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Markdown形式</span>
+                      </div>
                     </div>
                     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                       <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-2 dark:border-slate-800 dark:bg-slate-900/50" role="tablist">
@@ -3047,21 +3148,21 @@ export default function Register() {
                           type="button"
                           role="tab"
                           aria-selected={descriptionTab === 'edit'}
-                          className={`rounded-t-lg px-4 py-2 text-sm font-semibold transition-colors ${descriptionTab === 'edit'
-                            ? 'bg-white text-blue-600 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-900 dark:text-blue-400'
-                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                          className={`flex-1 rounded-tl-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${descriptionTab === 'edit'
+                            ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
+                            : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
                             }`}
                           onClick={() => setDescriptionTab('edit')}
                         >
-                          編集
+                          {isExternalDescription ? '外部リンク指定' : '編集'}
                         </button>
                         <button
                           type="button"
                           role="tab"
                           aria-selected={descriptionTab === 'preview'}
-                          className={`rounded-t-lg px-4 py-2 text-sm font-semibold transition-colors ${descriptionTab === 'preview'
-                            ? 'bg-white text-blue-600 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-900 dark:text-blue-400'
-                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                          className={`flex-1 rounded-tr-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${descriptionTab === 'preview'
+                            ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
+                            : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
                             }`}
                           onClick={() => setDescriptionTab('preview')}
                         >
@@ -3070,14 +3171,50 @@ export default function Register() {
                       </div>
                       <div className="p-0">
                         {descriptionTab === 'edit' ? (
-                          <textarea
-                            id="description-textarea"
-                            className="min-h-[400px] w-full resize-y border-0 bg-transparent p-4 font-mono text-sm leading-relaxed focus:ring-0"
-                            value={packageForm.descriptionText}
-                            onChange={e => updatePackageField('descriptionText', e.target.value)}
-                            required
-                            placeholder="パッケージの詳細情報を入力してください。Markdown形式で記入できます。どこから呼び出せるか（メニュー位置など）や、UIの説明もあわせて記入していただけると助かります。外部サイトの画像も貼り付けることができます。"
-                          />
+                          isExternalDescription ? (
+                            <div className="space-y-3 p-4">
+                              <input
+                                id="description-url"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800"
+                                type="url"
+                                value={packageForm.descriptionUrl}
+                                onChange={e => updatePackageField('descriptionUrl', e.target.value)}
+                                placeholder="https://example.com/description.md"
+                              />
+                              {!hasExternalDescriptionUrl && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  MarkdownのURLを入力してください。
+                                </p>
+                              )}
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                GitHub上のMDを登録される場合はhttps://raw.githubusercontent.com/から始まるリンクになっているか注意してください。
+                              </p>
+                              {descriptionLoading && (
+                                <p className="text-xs text-slate-400 dark:text-slate-500">リンク先を読み込み中…</p>
+                              )}
+                              {isExternalDescriptionLoaded && !descriptionLoading && (
+                                <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                                  <Icon name="check_circle" size={14} />
+                                  Markdown読み込み済み
+                                </div>
+                              )}
+                              {hasExternalDescriptionUrl && externalDescriptionStatus === 'error' && !descriptionLoading && (
+                                <div className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+                                  <Icon name="alert_circle" size={14} />
+                                  Markdownを読み込めませんでした
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <textarea
+                              id="description-textarea"
+                              className="min-h-[400px] w-full resize-y border-0 bg-transparent p-4 font-mono text-sm leading-relaxed focus:ring-0"
+                              value={packageForm.descriptionText}
+                              onChange={e => updatePackageField('descriptionText', e.target.value)}
+                              required
+                              placeholder="パッケージの詳細情報を入力してください。Markdown形式で記入できます。どこから呼び出せるか（メニュー位置など）や、UIの説明もあわせて記入していただけると助かります。外部サイトの画像も貼り付けることができます。"
+                            />
+                          )
                         ) : (
                           <div
                             className="prose prose-slate max-h-[400px] w-full max-w-none overflow-y-auto p-6 dark:prose-invert"
@@ -3294,7 +3431,7 @@ export default function Register() {
                 </div>
               </section>
 
-              <section className="sticky bottom-4 z-20 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+              <section className="sticky bottom-2 z-20 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
                     {packageGuideUrl && (
@@ -3310,20 +3447,18 @@ export default function Register() {
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="hidden sm:block">
-                      <div className="flex flex-col">
-                        <input
-                          type="text"
-                          value={packageSender}
-                          onChange={e => setPackageSender(e.target.value)}
-                          placeholder="送信者のニックネーム (任意)"
-                          className="min-w-[200px]"
-                          aria-label="送信者のニックネーム"
-                        />
-                        <p className="mt-1 text-[10px] leading-tight text-slate-500 dark:text-slate-400">
-                          GitHubのIDを入力してもらえると、問題があった際のやり取りがスムーズになります
-                        </p>
-                      </div>
+                    <div className="hidden sm:flex items-center gap-3">
+                      <span className="border-r border-slate-200 pr-3 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                        作者の方はできる限りご入力ください
+                      </span>
+                      <input
+                        type="text"
+                        value={packageSender}
+                        onChange={e => setPackageSender(e.target.value)}
+                        placeholder="送信者のニックネーム"
+                        className="min-w-[240px]"
+                        aria-label="送信者のニックネーム"
+                      />
                     </div>
                     <button
                       type="submit"
