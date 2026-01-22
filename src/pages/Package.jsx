@@ -395,6 +395,12 @@ export default function Package() {
                 <span className="text-slate-800 dark:text-slate-200">{item.installedVersion}</span>
               </div>
             ) : null}
+            {item.niconiCommonsId ? (
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                <span>ニコニコモンズID</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono">{item.niconiCommonsId}</span>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <span className="text-sm text-slate-600 dark:text-slate-400">ライセンス</span>
               <div className="flex flex-wrap gap-2">

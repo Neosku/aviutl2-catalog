@@ -282,6 +282,7 @@ function createEmptyPackageForm() {
     originalAuthor: '',
     type: '',
     summary: '',
+    niconiCommonsId: '',
     descriptionText: '',
     descriptionPath: '',
     descriptionMode: 'inline',
@@ -1557,6 +1558,7 @@ function entryToForm(item, baseUrl = '') {
   form.originalAuthor = String(item.originalAuthor || '');
   form.type = String(item.type || '');
   form.summary = String(item.summary || '');
+  form.niconiCommonsId = String(item.niconiCommonsId || '');
   form.descriptionPath = descriptionValue;
   form.descriptionMode = isExternalDescription ? 'external' : 'inline';
   form.descriptionUrl = isExternalDescription ? descriptionValue : '';
@@ -1738,6 +1740,7 @@ function buildPackageEntry(form, tags) {
   const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
   const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
   const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
+  const niconiCommonsId = String(form.niconiCommonsId || '').trim();
   const entry = {
     id,
     name: form.name.trim(),
@@ -1749,6 +1752,7 @@ function buildPackageEntry(form, tags) {
     repoURL: form.repoURL.trim(),
     'latest-version': computeLatestVersion(form),
     licenses: buildLicensesPayload(form),
+    niconiCommonsId,
     tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
     dependencies: commaListToArray(form.dependenciesText),
     images: buildImagesPayload(form),
@@ -1756,6 +1760,7 @@ function buildPackageEntry(form, tags) {
     version: buildVersionPayload(form),
   };
   if (!entry.originalAuthor) delete entry.originalAuthor;
+  if (!entry.niconiCommonsId) delete entry.niconiCommonsId;
   if (!entry.repoURL) entry.repoURL = '';
   if (!entry.licenses.length) entry.licenses = [];
   if (!entry.tags.length) entry.tags = [];
@@ -3074,6 +3079,16 @@ export default function Register() {
                         placeholder="パッケージのことが分かるURL"
                         type="url"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ニコニコモンズID (任意)</label>
+                      <input
+                        name="niconiCommonsId"
+                        value={packageForm.niconiCommonsId}
+                        onChange={e => updatePackageField('niconiCommonsId', e.target.value)}
+                        placeholder="nc12345"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">素材のニコニ・コモンズIDを入力してください</p>
                     </div>
                   </div>
 

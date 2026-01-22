@@ -83,7 +83,7 @@ const coolTooltip = () => {
 
 function PortalTooltip({ text, rect }) {
   if (!rect || !text) return null;
-  
+
   const top = rect.top + rect.height / 2;
   const left = rect.right + 12;
 
@@ -102,7 +102,7 @@ function PortalTooltip({ text, rect }) {
   );
 }
 
-function SidebarButton({ icon: Icon, label, onClick, isActive, isCollapsed, variant = 'default', badgeCount = 0, shortcut, rightIcon: RightIcon }) {
+function SidebarButton({ icon, label, onClick, isActive, isCollapsed, variant = 'default', badgeCount = 0, shortcut, rightIcon: RightIcon }) {
   const [hoverRect, setHoverRect] = useState(null);
   const buttonRef = useRef(null);
   const timerRef = useRef(null);
@@ -141,6 +141,14 @@ function SidebarButton({ icon: Icon, label, onClick, isActive, isCollapsed, vari
       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800',
   };
 
+  const iconClass = `shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`;
+  const iconElement = React.isValidElement(icon)
+    ? React.cloneElement(icon, {
+      className: `${icon.props?.className || ''} ${iconClass}`.trim(),
+      'aria-hidden': icon.props?.['aria-hidden'] ?? true,
+    })
+    : (icon ? React.createElement(icon, { size: 20, className: iconClass }) : null);
+
   return (
     <>
       <button
@@ -152,7 +160,7 @@ function SidebarButton({ icon: Icon, label, onClick, isActive, isCollapsed, vari
         type="button"
       >
         <div className="w-14 shrink-0 flex items-center justify-center">
-          <Icon size={20} className={`shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+          {iconElement}
         </div>
         {!isCollapsed && <span className="truncate flex-1 pr-2">{label}</span>}
         {!isCollapsed && RightIcon && <RightIcon size={18} className="opacity-50 shrink-0 mr-3" />}
@@ -267,7 +275,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { items, allTags, allTypes } = useCatalog();
   const [error, setError] = useState('');
-  
+
   const folderTooltip = usePortalTooltip('データフォルダを開く (Alt+O)');
   const launchTooltip = usePortalTooltip('AviUtl2を起動 (Alt+L)');
   const sidebarCloseTooltip = usePortalTooltip('サイドバーを閉じる (Alt+B)');
@@ -456,13 +464,30 @@ export default function AppShell() {
       ? 'updates'
       : activePath.startsWith('/register')
         ? 'register'
-        : activePath.startsWith('/feedback')
-          ? 'feedback'
-          : activePath.startsWith('/settings')
-            ? 'settings'
-            : activePath.startsWith('/package')
-              ? 'package'
-              : '';
+        : activePath.startsWith('/niconi-commons')
+          ? 'niconi-commons'
+          : activePath.startsWith('/feedback')
+            ? 'feedback'
+            : activePath.startsWith('/settings')
+              ? 'settings'
+              : activePath.startsWith('/package')
+                ? 'package'
+                : '';
+
+  // ニコニ・コモンズ用のインラインSVG（枠線のみ）
+  const niconiCommonsIcon = (
+    <svg
+      viewBox="0 0 22 22"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M19.213 4.724h-5.816l2.388-2.275a.852.852 0 00.041-1.182.802.802 0 00-1.153-.043L11 4.724l-3.673-3.5a.802.802 0 00-1.153.043.85.85 0 00.042 1.182l2.387 2.275H2.788A1.8 1.8 0 001 6.535v10.863c0 1 .802 1.812 1.788 1.812h2.266l1.35 1.59a.518.518 0 00.816 0l1.35-1.59h4.86l1.35 1.59a.518.518 0 00.816 0l1.35-1.59h2.266c.99 0 1.788-.811 1.788-1.812V6.535c0-1-.799-1.81-1.787-1.81" />
+    </svg>
+  );
 
   return (
     <div className="flex h-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 overflow-hidden">
@@ -512,12 +537,21 @@ export default function AppShell() {
               onClick={() => navigate('/register')}
               shortcut="Alt+R"
             />
+
+            <SidebarButton
+              icon={niconiCommonsIcon}
+              label="ニコニコモンズ"
+              variant="ghost"
+              isActive={activePage === 'niconi-commons'}
+              isCollapsed={isSidebarCollapsed}
+              onClick={() => navigate('/niconi-commons')}
+            />
           </div>
 
           <div className="p-3 pt-2 mt-auto sm:mt-0">
             <div className="space-y-1">
               <SidebarSectionLabel label="ショートカット" isCollapsed={isSidebarCollapsed} className="mt-2 mb-1" />
-              
+
               <SidebarButton
                 icon={AviUtlIcon}
                 label="AviUtl2を起動"
@@ -527,7 +561,7 @@ export default function AppShell() {
                 shortcut="Alt+L"
                 rightIcon={ExternalLink}
               />
-              
+
               <SidebarButton
                 icon={FolderOpen}
                 label="データフォルダを開く"

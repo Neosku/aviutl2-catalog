@@ -10,6 +10,7 @@ const Updates = lazy(() => import('./pages/Updates.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const Feedback = lazy(() => import('./pages/Feedback.jsx'));
+const NiconiCommons = lazy(() => import('./pages/NiconiCommons.jsx'));
 
 export default function AppRouter() {
   return (
@@ -23,6 +24,7 @@ export default function AppRouter() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/register" element={<Register />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/niconi-commons" element={<NiconiCommons />} />
             <Route path="/package/:id" element={<Package />} />
           </Route>
         </Routes>
