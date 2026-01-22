@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import TitleBar from '../components/TitleBar.jsx';
-import Icon from '../components/Icon.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
 import UpdateDialog from '../components/UpdateDialog.jsx';
 import { hasInstaller, logError, runInstallerForItem, loadCatalogData } from '../utils/index.js';
 import { useUpdatePrompt } from '../utils/useUpdatePrompt.js';
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import AppIcon from '../../src-tauri/icons/icon.svg';
+import { AlertCircle, Check, CheckCircle2, Download, FolderOpen } from 'lucide-react';
 
 async function showMain() {
   const win = getCurrentWindow()
@@ -94,7 +94,7 @@ function StepIndicator({ step, installed }) {
                   }
                 `}
               >
-                {isCompleted ? <Icon name="check" size={14} strokeWidth={4} /> : index + 1}
+                {isCompleted ? <Check size={14} strokeWidth={4} /> : index + 1}
               </div>
               
               <span 
@@ -512,7 +512,7 @@ ${detail}` : 'セットアップに失敗しました。');
 
             {error && (
               <div className="mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
-                <Icon name="alert_circle" size={18} className="mt-0.5 shrink-0" />
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <div className="whitespace-pre-wrap flex-1 font-medium leading-relaxed">{error}</div>
               </div>
             )}
@@ -558,7 +558,7 @@ ${detail}` : 'セットアップに失敗しました。');
                     className="group relative flex flex-col items-start p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-500 hover:ring-1 hover:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-xl text-left h-full cursor-pointer"
                   >
                     <div className="mb-4 p-3 rounded-xl bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-blue-900/30 dark:group-hover:text-blue-400 transition-colors">
-                      <Icon name="folder_open" size={28} />
+                      <FolderOpen size={28} />
                     </div>
                     <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">インストール済み</div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -571,7 +571,7 @@ ${detail}` : 'セットアップに失敗しました。');
                     className="group relative flex flex-col items-start p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-500 hover:ring-1 hover:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-xl text-left h-full cursor-pointer"
                   >
                     <div className="mb-4 p-3 rounded-xl bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-blue-900/30 dark:group-hover:text-blue-400 transition-colors">
-                      <Icon name="download" size={28} />
+                      <Download size={28} />
                     </div>
                     <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">新規インストール</div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -616,7 +616,7 @@ ${detail}` : 'セットアップに失敗しました。');
                         onClick={() => pickDir('existing')}
                         title="参照"
                       >
-                        <Icon name="folder_open" size={18} />
+                        <FolderOpen size={18} />
                       </button>
                     </div>
                     <p className="text-[14px] text-slate-400 dark:text-slate-500 ml-1">
@@ -697,7 +697,7 @@ ${detail}` : 'セットアップに失敗しました。');
                         onClick={() => pickDir('install')}
                         title="参照"
                       >
-                        <Icon name="folder_open" size={18} />
+                        <FolderOpen size={18} />
                       </button>
                     </div>
                   </div>
@@ -751,7 +751,7 @@ ${detail}` : 'セットアップに失敗しました。');
                        </span>
                      ) : (
                        <span className="flex items-center gap-2">
-                         <Icon name="download" size={18} />
+                         <Download size={18} />
                          インストールして次へ
                        </span>
                      )}
@@ -767,7 +767,7 @@ ${detail}` : 'セットアップに失敗しました。');
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">推奨パッケージの導入</h2>
                   {allRequiredInstalled ? (
                      <p className="text-sm text-emerald-600 dark:text-emerald-400 font-bold mt-2 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-1">
-                       <Icon name="check_circle" size={16} />
+                       <CheckCircle2 size={16} />
                        すべての推奨パッケージが導入済みです
                      </p>
                   ) : (
@@ -810,7 +810,7 @@ ${detail}` : 'セットアップに失敗しました。');
                                   </div>
                                 ) : state.installed ? (
                                   <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-1.5 rounded-full">
-                                    <Icon name="check" size={12} strokeWidth={4} /> インストール済
+                                    <Check size={12} strokeWidth={4} /> インストール済
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">未インストール</span>
@@ -855,7 +855,7 @@ ${detail}` : 'セットアップに失敗しました。');
                              '次へ'
                            ) : (
                              <span className="flex items-center gap-2">
-                               <Icon name="download" size={18} />
+                               <Download size={18} />
                                まとめてインストールして次へ
                              </span>
                            )}
@@ -873,7 +873,7 @@ ${detail}` : 'セットアップに失敗しました。');
                 <div className="relative mb-10">
                    <div className="absolute inset-0 bg-emerald-500 rounded-full opacity-30 blur-2xl animate-pulse" style={{ animationDuration: '3s' }} />
                    <div className="relative w-24 h-24 rounded-full bg-white dark:bg-slate-900 border-4 border-emerald-500/20 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shadow-2xl backdrop-blur-md">
-                     <Icon name="check" size={48} strokeWidth={4} />
+                     <Check size={48} strokeWidth={4} />
                    </div>
                 </div>
                 

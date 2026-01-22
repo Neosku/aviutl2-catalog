@@ -1,7 +1,7 @@
 import React from 'react';
 import { marked } from 'marked';
 import { renderToStaticMarkup } from 'react-dom/server';
-import Icon from '../components/Icon.jsx';
+import { AlertCircle, AlertOctagon, AlertTriangle, Info, Lightbulb } from 'lucide-react';
 
 const CALLOUT_META = {
   NOTE: { title: '注記', className: 'note', icon: 'callout-note' },
@@ -13,6 +13,13 @@ const CALLOUT_META = {
 
 const CALLOUT_LABEL_RE = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i;
 const CALLOUT_ICON_CACHE = new Map();
+const CALLOUT_ICON_COMPONENTS = {
+  'callout-note': Info,
+  'callout-tip': Lightbulb,
+  'callout-important': AlertOctagon,
+  'callout-warning': AlertTriangle,
+  'callout-caution': AlertCircle,
+};
 
 function escapeHtml(s) {
   return String(s)
@@ -122,11 +129,14 @@ function isIgnorableNode(node) {
 
 function getCalloutIconMarkup(iconName) {
   if (!iconName) return '';
+  const IconComponent = CALLOUT_ICON_COMPONENTS[iconName];
+  if (!IconComponent) return '';
   if (!CALLOUT_ICON_CACHE.has(iconName)) {
-    const element = React.createElement(Icon, {
-      name: iconName,
+    const element = React.createElement(IconComponent, {
       size: 16,
       strokeWidth: 1.8,
+      'aria-hidden': true,
+      role: 'presentation',
     });
     const svgString = renderToStaticMarkup(element);
     CALLOUT_ICON_CACHE.set(iconName, svgString);

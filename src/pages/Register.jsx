@@ -3,8 +3,35 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, useDeferredVa
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-shell';
+import {
+  AlertCircle,
+  BookOpen,
+  Calendar,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  ExternalLink,
+  FileSearch,
+  Folder,
+  FolderOpen,
+  GripVertical,
+  History,
+  Image,
+  ImagePlus,
+  Images,
+  Info,
+  Moon,
+  Plus,
+  Search,
+  Send,
+  Sun,
+  Trash2,
+  X,
+} from 'lucide-react';
 // パッケージ登録フォーム。
-import Icon from '../components/Icon.jsx';
 import PackageCard from '../components/PackageCard.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
@@ -184,7 +211,7 @@ const ActionSelect = memo(function ActionSelect({ value, onChange, options, aria
       >
         <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
         <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden>
-          <Icon name="chevron_down" size={16} />
+          <ChevronDown size={16} />
         </span>
       </button>
       {open && (
@@ -202,7 +229,7 @@ const ActionSelect = memo(function ActionSelect({ value, onChange, options, aria
               onMouseDown={e => { e.preventDefault(); choose(opt.value); }}
             >
               <span className="truncate">{opt.label}</span>
-              {opt.value === value && <Icon name="check" size={14} />}
+              {opt.value === value && <Check size={14} />}
             </button>
           ))}
         </div>
@@ -308,7 +335,7 @@ const DeleteButton = memo(function DeleteButton({ onClick, ariaLabel = '削除',
       title={title || ariaLabel}
       onClick={onClick}
     >
-      <Icon name="trash_2" size={18} />
+      <Trash2 size={18} />
     </button>
   );
 });
@@ -383,7 +410,7 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
           <span key={tag} className="inline-flex animate-in fade-in zoom-in duration-200 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">
             <span className="max-w-[160px] truncate">{tag}</span>
             <button type="button" className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-600 dark:hover:text-slate-200" onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }} aria-label={`${tag} を削除`}>
-              <Icon name="x" size={12} />
+              <X size={12} />
             </button>
           </span>
         ))}
@@ -415,7 +442,7 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
                   onClick={() => handleToggleTag(tag)}
                 >
                   <span>{tag}</span>
-                  {isSelected && <Icon name="check" size={12} />}
+                  {isSelected && <Check size={12} />}
                 </button>
               );
             })}
@@ -561,10 +588,10 @@ const PackageLicenseSection = memo(function PackageLicenseSection({
                         aria-label="ライセンス本文をコピー"
                         title="クリップボードにコピー"
                       >
-                        <Icon name={copied ? "check" : "copy"} size={16} />
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
                       </button>
                       <span className="text-slate-400 transition-transform group-open:rotate-180">
-                        <Icon name="chevron_down" size={16} />
+                        <ChevronDown size={16} />
                       </span>
                     </div>
                   </summary>
@@ -718,7 +745,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
               </p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-              <Icon name="image_plus" size={16} />
+              <ImagePlus size={16} />
               <span>画像を選択</span>
               <input
                 type="file"
@@ -735,7 +762,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
           {isDraggingOverThumbnail ? (
             <div className="flex h-52 items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
               <div className="text-center">
-                <Icon name="download" size={32} className="mx-auto mb-2 animate-bounce" />
+                <Download size={32} className="mx-auto mb-2 animate-bounce" />
                 <span className="text-sm font-bold">ここにドロップして追加</span>
               </div>
             </div>
@@ -759,7 +786,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
             </div>
           ) : (
             <div className="flex h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
-              <Icon name="image" size={32} className="mb-2 opacity-50" />
+              <Image size={32} className="mb-2 opacity-50" />
               <span className="text-xs font-medium">サムネイルが未設定です</span>
               <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
             </div>
@@ -781,7 +808,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
               <p className="text-[10px] text-blue-500 dark:text-blue-400">※縦横比は16:9を推奨します</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-              <Icon name="images" size={16} />
+              <Images size={16} />
               <span>画像を追加</span>
               <input
                 type="file"
@@ -799,7 +826,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
           {isDraggingOverInfo ? (
             <div className="flex flex-1 min-h-[13rem] items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
               <div className="text-center">
-                <Icon name="download" size={32} className="mx-auto mb-2 animate-bounce" />
+                <Download size={32} className="mx-auto mb-2 animate-bounce" />
                 <span className="text-sm font-bold">ここにドロップして追加</span>
               </div>
             </div>
@@ -825,7 +852,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
                           onClick={() => onRemoveInfoImage(entry.key)}
                           aria-label="削除"
                         >
-                          <Icon name="trash_2" size={14} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -838,7 +865,7 @@ const PackageImagesSection = memo(function PackageImagesSection({
             </div>
           ) : (
             <div className="flex flex-1 min-h-[13rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
-              <Icon name="image" size={32} className="mb-2 opacity-50" />
+              <Image size={32} className="mb-2 opacity-50" />
               <span className="text-xs font-medium">説明画像が未設定です</span>
               <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
             </div>
@@ -939,7 +966,7 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">インストール手順</h3>
           <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={addInstallStep}>
-            <Icon name="plus" size={14} />
+            <Plus size={14} />
             <span>ステップを追加</span>
           </button>
         </div>
@@ -966,7 +993,7 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
                         onPointerDown={e => startHandleDrag('install', idx, e)}
                         aria-label="ドラッグして並び替え"
                       >
-                        <Icon name="grip_vertical" size={16} />
+                        <GripVertical size={16} />
                       </span>
                     )}
                   </div>
@@ -1041,7 +1068,7 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">アンインストール手順</h3>
           <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={addUninstallStep}>
-            <Icon name="plus" size={14} />
+            <Plus size={14} />
             <span>ステップを追加</span>
           </button>
         </div>
@@ -1066,7 +1093,7 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
                       onPointerDown={e => startHandleDrag('uninstall', idx, e)}
                       aria-label="ドラッグして並び替え"
                     >
-                      <Icon name="grip_vertical" size={16} />
+                      <GripVertical size={16} />
                     </span>
                   </div>
                   <div className="flex-1 min-w-[120px]">
@@ -1174,7 +1201,7 @@ const VersionFileCard = memo(function VersionFileCard({
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             onClick={() => chooseFileForHash(versionKey, file.key)}
           >
-            <Icon name="file_search" size={14} />
+            <FileSearch size={14} />
             <span>ファイルを選択して計算</span>
           </button>
         </div>
@@ -1226,7 +1253,7 @@ const VersionItem = memo(function VersionItem({
       <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <div className="flex items-center gap-3">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${isOpen ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-            <Icon name={isOpen ? "folder_open" : "folder"} size={18} />
+            {isOpen ? <FolderOpen size={18} /> : <Folder size={18} />}
           </div>
           <div className="flex flex-col">
             <span className={`text-sm font-bold ${version.version ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 italic'}`}>
@@ -1243,7 +1270,7 @@ const VersionItem = memo(function VersionItem({
             ariaLabel="このバージョンを削除"
           />
           <span className="text-slate-400 transition-transform group-open:rotate-180">
-            <Icon name="chevron_down" size={20} />
+            <ChevronDown size={20} />
           </span>
         </div>
       </summary>
@@ -1270,7 +1297,7 @@ const VersionItem = memo(function VersionItem({
                 onClick={() => openDatePicker(version.key)}
                 aria-label="カレンダーを開く"
               >
-                <Icon name="calendar" size={18} />
+                <Calendar size={18} />
               </button>
             </div>
           </div>
@@ -1283,7 +1310,7 @@ const VersionItem = memo(function VersionItem({
               <p className="text-xs text-slate-500 dark:text-slate-400">主要ファイルのハッシュ値を計算してください</p>
             </div>
             <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={() => addVersionFile(version.key)}>
-              <Icon name="plus" size={14} />
+              <Plus size={14} />
               <span>ファイルを追加</span>
             </button>
           </div>
@@ -1346,7 +1373,7 @@ const PackageVersionSection = memo(function PackageVersionSection({
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500"
           onClick={addVersion}
         >
-          <Icon name="plus" size={16} />
+          <Plus size={16} />
           <span>新しいバージョンを追加</span>
         </button>
       </div>
@@ -1357,7 +1384,7 @@ const PackageVersionSection = memo(function PackageVersionSection({
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-3 text-xs font-semibold text-slate-500 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
             onClick={() => setShowAll(true)}
           >
-            <Icon name="chevron_up" size={14} />
+            <ChevronUp size={14} />
             <span>以前のバージョン ({hiddenCount}件) を表示</span>
           </button>
         )}
@@ -1379,7 +1406,7 @@ const PackageVersionSection = memo(function PackageVersionSection({
         ))}
         {!versions.length && (
           <div className="flex h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-            <Icon name="history" size={32} className="mb-2 opacity-50" />
+            <History size={32} className="mb-2 opacity-50" />
             <p className="text-sm font-medium">バージョン情報がありません</p>
             <p className="text-xs opacity-70">右上のボタンから追加してください</p>
           </div>
@@ -2886,7 +2913,7 @@ export default function Register() {
             <div className="px-6 py-6">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" aria-hidden>
-                  <Icon name="check" size={24} />
+                  <Check size={24} />
                 </div>
                 <div className="space-y-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{successPrimaryText}</p>
@@ -2902,7 +2929,7 @@ export default function Register() {
                   target="_blank"
                   rel="noreferrer noopener"
                 >
-                  <Icon name="external_link" size={16} />
+                  <ExternalLink size={16} />
                   公開ページを開く
                 </a>
               )}
@@ -2919,7 +2946,7 @@ export default function Register() {
 
         {error && (
           <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300" role="alert">
-            <Icon name="alert_circle" size={20} className="mt-0.5 flex-shrink-0" />
+            <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
             <div className="text-sm font-medium">{error}</div>
           </div>
         )}
@@ -2932,7 +2959,7 @@ export default function Register() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                   <div className="space-y-3">
                     <div className="relative">
-                      <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="search"
                         value={packageSearch}
@@ -2986,7 +3013,7 @@ export default function Register() {
                       className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-transparent px-4 py-3 text-sm font-bold text-slate-600 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
                       onClick={handleStartNewPackage}
                     >
-                      <Icon name="plus" size={18} />
+                      <Plus size={18} />
                       新規パッケージ作成
                     </button>
                   </div>
@@ -2998,7 +3025,7 @@ export default function Register() {
             <div className="space-y-8">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300">
-                  <Icon name="info" size={20} className="mt-0.5 flex-shrink-0 text-blue-500" />
+                  <Info size={20} className="mt-0.5 flex-shrink-0 text-blue-500" />
                   <div>
                     このフォームに入力するプラグイン情報はすべて公開されます。<br />
                     パッケージ登録は作者本人でなくてもどなたでも行えます。
@@ -3209,13 +3236,13 @@ export default function Register() {
                               )}
                               {isExternalDescriptionLoaded && !descriptionLoading && (
                                 <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                                  <Icon name="check_circle" size={14} />
+                                  <CheckCircle2 size={14} />
                                   Markdown読み込み済み
                                 </div>
                               )}
                               {hasExternalDescriptionUrl && externalDescriptionStatus === 'error' && !descriptionLoading && (
                                 <div className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
-                                  <Icon name="alert_circle" size={14} />
+                                  <AlertCircle size={14} />
                                   Markdownを読み込めませんでした
                                 </div>
                               )}
@@ -3302,7 +3329,7 @@ export default function Register() {
                     onClick={() => setPreviewDarkMode(!previewDarkMode)}
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   >
-                    <Icon name={previewDarkMode ? "sun" : "moon"} size={14} />
+                    {previewDarkMode ? <Sun size={14} /> : <Moon size={14} />}
                     <span>{previewDarkMode ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}</span>
                   </button>
                 </div>
@@ -3348,7 +3375,7 @@ export default function Register() {
                       {installerTestRunning ? (
                         <ProgressCircle value={installerTestRatio} size={16} strokeWidth={3} className="text-white" ariaLabel="インストーラーテストの進行度" />
                       ) : (
-                        <Icon name="download" size={14} />
+                        <Download size={14} />
                       )}
                       <span>{installerTestRunning ? '実行中…' : 'インストールテスト'}</span>
                     </button>
@@ -3359,7 +3386,7 @@ export default function Register() {
                       disabled={uninstallerTestRunning || !!uninstallerTestValidation}
                       title={uninstallerTestValidation || ''}
                     >
-                      <Icon name="trash_2" size={14} />
+                      <Trash2 size={14} />
                       <span>{uninstallerTestRunning ? '実行中…' : '削除テスト'}</span>
                     </button>
                   </div>
@@ -3397,7 +3424,7 @@ export default function Register() {
                     )}
                     {installerTestValidation && (
                       <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                        <Icon name="alert_circle" size={16} className="mt-0.5 flex-shrink-0" />
+                        <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                         <span className="text-xs">{installerTestValidation}</span>
                       </div>
                     )}
@@ -3432,7 +3459,7 @@ export default function Register() {
                     </div>
                     {uninstallerTestValidation && (
                       <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                        <Icon name="alert_circle" size={16} className="mt-0.5 flex-shrink-0" />
+                        <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                         <span className="text-xs">{uninstallerTestValidation}</span>
                       </div>
                     )}
@@ -3456,7 +3483,7 @@ export default function Register() {
                         target="_blank"
                         rel="noreferrer noopener"
                       >
-                        <Icon name="book_open" size={16} />
+                        <BookOpen size={16} />
                         説明サイト
                       </a>
                     )}
@@ -3487,7 +3514,7 @@ export default function Register() {
                         </>
                       ) : (
                         <>
-                          <Icon name="send" size={18} />
+                          <Send size={18} />
                           送信する
                         </>
                       )}
