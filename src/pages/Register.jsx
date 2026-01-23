@@ -1852,6 +1852,7 @@ function validatePackageForm(form) {
   if (!form.type.trim()) return '種類は必須です';
   if (!form.summary.trim()) return '概要は必須です';
   if (form.summary.trim().length > 35) return '概要は35文字以内で入力してください';
+  if (!form.repoURL.trim()) return 'パッケージのサイトは必須です';
   const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
   if (descriptionMode === 'external') {
     const externalUrl = String(form.descriptionUrl || '').trim();
@@ -2945,7 +2946,7 @@ export default function Register() {
         </header>
 
         {error && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300" role="alert">
+          <div className="sticky top-4 z-30 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300" role="alert">
             <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
             <div className="text-sm font-medium">{error}</div>
           </div>
@@ -3098,24 +3099,26 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">パッケージのサイト</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        パッケージのサイト <span className="text-red-500">*</span>
+                      </label>
                       <input
                         name="repoURL"
                         value={packageForm.repoURL}
                         onChange={e => updatePackageField('repoURL', e.target.value)}
                         placeholder="パッケージのことが分かるURL"
                         type="url"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ニコニコモンズID (任意)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ニコニ・コモンズID (任意)</label>
                       <input
                         name="niconiCommonsId"
                         value={packageForm.niconiCommonsId}
                         onChange={e => updatePackageField('niconiCommonsId', e.target.value)}
-                        placeholder="nc12345"
+                        placeholder=""
                       />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">素材のニコニ・コモンズIDを入力してください</p>
                     </div>
                   </div>
 

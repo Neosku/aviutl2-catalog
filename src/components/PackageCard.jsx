@@ -227,13 +227,13 @@ export default function PackageCard({ item }) {
         </div>
 
         {/* Image Side (Right) */}
-        <div className={`relative shrink-0 ${imageSize} h-full bg-slate-100 dark:bg-slate-800/50 after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-100 after:content-[''] dark:after:bg-slate-800`}>
+        <div className={`relative shrink-0 ${imageSize} h-full ${thumbnail ? 'bg-slate-100 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-900'} after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-100 after:content-[''] dark:after:bg-slate-800`}>
            {/* Background Image/Placeholder */}
            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                {thumbnail ? (
                   <img src={thumbnail} alt={item.name} className="w-full h-full object-contain" loading="lazy" />
                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/20">
+                  <div className="w-full h-full flex items-center justify-center bg-transparent">
                     {/* Decorative Background Pattern */}
                     <div className="absolute inset-0 opacity-[0.05] dark:opacity-[0.1]"
                          style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '16px 16px' }}>
@@ -242,7 +242,7 @@ export default function PackageCard({ item }) {
                     {/* Stylized Icon Tile */}
                     <div className="relative">
                       <div className="absolute -inset-4 bg-blue-500/5 dark:bg-blue-400/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors duration-500"></div>
-                      <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                      <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/40 dark:border-slate-700/50 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                          <Package size={32} className="text-slate-300 dark:text-slate-500" strokeWidth={1.5} />
                       </div>
                     </div>
