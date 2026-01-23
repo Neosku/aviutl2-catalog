@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import {
@@ -275,6 +275,8 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { items, allTags, allTypes } = useCatalog();
   const [error, setError] = useState('');
+  const scrollContainerRef = useRef(null);
+  const homeScrollRef = useRef(0);
 
   const folderTooltip = usePortalTooltip('データフォルダを開く (Alt+O)');
   const launchTooltip = usePortalTooltip('AviUtl2を起動 (Alt+L)');
@@ -299,18 +301,25 @@ export default function AppShell() {
   const selectedTags = parseQuery.tags;
   const sortOrder = sortOrderFromQuery(parseQuery.sortKey, parseQuery.dir);
 
-  // Local state only for Search Input (to allow typing without immediate URL update)
+  // 検索入力はローカル状態で管理し、毎キーのURL更新を避ける
   const [searchQuery, setSearchQuery] = useState(parseQuery.q);
   const debouncedQuery = useDebouncedValue(searchQuery, 250);
   const isHome = location.pathname === '/';
 
-  // Sync Search Input from URL (only when URL changes externally, e.g. Back button)
+  // URL変更（戻る操作など）に追従して検索入力を同期
   useEffect(() => {
     if (!isHome) return;
     if (parseQuery.q !== searchQuery) {
       setSearchQuery(parseQuery.q);
     }
   }, [isHome, parseQuery.q]);
+
+  useEffect(() => {
+    const isPackageDetail = location.pathname.startsWith('/package/');
+    if (location.pathname !== '/' && !isPackageDetail) {
+      setSearchQuery('');
+    }
+  }, [location.pathname]);
 
   // Helper to update URL params
   const updateUrl = (overrides) => {
@@ -326,8 +335,7 @@ export default function AppShell() {
       }
     });
 
-    // Ensure current search query is preserved/updated in URL to prevent reverting user input
-    // when changing other filters while typing
+    // 他のフィルタ操作時に検索入力が巻き戻らないようURLを維持
     if (!('q' in overrides)) {
       if (searchQuery) params.set('q', searchQuery);
       else params.delete('q');
@@ -340,13 +348,34 @@ export default function AppShell() {
     navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
-  // Debounced Search URL Update
+  // 検索入力をデバウンスしてURLへ反映
   useEffect(() => {
     if (!isHome) return;
     if (debouncedQuery !== parseQuery.q) {
       updateUrl({ q: debouncedQuery });
     }
   }, [debouncedQuery, isHome]);
+
+  useEffect(() => {
+    if (!isHome) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      homeScrollRef.current = el.scrollTop;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isHome]);
+
+  useLayoutEffect(() => {
+    if (!isHome) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const previous = el.style.scrollBehavior;
+    el.style.scrollBehavior = 'auto';
+    el.scrollTop = homeScrollRef.current || 0;
+    el.style.scrollBehavior = previous;
+  }, [isHome]);
 
   const categories = useMemo(() => ['すべて', ...(allTypes || [])], [allTypes]);
 
@@ -633,7 +662,7 @@ export default function AppShell() {
           </header>
         )}
 
-        <div className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}>
+        <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}>
           <Outlet
             context={{
               filteredPackages,

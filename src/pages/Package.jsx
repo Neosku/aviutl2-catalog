@@ -66,6 +66,8 @@ export default function Package() {
   const location = useLocation();
   const { items, loading } = useCatalog();
   const dispatch = useCatalogDispatch();
+  const fromSearch = typeof location.state?.fromSearch === 'string' ? location.state.fromSearch : '';
+  const listLink = fromSearch ? { pathname: '/', search: fromSearch } : '/';
 
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find(i => i.id === id), [items, id]);
@@ -288,7 +290,7 @@ export default function Package() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto min-h-[calc(100vh-6rem)] flex flex-col">
       <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-        <Link to="/" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+        <Link to={listLink} className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
           パッケージ一覧
         </Link>
         <ChevronRight size={16} className="mx-2" />
@@ -476,7 +478,7 @@ export default function Package() {
 
           </div>
           <div className="contents lg:block lg:sticky lg:bottom-0 lg:z-10 lg:mt-auto lg:pt-4">
-            <Link to="/" className="btn btn--secondary w-full justify-center flex items-center gap-2">
+            <Link to={listLink} className="btn btn--secondary w-full justify-center flex items-center gap-2">
               <ArrowLeft size={18} /> パッケージ一覧に戻る
             </Link>
           </div>

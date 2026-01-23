@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Package, CheckCircle2, Filter, X, ArrowUpDown, ChevronDown, ChevronUp, Layers, Tags } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useHomeContext, SORT_OPTIONS } from '../components/AppShell.jsx';
 import PackageCard from '../components/PackageCard.jsx';
 
 export default function Home() {
+  const location = useLocation();
   const {
     filteredPackages,
     searchQuery,
@@ -20,6 +22,13 @@ export default function Home() {
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const listSearch = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    if (searchQuery) params.set('q', searchQuery);
+    else params.delete('q');
+    const next = params.toString();
+    return next ? `?${next}` : '';
+  }, [location.search, searchQuery]);
 
   // Helper to change category
   const setCategory = (cat) => updateUrl({ type: cat === 'すべて' ? '' : cat });
@@ -215,7 +224,7 @@ export default function Home() {
       {filteredPackages.length > 0 ? (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(500px,1fr))] gap-6 pb-10">
           {filteredPackages.map((item) => (
-            <PackageCard key={item.id} item={item} />
+            <PackageCard key={item.id} item={item} listSearch={listSearch} />
           ))}
         </div>
       ) : (

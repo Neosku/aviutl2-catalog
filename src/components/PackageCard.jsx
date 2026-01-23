@@ -27,7 +27,7 @@ function pickThumbnail(item) {
   return '';
 }
 
-export default function PackageCard({ item }) {
+export default function PackageCard({ item, listSearch = '' }) {
   const navigate = useNavigate();
   const dispatch = useCatalogDispatch();
   const [error, setError] = useState('');
@@ -114,12 +114,13 @@ export default function PackageCard({ item }) {
   // Layout constants
   const cardHeight = "h-52"; // Increased height
   const imageSize = "aspect-square";
+  const fromSearch = typeof listSearch === 'string' ? listSearch : '';
 
   return (
     <>
       <div
         className={`group relative flex flex-row ${cardHeight} min-w-[480px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-black/40 hover:border-blue-300/50 dark:hover:border-slate-600 transition-all duration-300 ease-out cursor-pointer hover:-translate-y-0.5`}
-        onClick={() => navigate(`/package/${encodeURIComponent(item.id)}`)}
+        onClick={() => navigate(`/package/${encodeURIComponent(item.id)}`, { state: { fromSearch } })}
         role="button"
         tabIndex={0}
       >
