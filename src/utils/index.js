@@ -99,6 +99,47 @@ export function getSorter(key = 'newest', dir = 'desc') {
             return d || compareByUpdatedAt(a, b);
         };
     }
+    if (key === 'trend') {
+        const compareByUpdatedAt = (a, b) => {
+            const d = ((b.updatedAt == null ? Number.NEGATIVE_INFINITY : b.updatedAt) -
+                (a.updatedAt == null ? Number.NEGATIVE_INFINITY : a.updatedAt));
+            return d || cmpNameAsc(a, b);
+        };
+        if (dir === 'asc') {
+            return (a, b) => {
+                const ap = toFiniteNumber(a.trend);
+                const bp = toFiniteNumber(b.trend);
+                const d = ((ap == null ? Number.POSITIVE_INFINITY : ap) -
+                    (bp == null ? Number.POSITIVE_INFINITY : bp));
+                return d || compareByUpdatedAt(a, b);
+            };
+        }
+        return (a, b) => {
+            const ap = toFiniteNumber(a.trend);
+            const bp = toFiniteNumber(b.trend);
+            const d = ((bp == null ? Number.NEGATIVE_INFINITY : bp) -
+                (ap == null ? Number.NEGATIVE_INFINITY : ap));
+            return d || compareByUpdatedAt(a, b);
+        };
+    }
+    if (key === 'added') {
+        if (dir === 'asc') {
+            return (a, b) => {
+                const ap = toFiniteNumber(a.catalogIndex);
+                const bp = toFiniteNumber(b.catalogIndex);
+                const d = ((ap == null ? Number.POSITIVE_INFINITY : ap) -
+                    (bp == null ? Number.POSITIVE_INFINITY : bp));
+                return d || cmpNameAsc(a, b);
+            };
+        }
+        return (a, b) => {
+            const ap = toFiniteNumber(a.catalogIndex);
+            const bp = toFiniteNumber(b.catalogIndex);
+            const d = ((bp == null ? Number.NEGATIVE_INFINITY : bp) -
+                (ap == null ? Number.NEGATIVE_INFINITY : ap));
+            return d || cmpNameAsc(a, b);
+        };
+    }
     if (dir === 'asc') {
         return (a, b) => {
             const d = ((a.updatedAt == null ? Number.POSITIVE_INFINITY : a.updatedAt) -

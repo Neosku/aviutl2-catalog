@@ -30,26 +30,27 @@ import appIcon from '../../src-tauri/icons/icon.svg';
 
 export const SORT_OPTIONS = [
   { value: 'popularity_desc', label: '人気順' },
-  { value: 'updated_desc', label: '新着順 (更新日)' },
-  { value: 'name_asc', label: '名前順 (A-Z)' },
-  { value: 'updated_asc', label: '古い順 (更新日)' },
+  { value: 'trend_desc', label: 'トレンド順' },
+  { value: 'added_desc', label: '新着順' },
+  { value: 'updated_desc', label: '最終更新日順' },
 ];
 
 function sortOrderFromQuery(sortKey, dir) {
   if (sortKey === 'popularity') return 'popularity_desc';
-  if (sortKey === 'name') return 'name_asc';
-  if (dir === 'asc') return 'updated_asc';
-  return 'updated_desc';
+  if (sortKey === 'trend') return 'trend_desc';
+  if (sortKey === 'added') return 'added_desc';
+  if (sortKey === 'newest') return 'updated_desc';
+  return 'popularity_desc';
 }
 
 function sortParamsFromOrder(order) {
   switch (order) {
     case 'popularity_desc':
       return { sortKey: 'popularity', dir: 'desc' };
-    case 'name_asc':
-      return { sortKey: 'name', dir: 'asc' };
-    case 'updated_asc':
-      return { sortKey: 'newest', dir: 'asc' };
+    case 'trend_desc':
+      return { sortKey: 'trend', dir: 'desc' };
+    case 'added_desc':
+      return { sortKey: 'added', dir: 'desc' };
     case 'updated_desc':
     default:
       return { sortKey: 'newest', dir: 'desc' };
@@ -287,8 +288,11 @@ export default function AppShell() {
   const parseQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get('q') || '';
-    const sortKey = params.get('sort') || 'popularity';
-    const dir = params.get('dir') || (sortKey === 'name' ? 'asc' : 'desc');
+    let sortKey = params.get('sort') || 'popularity';
+    if (!['popularity', 'newest', 'trend', 'added'].includes(sortKey)) {
+      sortKey = 'popularity';
+    }
+    const dir = sortKey === 'newest' ? 'desc' : (params.get('dir') || 'desc');
     const type = params.get('type') || '';
     const tags = (params.get('tags') || '').split(',').filter(Boolean);
     const installed = params.get('installed') === '1';

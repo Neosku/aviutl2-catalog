@@ -1762,7 +1762,7 @@ async function computeHashFromFile(fileOrPath) {
 }
 
 // フォーム入力＋タグ配列から index.json の1エントリを構築
-function buildPackageEntry(form, tags) {
+function buildPackageEntry(form, tags, inherited = {}) {
   const id = form.id.trim();
   const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
   const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
@@ -1778,6 +1778,8 @@ function buildPackageEntry(form, tags) {
     originalAuthor: form.originalAuthor.trim(),
     repoURL: form.repoURL.trim(),
     'latest-version': computeLatestVersion(form),
+    ...(Object.prototype.hasOwnProperty.call(inherited, 'popularity') ? { popularity: inherited.popularity } : {}),
+    ...(Object.prototype.hasOwnProperty.call(inherited, 'trend') ? { trend: inherited.trend } : {}),
     licenses: buildLicensesPayload(form),
     niconiCommonsId,
     tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
@@ -2794,23 +2796,21 @@ export default function Register() {
         setError(validation);
         return;
       }
-      let entry = buildPackageEntry(packageForm, tagListRef.current);
-      const useExternalDescription = packageForm.descriptionMode === 'external'
-        && isHttpsUrl(packageForm.descriptionUrl);
-      const existingIndex = catalogItems.findIndex(item => item.id === entry.id);
+      const entryId = packageForm.id.trim();
+      const existingIndex = catalogItems.findIndex(item => item.id === entryId);
+      const inherited = {};
       if (existingIndex >= 0) {
         const existingItem = catalogItems[existingIndex];
-        const inherited = {};
         if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'popularity')) {
           inherited.popularity = existingItem.popularity;
         }
         if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'trend')) {
           inherited.trend = existingItem.trend;
         }
-        if (Object.keys(inherited).length) {
-          entry = { ...entry, ...inherited };
-        }
       }
+      const entry = buildPackageEntry(packageForm, tagListRef.current, inherited);
+      const useExternalDescription = packageForm.descriptionMode === 'external'
+        && isHttpsUrl(packageForm.descriptionUrl);
       const nextCatalog = existingIndex >= 0
         ? catalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
         : [...catalogItems, entry];

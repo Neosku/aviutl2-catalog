@@ -61,7 +61,9 @@ function catalogReducerInternal(state, action) {
       // カタログ本体の差し替え
       // - installer があるものは downloadURL を installer:// に置き換え（UI でインストーラ起動）
       // - detectedMap（検出済みバージョン）から installed/isLatest を付加
-      const items = (action.payload || []).map(enrich).map(it => {
+      const items = (action.payload || []).map((item, index) => (
+        enrich({ ...item, catalogIndex: index })
+      )).map(it => {
         const hasInst = (typeof it?.installer === 'string') || Array.isArray(it?.installer?.install);
         const dl = hasInst ? `installer://${encodeURIComponent(it.id)}` : it.downloadURL;
         const detectedVersion = state.detectedMap?.[it.id] || '';
