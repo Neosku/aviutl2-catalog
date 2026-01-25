@@ -1,4 +1,10 @@
 # AviUtl2 カタログ
+![Platform](https://img.shields.io/badge/Windows-Only-0078D6)
+[![Release](https://img.shields.io/github/v/release/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/releases/latest)
+![WinGet](https://img.shields.io/winget/v/Neosku.AviUtl2-Catalog)
+[![Downloads](https://img.shields.io/github/downloads/Neosku/aviutl2-catalog/total)](https://github.com/Neosku/aviutl2-catalog/releases/latest)
+[![License](https://img.shields.io/github/license/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/blob/main/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/commits/main)
 
 AviUtl2のプラグインやスクリプトを、検索から導入・更新まで一括で管理できるデスクトップアプリです。
 現在ベータ版です。
@@ -6,7 +12,7 @@ AviUtl2のプラグインやスクリプトを、検索から導入・更新ま�
 ---
 
 ## 主な機能
-- 🚀 AviUtl2本体および推奨プラグインを簡単に導入
+* 🚀 AviUtl2本体および推奨プラグインを簡単に導入
 * 📦 インストール・更新・削除をワンボタンでかんたん操作（一括更新にも対応）
 * 🔔 AviUtl2本体やプラグイン／スクリプトに更新があると、AviUtl2のメニューバーでお知らせ
 * 🔍 パッケージを検索・絞り込み
@@ -88,6 +94,23 @@ AviUtl2のプラグインやスクリプトを、検索から導入・更新ま�
   パッケージ詳細を開いた上で、未インストールの場合は自動でインストールを開始します。
 
 ※ 上記以外のパスは無視されます。
+
+---
+
+## インストール
+### 手動（推奨）
+1. https://github.com/Neosku/aviutl2-catalog/releases/latest から最新版をダウンロード
+2. ダウンロードしたインストーラー（.exe）を実行
+
+
+### Winget
+※ WinGet への登録／反映が遅れることがあります（最新バージョンが表示されない場合は、手動インストールをご利用ください）
+```powershell
+winget install --id Neosku.AviUtl2-Catalog -e
+```
+
+## アップデート
+ソフトを起動すると、更新がある場合にメッセージが表示されます。案内に従ってそのまま更新できます
 
 ---
 
