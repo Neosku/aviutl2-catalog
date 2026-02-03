@@ -27,8 +27,7 @@ if (document.readyState === 'loading') {
   showMain();
 }
 
-const CORE_PACKAGE_ID = 'Kenkun.AviUtlExEdit2';
-const REQUIRED_PLUGIN_IDS = ['hebiiro.al2_jd', 'rigaya.x264guiEx', 'Mr-Ojii.L-SMASH-Works'];
+const SETUP_REMOTE_URL = import.meta.env.VITE_SETUP_REMOTE;
 
 // 共通の安全ログ関数
 async function safeLog(prefix, error) {
@@ -146,6 +145,8 @@ export default function InitSetupApp() {
   const [packagesDownloadError, setPackagesDownloadError] = useState('');
   const [packageVersions, setPackageVersions] = useState({});
   const [versionsDetected, setVersionsDetected] = useState(false);
+  const [setupConfig, setSetupConfig] = useState(null);
+  const [setupError, setSetupError] = useState('');
 
   const { updateInfo, updateBusy, updateError, confirmUpdate, dismissUpdate } = useUpdatePrompt();
 
@@ -257,14 +258,47 @@ export default function InitSetupApp() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!REQUIRED_PLUGIN_IDS.length) return;
+      try {
+        const response = await fetch(SETUP_REMOTE_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        const corePackageId = typeof data?.corePackageId === 'string' ? data.corePackageId.trim() : '';
+        const requiredPluginIds = Array.isArray(data?.requiredPluginIds)
+          ? data.requiredPluginIds.map((id) => String(id).trim()).filter(Boolean)
+          : [];
+        if (!corePackageId || requiredPluginIds.length === 0) {
+          throw new Error('invalid payload');
+        }
+        if (cancelled) return;
+        setSetupConfig({ corePackageId, requiredPluginIds });
+        setSetupError('');
+      } catch (e) {
+        if (!cancelled) {
+          setSetupConfig(null);
+          setSetupError('インターネットに接続してください。');
+        }
+        await safeLog('[init-window] setup config load failed', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const requiredPluginIds = setupConfig?.requiredPluginIds ?? [];
+  const corePackageId = setupConfig?.corePackageId ?? '';
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!requiredPluginIds.length) return;
       setPackagesLoading(true);
       setPackagesError('');
       try {
         const list = await fetchCatalogList();
         const nextItems = {};
         const missing = [];
-        REQUIRED_PLUGIN_IDS.forEach((id) => {
+        requiredPluginIds.forEach((id) => {
           const found = list.find((it) => it && it.id === id) || null;
           if (!found) missing.push(id);
           nextItems[id] = found;
@@ -273,7 +307,7 @@ export default function InitSetupApp() {
           setPackageItems(nextItems);
           setPackageStates((prev) => {
             const next = { ...prev };
-            REQUIRED_PLUGIN_IDS.forEach((id) => {
+            requiredPluginIds.forEach((id) => {
               if (!next[id]) next[id] = { downloading: false, installed: false, error: '', progress: null };
             });
             return next;
@@ -290,7 +324,7 @@ export default function InitSetupApp() {
     return () => {
       cancelled = true;
     };
-  }, [fetchCatalogList]);
+  }, [fetchCatalogList, requiredPluginIds]);
 
   useEffect(() => {
     if (step === 'packages') setVersionsDetected(false);
@@ -303,7 +337,7 @@ export default function InitSetupApp() {
       if (versionsDetected) return;
       try {
         const core = await import('@tauri-apps/api/core');
-        const itemsForDetect = REQUIRED_PLUGIN_IDS.map((id) => packageItems[id]).filter(Boolean);
+        const itemsForDetect = requiredPluginIds.map((id) => packageItems[id]).filter(Boolean);
         if (itemsForDetect.length === 0) return;
         const result = await core.invoke('detect_versions_map', { items: itemsForDetect });
         if (cancelled) return;
@@ -329,7 +363,7 @@ export default function InitSetupApp() {
     return () => {
       cancelled = true;
     };
-  }, [step, packageItems, versionsDetected]);
+  }, [step, packageItems, requiredPluginIds, versionsDetected]);
 
   function updatePackageState(id, updater) {
     setPackageStates((prev) => {
@@ -341,12 +375,12 @@ export default function InitSetupApp() {
 
   const requiredPackages = useMemo(
     () =>
-      REQUIRED_PLUGIN_IDS.map((id) => ({
+      requiredPluginIds.map((id) => ({
         id,
         item: packageItems[id] || null,
         state: packageStates[id] || { downloading: false, installed: false, error: '', progress: null },
       })),
-    [packageItems, packageStates],
+    [packageItems, packageStates, requiredPluginIds],
   );
 
   const allRequiredInstalled = useMemo(
@@ -354,7 +388,7 @@ export default function InitSetupApp() {
     [requiredPackages],
   );
 
-  const corePackageState = packageStates[CORE_PACKAGE_ID] || {
+  const corePackageState = packageStates[corePackageId] || {
     downloading: false,
     installed: false,
     error: '',
@@ -478,7 +512,7 @@ ${detail}`
         return;
       }
       await persistAviutlSettings(normalized, portable);
-      const success = await downloadRequiredPackage(CORE_PACKAGE_ID);
+      const success = await downloadRequiredPackage(corePackageId);
       if (!success) throw new Error('インストールに失敗しました。');
       setStep('packages');
     } catch (e) {
@@ -562,6 +596,12 @@ ${detail}`
                 <div className="whitespace-pre-wrap flex-1 font-medium leading-relaxed">{error}</div>
               </div>
             )}
+            {setupError && (
+              <div className="mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <div className="whitespace-pre-wrap flex-1 font-medium leading-relaxed">{setupError}</div>
+              </div>
+            )}
 
             {/* Content: Intro */}
             {step === 'intro' && (
@@ -582,8 +622,13 @@ ${detail}`
                 </p>
 
                 <button
-                  className="btn btn--primary h-12 px-10 rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 border-transparent text-white cursor-pointer"
+                  className={`btn btn--primary h-12 px-10 rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 transition-all bg-blue-600 border-transparent text-white ${
+                    setupConfig
+                      ? 'hover:shadow-blue-600/30 hover:-translate-y-0.5 hover:bg-blue-700 cursor-pointer'
+                      : 'opacity-50 cursor-not-allowed shadow-none'
+                  }`}
                   onClick={() => setStep('question')}
+                  disabled={!setupConfig}
                 >
                   セットアップを開始
                 </button>
