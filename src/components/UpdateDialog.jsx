@@ -13,7 +13,7 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={handleBackdrop} />
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={handleBackdrop} />
       <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>

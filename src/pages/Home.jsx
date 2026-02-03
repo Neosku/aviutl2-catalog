@@ -132,7 +132,12 @@ export default function Home() {
                 </button>
                 {isSortMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsSortMenuOpen(false)} />
+                    <button
+                      type="button"
+                      aria-label="並び替えメニューを閉じる"
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsSortMenuOpen(false)}
+                    />
                     <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 py-1 origin-top-right animate-in fade-in zoom-in-95 duration-100">
                       {SORT_OPTIONS.map((option) => (
                         <button

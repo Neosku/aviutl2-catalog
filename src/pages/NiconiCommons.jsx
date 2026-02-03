@@ -8,6 +8,28 @@ function toNiconiId(value) {
   return String(value || '').trim();
 }
 
+// 一覧用のカスタムチェックボックス
+function Checkbox({ checked, onChange, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      aria-label={ariaLabel}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange?.();
+      }}
+      className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${
+        checked
+          ? 'border-blue-500 bg-blue-600 shadow-sm shadow-blue-500/30'
+          : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-slate-500'
+      }`}
+    >
+      <Check size={14} className={`transition-opacity ${checked ? 'opacity-100' : 'opacity-0'}`} />
+    </button>
+  );
+}
+
 export default function NiconiCommons() {
   const { items } = useCatalog();
   const deselectedIdsRef = useRef([]);
@@ -25,7 +47,7 @@ export default function NiconiCommons() {
   }, [items]);
 
   const sortedEligible = useMemo(() => {
-    return eligibleItems.slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
+    return eligibleItems.toSorted((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
   }, [eligibleItems]);
 
   const queryKey = useMemo(() => normalize(query || ''), [query]);
@@ -57,7 +79,7 @@ export default function NiconiCommons() {
           deselectedIdsRef.current = parsed.map(String).filter(Boolean);
         }
       }
-    } catch (_) {}
+    } catch {}
     const deselectedSet = new Set(deselectedIdsRef.current);
     setSelectedMap(() => {
       const next = {};
@@ -79,7 +101,7 @@ export default function NiconiCommons() {
     deselectedIdsRef.current = deselected;
     try {
       window.localStorage.setItem('niconiCommonsDeselectedIds', JSON.stringify(deselected));
-    } catch (_) {}
+    } catch {}
   }, [eligibleItems, selectedMap]);
 
   const selectedItems = useMemo(() => {
@@ -94,26 +116,6 @@ export default function NiconiCommons() {
   const totalEligible = eligibleItems.length;
   const visibleCount = filteredItems.length;
   const allVisibleSelected = visibleCount > 0 && filteredItems.every((item) => selectedMap[item.id]);
-
-  // 一覧用のカスタムチェックボックス
-  function Checkbox({ checked, onChange, ariaLabel }) {
-    return (
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={checked}
-        aria-label={ariaLabel}
-        onClick={onChange}
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${
-          checked
-            ? 'border-blue-500 bg-blue-600 shadow-sm shadow-blue-500/30'
-            : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-slate-500'
-        }`}
-      >
-        <Check size={14} className={`transition-opacity ${checked ? 'opacity-100' : 'opacity-0'}`} />
-      </button>
-    );
-  }
 
   function toggleItem(id) {
     setSelectedMap((prev) => ({
@@ -144,7 +146,7 @@ export default function NiconiCommons() {
     try {
       await navigator.clipboard.writeText(list.join(' '));
       setCopyState({ ok: true, message: `${list.length}件をコピーしました`, count: list.length });
-    } catch (_) {
+    } catch {
       setCopyState({ ok: false, message: 'コピーに失敗しました', count: 0 });
     }
   }
@@ -205,7 +207,7 @@ export default function NiconiCommons() {
             onClick={async () => {
               try {
                 await open('https://qa.nicovideo.jp/faq/show/863');
-              } catch (_) {}
+              } catch {}
             }}
             type="button"
           >
@@ -254,7 +256,6 @@ export default function NiconiCommons() {
                   <div
                     key={item.id}
                     className="px-4 py-3 grid grid-cols-[2.5rem_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-2 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                    role="button"
                     tabIndex={0}
                     onClick={() => toggleItem(item.id)}
                     onKeyDown={(e) => {
@@ -265,13 +266,11 @@ export default function NiconiCommons() {
                     }}
                   >
                     <div className="flex items-center justify-center">
-                      <span onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={!!selectedMap[item.id]}
-                          onChange={() => toggleItem(item.id)}
-                          ariaLabel={`${item.name || item.id} を選択`}
-                        />
-                      </span>
+                      <Checkbox
+                        checked={!!selectedMap[item.id]}
+                        onChange={() => toggleItem(item.id)}
+                        ariaLabel={`${item.name || item.id} を選択`}
+                      />
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">

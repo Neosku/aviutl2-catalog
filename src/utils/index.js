@@ -32,6 +32,8 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
 // タイムスタンプから "YYYY-MM-DD" の形式に変換する関数
 // 無効な値(null, undefined, NaNなど)や不正な日付は空文字列を返す
 // 必要か要件等
@@ -39,7 +41,6 @@ export function formatDate(ts) {
   if (ts == null) return '';
   const d = new Date(ts);
   if (isNaN(+d)) return '';
-  const pad2 = (n) => ('0' + n).slice(-2); // 2桁ゼロ埋めの簡易関数
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
@@ -173,7 +174,7 @@ export async function readCatalogCache() {
   try {
     return JSON.parse(raw);
   } catch (e) {
-    throw new Error(`catalog cache parse failed: ${e?.message || e}`);
+    throw new Error(`catalog cache parse failed: ${e?.message || e}`, { cause: e });
   }
 }
 
@@ -198,7 +199,7 @@ function deriveCatalogBaseUrl(rootUrl) {
     const resolved = new URL(trimmed, origin);
     const dir = new URL('.', resolved);
     return dir.toString();
-  } catch (_) {
+  } catch {
     const withoutQuery = trimmed.split(/[?#]/)[0];
     const idx = withoutQuery.lastIndexOf('/');
     if (idx >= 0) {
@@ -215,7 +216,7 @@ function resolveCatalogAssetUrl(raw, baseUrl) {
   if (baseUrl) {
     try {
       return new URL(trimmed, baseUrl).toString();
-    } catch (_) {
+    } catch {
       /* fall through */
     }
   }
@@ -334,7 +335,7 @@ async function writeInstalledMap(map) {
   } catch (e) {
     try {
       await logError(`[writeInstalledMap] failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
   return map;
 }
@@ -347,7 +348,7 @@ async function addInstalledId(id, version = '') {
   } catch (e) {
     try {
       await logError(`[addInstalledId] invoke failed, fallback to file: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 
@@ -359,7 +360,7 @@ export async function removeInstalledId(id) {
   } catch (e) {
     try {
       await logError(`[removeInstalledId] invoke failed, fallback to file: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 
@@ -405,7 +406,7 @@ export async function getSettings() {
   } catch (e) {
     try {
       await logError(`[getSettings] failed: ${e?.message || e}`);
-    } catch (_) {
+    } catch {
       /* ログ失敗時は無視 */
     }
     return {};
@@ -458,7 +459,7 @@ async function getClientVersionCached() {
     packageStateClientVersion = '';
     try {
       await logError(`[package-state] getVersion failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
   return packageStateClientVersion;
 }
@@ -476,7 +477,7 @@ async function readAppConfigJson(relPath, fallback) {
   } catch (e) {
     try {
       await logError(`[package-state] read ${relPath} failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
     return fallback;
   }
 }
@@ -488,7 +489,7 @@ async function writeAppConfigJson(relPath, data) {
   } catch (e) {
     try {
       await logError(`[package-state] write ${relPath} failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 // JSONファイルを削除
@@ -501,7 +502,7 @@ async function removeAppConfigFile(relPath) {
   } catch (e) {
     try {
       await logError(`[package-state] remove ${relPath} failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 // メタ情報を正規化
@@ -553,7 +554,7 @@ async function getCurrentWindowLabel() {
   } catch (e) {
     try {
       await logError(`[package-state] getCurrentWindowLabel failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
   return '';
 }
@@ -563,7 +564,7 @@ async function shouldSkipPackageState() {
   try {
     const settings = await getSettings();
     if (settings?.package_state_opt_out) return true;
-  } catch (_) {}
+  } catch {}
   const label = await getCurrentWindowLabel();
   return label === 'init-setup';
 }
@@ -581,7 +582,7 @@ async function createPackageStateEvent(type, extra) {
   const event_id = generateUuidV4();
   const ts = nowUnixSeconds();
   const client_version = await getClientVersionCached();
-  return { uid, event_id, ts, type, client_version, ...(extra || {}) };
+  return { uid, event_id, ts, type, client_version, ...extra };
 }
 // パッケージ状態イベントを送信
 async function postPackageStateEvent(event) {
@@ -617,7 +618,7 @@ async function flushPackageStateQueueInternal(preloadedQueue) {
       await postPackageStateEvent(event);
       try {
         await logInfo(`[package-state] sent ${describePackageStateEvent(event)}`);
-      } catch (_) {}
+      } catch {}
       if (event?.type === 'snapshot' && Number.isFinite(event?.ts)) {
         const meta = await loadPackageStateMeta();
         if (event.ts > meta.last_snapshot_ts) {
@@ -629,7 +630,7 @@ async function flushPackageStateQueueInternal(preloadedQueue) {
       remaining.push(event, ...queue.slice(i + 1));
       try {
         await logError(`[package-state] send failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
       break;
     }
   }
@@ -703,7 +704,7 @@ async function logLine(level, msg) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('log_cmd', { level: String(level), msg: String(msg) });
-  } catch (_) {}
+  } catch {}
 }
 
 // -------------------------
@@ -716,10 +717,6 @@ const LOG_FILE = 'logs/app.log';
 // OS/CPU/GPU/プラグインなどの環境情報を収集
 export async function collectDeviceInfo() {
   const info = { os: {}, cpu: {}, gpu: {}, installedApps: [], installedPlugins: [] };
-  const isWin = true;
-  const isMac = false;
-  const isLinux = false;
-
   // OS情報を取得
   try {
     const shell = await import('@tauri-apps/plugin-shell');
@@ -746,7 +743,7 @@ export async function collectDeviceInfo() {
   } catch (e) {
     try {
       await logError(`[collectDeviceInfo] OS query failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 
   // CPU情報を取得
@@ -776,7 +773,7 @@ export async function collectDeviceInfo() {
   } catch (e) {
     try {
       await logError(`[collectDeviceInfo] CPU query failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 
   // GPU情報を取得
@@ -823,7 +820,7 @@ export async function readAppLog() {
   } catch (e) {
     try {
       await logError(`[readAppLog] failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
     return '';
   }
 }
@@ -852,13 +849,13 @@ async function ensureAviutlClosed() {
     const detail = e?.message || (typeof e === 'string' ? e : '不明なエラー');
     try {
       await logError(`[process-check] failed to query process state: ${detail}`);
-    } catch (_) {}
-    throw new Error(`AviUtl2の起動状況を確認できませんでした: ${detail}`);
+    } catch {}
+    throw new Error(`AviUtl2の起動状況を確認できませんでした: ${detail}`, { cause: e });
   }
   if (running) {
     try {
       await logError(`[process-check] aviutl2.exe is running; aborting operation.`);
-    } catch (_) {}
+    } catch {}
     throw new Error('AviUtl2 が起動中です。\nインストールやアンインストールを行う前にアプリを終了してください。');
   }
 }
@@ -903,13 +900,14 @@ async function ensureTmpDir(idVersion) {
 // exe実行処理
 // -------------------------
 
+function psEscape(s) {
+  return String(s).replace(/'/g, "''");
+}
+
 // 実行ファイルをウィンドウ非表示で実行する関数
 async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
   const shell = await import('@tauri-apps/plugin-shell');
   const fs = await import('@tauri-apps/plugin-fs');
-  function psEscape(s) {
-    return String(s).replace(/'/g, "''");
-  }
   const argList = (args || []).map((a) => `'${psEscape(a)}'`).join(', ');
   const argClause = args && args.length > 0 ? ` -ArgumentList @(${argList})` : '';
   const body = [
@@ -934,7 +932,7 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
 async function runAuoSetup(exeAbsPath) {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const result = await invoke('run_auo_setup', { exePath: exeAbsPath });
+    const _result = await invoke('run_auo_setup', { exePath: exeAbsPath });
   } catch (e) {
     logError(`[runAuoSetup] failed exe=${exeAbsPath}: ${e}`);
     throw e; // ← 呼び出し元に Rust のエラーを投げる
@@ -990,7 +988,7 @@ async function fetchGitHubURL(github) {
   } catch (e) {
     try {
       await logError(`[fetchGitHubAsset] fetch latest failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 
   try {
@@ -1002,14 +1000,51 @@ async function fetchGitHubURL(github) {
   } catch (e) {
     try {
       await logError(`[fetchGitHubAsset] fetch failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
     return '';
   }
 }
 
 // 絶対パスかどうかを判定
 function isAbsPath(p) {
-  return /^(?:[a-zA-Z]:[\\\/]|\\\\|\/)/.test(String(p || ''));
+  return /^(?:[a-zA-Z]:[\\/]|\\\\|\/)/.test(String(p || ''));
+}
+
+async function deletePath(absPath) {
+  const fs = await import('@tauri-apps/plugin-fs');
+  let ok = false;
+  let lastErr = null;
+  try {
+    // 存在確認
+    const exists = await fs.exists(absPath);
+    if (!exists) {
+      return false; // 存在しない場合
+    }
+    // 削除を試みる（ディレクトリも含め再帰的に）
+    try {
+      await fs.remove(absPath, { recursive: true });
+      ok = true;
+    } catch {
+      // 一度失敗したら stat で種類を確認して削除をやり直す
+      try {
+        const st = await fs.stat(absPath);
+        if (st.isDirectory) {
+          await fs.remove(absPath, { recursive: true });
+        } else {
+          await fs.remove(absPath);
+        }
+        ok = true;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (ok) return true;
+  } catch (e) {
+    lastErr = e;
+  }
+  // 削除できなかった場合はエラーを投げる
+  if (!ok) throw lastErr || new Error('remove failed');
+  return ok;
 }
 
 // ファイルのダウンロード（Rust経由）
@@ -1050,12 +1085,12 @@ export async function downloadFileFromUrl(url, destPath, options = {}) {
     return finalPath;
   } catch (e) {
     const detail = e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)) || 'unknown error';
-    throw new Error(`downloadFileFromUrl failed (url=${url}): ${detail}`);
+    throw new Error(`downloadFileFromUrl failed (url=${url}): ${detail}`, { cause: e });
   } finally {
     for (const unlisten of unlisteners) {
       try {
         unlisten();
-      } catch (_) {}
+      } catch {}
     }
   }
 }
@@ -1076,7 +1111,7 @@ async function closeBoothAuthWindow() {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('close_booth_auth_window');
-  } catch (_) {}
+  } catch {}
 }
 // 認証完了イベントを待機
 async function prepareBoothLoginWait() {
@@ -1089,7 +1124,7 @@ async function prepareBoothLoginWait() {
   const unlisten = await listen(BOOTH_LOGIN_COMPLETE_EVENT, (evt) => {
     try {
       unlisten();
-    } catch (_) {}
+    } catch {}
     resolveFn(evt?.payload);
   });
   return done;
@@ -1151,7 +1186,7 @@ export async function downloadFileFromBoothUrl(url, destPath, options = {}) {
           await waitLogin;
           continue;
         }
-        throw new Error(`downloadFileFromBoothUrl failed (url=${url}): ${detail}`);
+        throw new Error(`downloadFileFromBoothUrl failed (url=${url}): ${detail}`, { cause: e });
       }
     }
     throw new Error(`downloadFileFromBoothUrl failed (url=${url}): AUTH_REQUIRED`);
@@ -1159,7 +1194,7 @@ export async function downloadFileFromBoothUrl(url, destPath, options = {}) {
     for (const unlisten of unlisteners) {
       try {
         unlisten();
-      } catch (_) {}
+      } catch {}
     }
   }
 }
@@ -1173,7 +1208,7 @@ async function extractZip(zipPath, destPath) {
   } catch (e) {
     try {
       await logError(`[extractZip] failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 
@@ -1187,7 +1222,7 @@ async function extractSevenZipSfx(sfxPath, destPath) {
   } catch (e) {
     try {
       await logError(`[extractSevenZipSfx] failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
 }
 
@@ -1259,7 +1294,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     if (typeof onProgress !== 'function') return;
     try {
       onProgress(buildProgressPayload(completedUnits, step, index, phase));
-    } catch (_) {
+    } catch {
       // UI 側の例外は握り潰す
     }
   };
@@ -1316,7 +1351,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
                 for (const unlisten of unlisteners) {
                   try {
                     unlisten();
-                  } catch (_) {}
+                  } catch {}
                 }
               }
               ctx.downloadPath = tmpDir;
@@ -1423,7 +1458,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
         try {
           await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`);
         } catch {}
-        throw new Error(`${prefix}: ${err.message}`, { cause: err });
+        throw new Error(`${prefix}: ${err.message}`, { cause: e });
       }
     }
 
@@ -1436,7 +1471,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     }
     try {
       await recordPackageStateEvent('install', item.id);
-    } catch (_) {}
+    } catch {}
     await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
     emitProgress(totalSteps, null, null, 'done');
     // 後始末: 一時作業フォルダを削除（成功時のみ）
@@ -1444,13 +1479,13 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
       try {
         const fs = await import('@tauri-apps/plugin-fs');
         await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-      } catch (_) {}
+      } catch {}
     }
   } catch (e) {
     const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
     try {
       await logError(`[installer ${item.id}] error: ${detail}`);
-    } catch (_) {}
+    } catch {}
     throw e;
   } finally {
     await closeBoothAuthWindow();
@@ -1470,42 +1505,6 @@ export async function runUninstallerForItem(item, dispatch) {
 
   try {
     await logInfo(`[uninstall ${item.id}] start steps=${item.installer.uninstall.length}`);
-    async function deletePath(absPath) {
-      const fs = await import('@tauri-apps/plugin-fs');
-      let ok = false;
-      let lastErr = null;
-      try {
-        // 存在確認
-        const exists = await fs.exists(absPath);
-        if (!exists) {
-          return false; // 存在しない場合
-        }
-        // 削除を試みる（ディレクトリも含め再帰的に）
-        try {
-          await fs.remove(absPath, { recursive: true });
-          ok = true;
-        } catch (e1) {
-          // 一度失敗したら stat で種類を確認して削除をやり直す
-          try {
-            const st = await fs.stat(absPath);
-            if (st.isDirectory) {
-              await fs.remove(absPath, { recursive: true });
-            } else {
-              await fs.remove(absPath);
-            }
-            ok = true;
-          } catch (e2) {
-            lastErr = e2;
-          }
-        }
-        if (ok) return true;
-      } catch (e) {
-        lastErr = e;
-      }
-      // 削除できなかった場合はエラーを投げる
-      if (!ok) throw lastErr || new Error('remove failed');
-      return ok;
-    }
     // アンインストール手順を順に実行
     for (let i = 0; i < item.installer.uninstall.length; i++) {
       const step = item.installer.uninstall[i];
@@ -1519,7 +1518,7 @@ export async function runUninstallerForItem(item, dispatch) {
               if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
               else await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
             } catch (e) {
-              throw new Error(`delete failed path=${p}: ${e?.message || e}`);
+              throw new Error(`delete failed path=${p}: ${e?.message || e}`, { cause: e });
             }
             break;
           }
@@ -1537,12 +1536,15 @@ export async function runUninstallerForItem(item, dispatch) {
         const msg = `[uninstall ${item.id}] step ${i + 1}/${item.installer.uninstall.length} action=${step.action} failed: ${e?.message || e}`;
         try {
           await logError(msg);
-        } catch (_) {}
-        throw new Error(msg);
+        } catch {}
+        throw new Error(msg, { cause: e });
       }
     }
   } catch (e) {
-    // ログ出力後にエラーを伝播させる
+    const detail = e?.message || e;
+    try {
+      await logError(`[uninstall ${item.id}] error: ${detail}`);
+    } catch {}
     throw e;
   }
 
@@ -1555,6 +1557,6 @@ export async function runUninstallerForItem(item, dispatch) {
   }
   try {
     await recordPackageStateEvent('uninstall', item.id);
-  } catch (_) {}
+  } catch {}
   await logInfo(`[uninstall ${item.id}] completed`);
 }

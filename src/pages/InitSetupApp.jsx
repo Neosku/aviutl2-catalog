@@ -36,7 +36,7 @@ async function safeLog(prefix, error) {
     const detail = error ? error.message || (error.toString ? error.toString() : '') : '';
     const message = detail ? `${prefix}: ${detail}` : prefix;
     await logError(message);
-  } catch (_) {
+  } catch {
     // ignore secondary logging failure
   }
 }
@@ -247,6 +247,7 @@ export default function InitSetupApp() {
     let cancelled = false;
     fetchWindowLabel().then((value) => {
       if (!cancelled) setLabel(String(value || ''));
+      return value;
     });
     return () => {
       cancelled = true;
@@ -333,8 +334,7 @@ export default function InitSetupApp() {
   function updatePackageState(id, updater) {
     setPackageStates((prev) => {
       const current = prev[id] || { downloading: false, installed: false, error: '', progress: null };
-      const next =
-        typeof updater === 'function' ? { ...current, ...updater(current) } : { ...current, ...(updater || {}) };
+      const next = typeof updater === 'function' ? { ...current, ...updater(current) } : { ...current, ...updater };
       return { ...prev, [id]: next };
     });
   }
@@ -362,10 +362,6 @@ export default function InitSetupApp() {
   };
   const coreProgress = corePackageState?.progress;
   const coreProgressRatio = coreProgress?.ratio ?? 0;
-  const coreProgressPercent = Number.isFinite(coreProgress?.percent)
-    ? coreProgress.percent
-    : Math.round(coreProgressRatio * 100);
-  const coreProgressLabel = coreProgress?.label ?? '処理中…';
 
   async function downloadRequiredPackage(id) {
     let pkg = packageItems[id];
@@ -412,27 +408,6 @@ export default function InitSetupApp() {
       const detail = e?.message || (e?.toString ? e.toString() : '') || 'エラーが発生しました。';
       updatePackageState(id, () => ({ downloading: false, error: detail, progress: null }));
       return false;
-    }
-  }
-
-  async function downloadAllRequiredPackages() {
-    if (bulkDownloading) return;
-    setPackagesDownloadError('');
-    setBulkDownloading(true);
-    try {
-      let hasFailure = false;
-      for (const { id, state } of requiredPackages) {
-        if (state?.installed) continue;
-        const success = await downloadRequiredPackage(id);
-        if (!success) hasFailure = true;
-      }
-      if (hasFailure) setPackagesDownloadError('一部のインストールに失敗しました。');
-      setVersionsDetected(false);
-    } catch (e) {
-      setPackagesDownloadError('エラーが発生しました。');
-      await safeLog('[init-window] bulk required packages download failed', e);
-    } finally {
-      setBulkDownloading(false);
     }
   }
 
@@ -536,7 +511,7 @@ ${detail}`
         else setAviutlRoot(value);
         setError('');
       }
-    } catch (e) {
+    } catch {
       setError('フォルダ選択に失敗しました。');
     }
   }
@@ -682,12 +657,16 @@ ${detail}`
 
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                    <label
+                      className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 ml-1"
+                      htmlFor="setup-aviutl2-root"
+                    >
                       AviUtl2 フォルダパス
                     </label>
                     <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                       <input
                         type="text"
+                        id="setup-aviutl2-root"
                         className="flex-1 h-11 px-4 text-sm font-mono bg-transparent border-none focus:ring-0 placeholder-slate-400 text-slate-800 dark:text-slate-200"
                         value={aviutlRoot}
                         onChange={(e) => setAviutlRoot(e.target.value)}
@@ -708,13 +687,14 @@ ${detail}`
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
                       ポータブルモード設定
-                    </label>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div
+                      <button
+                        type="button"
                         onClick={() => setPortable(false)}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${!portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
+                        className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${!portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <span
@@ -726,11 +706,12 @@ ${detail}`
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           プラグインやスクリプトを ProgramData に導入します
                         </p>
-                      </div>
+                      </button>
 
-                      <div
+                      <button
+                        type="button"
                         onClick={() => setPortable(true)}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
+                        className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <span
@@ -742,7 +723,7 @@ ${detail}`
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに導入します
                         </p>
-                      </div>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -783,12 +764,16 @@ ${detail}`
 
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                    <label
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1"
+                      htmlFor="setup-install-dir"
+                    >
                       インストール先フォルダ
                     </label>
                     <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                       <input
                         type="text"
+                        id="setup-install-dir"
                         className="flex-1 h-11 px-4 text-sm font-mono bg-transparent border-none focus:ring-0 placeholder-slate-400 text-slate-800 dark:text-slate-200"
                         value={installDir}
                         onChange={(e) => setInstallDir(e.target.value)}
@@ -806,13 +791,14 @@ ${detail}`
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
                       ポータブルモード設定
-                    </label>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div
+                      <button
+                        type="button"
                         onClick={() => setPortable(false)}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${!portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
+                        className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${!portable ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <span
@@ -824,11 +810,12 @@ ${detail}`
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           プラグインやスクリプトを ProgramData に導入します
                         </p>
-                      </div>
+                      </button>
 
-                      <div
+                      <button
+                        type="button"
                         onClick={() => setPortable(true)}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${portable ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
+                        className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${portable ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800'}`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <span
@@ -840,7 +827,7 @@ ${detail}`
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに導入します
                         </p>
-                      </div>
+                      </button>
                     </div>
                   </div>
                 </div>

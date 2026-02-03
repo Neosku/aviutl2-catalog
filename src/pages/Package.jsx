@@ -44,11 +44,11 @@ function resolveMarkdownURL(path, baseUrl) {
   // 絶対URLならそのまま返す
   try {
     return new URL(trimmed).toString();
-  } catch (_) {}
+  } catch {}
   // 相対URLならbaseUrlを基準に解決
   try {
     return new URL(trimmed, baseUrl).toString();
-  } catch (_) {}
+  } catch {}
   throw new Error('Unable to resolve markdown path');
 }
 
@@ -62,7 +62,7 @@ function LicenseModal({ license, onClose }) {
       aria-modal="true"
       aria-labelledby="license-modal-title"
     >
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <h3 id="license-modal-title" className="text-lg font-bold">
@@ -170,7 +170,7 @@ export default function Package() {
         if (!cancelled) {
           setDescriptionHtml(renderMarkdown(text));
         }
-      } catch (_) {
+      } catch {
         if (!cancelled) {
           setDescriptionHtml(renderMarkdown('詳細説明を読み込めませんでした。'));
           setDescriptionError('詳細説明を読み込めませんでした。');
@@ -385,6 +385,14 @@ export default function Package() {
                   className="prose prose-slate max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                   onClick={async (e) => {
+                    const link = e.target.closest('a');
+                    if (link && link.href) {
+                      e.preventDefault();
+                      await open(link.href);
+                    }
+                  }}
+                  onKeyDown={async (e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
                     const link = e.target.closest('a');
                     if (link && link.href) {
                       e.preventDefault();

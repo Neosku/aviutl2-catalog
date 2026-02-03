@@ -19,7 +19,7 @@ function resolvePubDate(update) {
   let label = '';
   try {
     label = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric' }).format(parsed);
-  } catch (_) {
+  } catch {
     label = `${parsed.getMonth() + 1}月${parsed.getDate()}日`;
   }
   return { raw, label };
@@ -59,7 +59,7 @@ export function useUpdatePrompt(options = {}) {
       } catch (e) {
         try {
           await logError(`[updater] check failed: ${e?.message || e}`);
-        } catch (_) {}
+        } catch {}
       }
     })();
     return () => {
@@ -82,21 +82,21 @@ export function useUpdatePrompt(options = {}) {
       try {
         const { relaunch } = await import('@tauri-apps/plugin-process');
         await relaunch();
-      } catch (e) {
+      } catch {
         try {
           const { message } = await import('@tauri-apps/plugin-dialog');
           await message('アップデートを適用しました。アプリを再起動してください。', {
             title: 'アップデート',
             kind: 'info',
           });
-        } catch (_) {}
+        } catch {}
       }
       setUpdateInfo(null);
     } catch (e) {
       setUpdateError('アップデートに失敗しました。ネットワークや権限をご確認ください。');
       try {
         await logError(`[updater] download/install failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     } finally {
       setUpdateBusy(false);
     }

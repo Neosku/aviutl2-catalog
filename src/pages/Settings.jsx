@@ -14,11 +14,6 @@ import {
   resetPackageStateLocalState,
 } from '../utils/index.js';
 
-const THEME_OPTIONS = [
-  { value: 'darkmode', label: 'ダークモード', icon: Moon },
-  { value: 'lightmode', label: 'ライトモード', icon: Sun },
-];
-
 function applyTheme(theme) {
   const root = document?.documentElement;
   if (!root) return;
@@ -64,7 +59,7 @@ export default function Settings() {
       } catch (e) {
         try {
           await logError(`[settings] getSettings failed: ${e?.message || e}`);
-        } catch (_) {}
+        } catch {}
       }
 
       try {
@@ -74,7 +69,7 @@ export default function Settings() {
       } catch (e) {
         try {
           await logError(`[settings] getVersion failed: ${e?.message || e}`);
-        } catch (_) {}
+        } catch {}
       }
     })();
     return () => {
@@ -102,7 +97,7 @@ export default function Settings() {
       const dialog = await import('@tauri-apps/plugin-dialog');
       const p = await dialog.open({ directory: true, multiple: false, title });
       if (p) setForm((prev) => ({ ...prev, [field]: String(p) }));
-    } catch (e) {
+    } catch {
       setError('ディレクトリ選択に失敗しました');
     }
   }
@@ -133,7 +128,7 @@ export default function Settings() {
       try {
         const detected = await detectInstalledVersionsMap(items || []);
         dispatch({ type: 'SET_DETECTED_MAP', payload: detected });
-      } catch (_) {}
+      } catch {}
 
       setSuccess('設定を保存しました。');
       setTimeout(() => setSuccess(''), 3000);
@@ -141,7 +136,7 @@ export default function Settings() {
       setError(e?.message ? String(e.message) : '保存に失敗しました。権限やパスをご確認ください。');
       try {
         await logError(`[settings] save failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     } finally {
       setSaving(false);
     }
@@ -175,12 +170,12 @@ export default function Settings() {
       await fs.writeTextFile(String(savePath), payload);
       try {
         await dialog.message('エクスポートを保存しました。', { title: 'エクスポート', kind: 'info' });
-      } catch (_) {}
+      } catch {}
     } catch (e) {
       setError('エクスポートに失敗しました。\n権限や保存先を確認してください。');
       try {
         await logError(`[settings] export failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     } finally {
       setSyncBusy(false);
       setSyncStatus('');
@@ -215,7 +210,7 @@ export default function Settings() {
       let parsed;
       try {
         parsed = JSON.parse(raw || '{}');
-      } catch (_) {
+      } catch {
         throw new Error('インポートファイルのJSONを読み込めませんでした。');
       }
 
@@ -306,19 +301,18 @@ export default function Settings() {
           title: 'インポート結果',
           kind: hasIssues ? 'warning' : 'info',
         });
-      } catch (_) {}
+      } catch {}
     } catch (e) {
       setError(e?.message ? String(e.message) : 'インポートに失敗しました。');
       try {
         await logError(`[settings] import failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     } finally {
       setSyncBusy(false);
       setSyncStatus('');
     }
   }
 
-  const selectedTheme = THEME_OPTIONS.find((opt) => opt.value === form.theme) || THEME_OPTIONS[0];
   const packageStateEnabled = !form.packageStateOptOut;
 
   return (
@@ -341,12 +335,15 @@ export default function Settings() {
         </div>
         <div className="p-6 space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">AviUtl2 フォルダ</label>
+            <label className="text-sm font-medium" htmlFor="settings-aviutl2-root">
+              AviUtl2 フォルダ
+            </label>
             <div className="text-xs text-slate-500 dark:text-slate-400">
               aviutl2.exeを含むフォルダを指定してください。
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
+                id="settings-aviutl2-root"
                 name="aviutl2Root"
                 value={form.aviutl2Root}
                 onChange={onChange}

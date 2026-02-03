@@ -16,6 +16,7 @@ import {
 } from './utils/index.js';
 import { useUpdatePrompt } from './utils/useUpdatePrompt.js';
 import InitSetupApp from './pages/InitSetupApp.jsx';
+// eslint-disable-next-line import/no-unassigned-import
 import './styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -59,14 +60,14 @@ async function detectWindowLabel() {
     if (typeof win.label === 'function') {
       try {
         return await win.label();
-      } catch (_) {
+      } catch {
         return 'main';
       }
     }
   } catch (e) {
     try {
       await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`);
-    } catch (_) {}
+    } catch {}
   }
   return 'main';
 }
@@ -93,7 +94,7 @@ function Bootstrapper() {
     const onError = async (e) => {
       try {
         await logError(`[window.error] ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     };
     const onRejection = async (e) => {
       const reason = e?.reason;
@@ -102,25 +103,25 @@ function Bootstrapper() {
         String(reason || 'unhandled rejection');
       try {
         await logError(`[window.unhandledrejection] ${msg}`);
-      } catch (_) {}
+      } catch {}
     };
     const origError = console.error;
     console.error = (...args) => {
       try {
         origError?.(...args);
-      } catch (_) {}
+      } catch {}
       try {
         logError(
           `[console.error] ${args.map((a) => (a && a.stack ? a.stack : a && a.message ? a.message : String(a))).join(' ')}`,
         );
-      } catch (_) {}
+      } catch {}
     };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     return () => {
       try {
         console.error = origError;
-      } catch (_) {}
+      } catch {}
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
     };
@@ -157,7 +158,7 @@ function Bootstrapper() {
       } catch (e) {
         try {
           await logError(`[bootstrap] theme apply failed: ${e?.message || e}`);
-        } catch (_) {}
+        } catch {}
       }
       root?.classList.remove('theme-init');
       // パッケージ状態キューをフラッシュ
@@ -166,7 +167,7 @@ function Bootstrapper() {
       } catch (e) {
         try {
           await logError(`[package-state] flush failed: ${e?.message || e}`);
-        } catch (_) {}
+        } catch {}
       }
 
       try {
@@ -182,7 +183,7 @@ function Bootstrapper() {
           console.warn('Catalog load failed:', e);
           try {
             await logError(`[bootstrap] loadCatalogData failed: ${e?.message || e}`);
-          } catch (_) {}
+          } catch {}
         }
 
         if (Array.isArray(catalogItems) && catalogItems.length > 0) {
@@ -195,7 +196,7 @@ function Bootstrapper() {
           } catch (e) {
             try {
               await logError(`[bootstrap] set_catalog_index failed: ${e?.message || e}`);
-            } catch (_) {}
+            } catch {}
           }
           // ファイルのハッシュでインストール済みバージョンを検出
           try {
@@ -209,7 +210,7 @@ function Bootstrapper() {
               } catch (e) {
                 try {
                   await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`);
-                } catch (_) {}
+                } catch {}
               }
               // パッケージ状態スナップショットを送信
               try {
@@ -217,13 +218,13 @@ function Bootstrapper() {
               } catch (e) {
                 try {
                   await logError(`[package-state] snapshot failed: ${e?.message || e}`);
-                } catch (_) {}
+                } catch {}
               }
             }
           } catch (e) {
             try {
               await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`);
-            } catch (_) {}
+            } catch {}
           }
         } else {
           if (!cancelled)
@@ -312,7 +313,7 @@ function normalizeHref(rawHref) {
       return new URL(trimmed).toString();
     }
     return new URL(trimmed, window.location.href).toString();
-  } catch (_) {
+  } catch {
     return trimmed;
   }
 }
@@ -331,7 +332,7 @@ async function openMarkdownLinkExternally(rawHref) {
   }
   try {
     window.open(href, '_blank', 'noopener,noreferrer');
-  } catch (_) {
+  } catch {
     window.location.href = href;
   }
 }

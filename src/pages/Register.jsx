@@ -125,7 +125,7 @@ function revokePreviewUrl(url) {
   if (typeof url === 'string' && url.startsWith('blob:')) {
     try {
       URL.revokeObjectURL(url);
-    } catch (_) {
+    } catch {
       /* ignore */
     }
   }
@@ -149,7 +149,7 @@ function resolveBaseUrl(rawUrl) {
       (typeof window !== 'undefined' && window.location && window.location.href) || 'app://localhost/',
     );
     return new URL('.', absolute).toString();
-  } catch (_) {
+  } catch {
     const stripped = String(rawUrl).split(/[?#]/)[0];
     const idx = stripped.lastIndexOf('/');
     if (idx >= 0) {
@@ -164,7 +164,7 @@ function resolveRelativeUrl(rawPath, baseUrl) {
   if (!baseUrl) return rawPath;
   try {
     return new URL(rawPath, baseUrl).toString();
-  } catch (_) {
+  } catch {
     return rawPath;
   }
 }
@@ -175,9 +175,15 @@ function basename(path) {
   return parts[parts.length - 1] || path;
 }
 
+// 矩形領域内かどうかを判定
+function isInsideRect(rect, x, y) {
+  if (!rect) return false;
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
 // シンプルなカスタムセレクト（WebView標準のプルダウンを避ける）
 const ActionSelect = memo(
-  function ActionSelect({ value, onChange, options, ariaLabel }) {
+  function ActionSelect({ value, onChange, options, ariaLabel, buttonId, ariaLabelledby }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     const normalized = Array.isArray(options) ? options : [];
@@ -213,6 +219,7 @@ const ActionSelect = memo(
       <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
         <button
           type="button"
+          id={buttonId}
           className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
             open
               ? 'border-blue-500 ring-2 ring-blue-500/20 z-10'
@@ -222,6 +229,7 @@ const ActionSelect = memo(
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledby}
         >
           <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
           <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden>
@@ -434,10 +442,19 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">タグ</label>
+      <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="tags-input">
+        タグ
+      </label>
       <div
         className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
         onClick={() => inputRef.current?.focus()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.focus();
+          }
+        }}
+        tabIndex={0}
       >
         {tags.map((tag) => (
           <span
@@ -460,6 +477,7 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
         ))}
         <input
           ref={inputRef}
+          id="tags-input"
           name="tags"
           className="min-w-[120px] flex-1 border-0 bg-transparent p-1 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 dark:text-slate-100"
           value={inputValue}
@@ -524,7 +542,7 @@ const PackageLicenseSection = memo(
         await navigator.clipboard.writeText(templatePreview);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch (_) {}
+      } catch {}
     }
     return (
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -538,7 +556,10 @@ const PackageLicenseSection = memo(
           >
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label
+                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  htmlFor={`license-type-${activeLicense.key}`}
+                >
                   種類<span className="text-red-500">*</span>
                 </label>
                 <ActionSelect
@@ -546,14 +567,19 @@ const PackageLicenseSection = memo(
                   onChange={(val) => onUpdateLicenseField(activeLicense.key, 'type', val)}
                   options={[{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS]}
                   ariaLabel="ライセンスの種類を選択"
+                  buttonId={`license-type-${activeLicense.key}`}
                 />
               </div>
               {isOtherType && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                    htmlFor={`license-name-${activeLicense.key}`}
+                  >
                     ライセンス名<span className="text-red-500">*</span>
                   </label>
                   <input
+                    id={`license-name-${activeLicense.key}`}
                     value={activeLicense.licenseName}
                     onChange={(e) => onUpdateLicenseField(activeLicense.key, 'licenseName', e.target.value)}
                     placeholder="ライセンス名を入力してください"
@@ -586,10 +612,14 @@ const PackageLicenseSection = memo(
             </div>
             {showBodyInput ? (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label
+                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  htmlFor={`license-body-${activeLicense.key}`}
+                >
                   ライセンス本文{forceBodyInput ? <span className="text-red-500">*</span> : ''}
                 </label>
                 <textarea
+                  id={`license-body-${activeLicense.key}`}
                   className="min-h-[160px] font-mono text-xs leading-relaxed"
                   value={activeLicense.licenseBody}
                   onChange={(e) => onUpdateLicenseField(activeLicense.key, 'licenseBody', e.target.value)}
@@ -608,16 +638,28 @@ const PackageLicenseSection = memo(
                   activeLicense.copyrights.map((copyright) => (
                     <div key={copyright.key} className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権年</label>
+                        <label
+                          className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                          htmlFor={`license-${activeLicense.key}-copyright-years-${copyright.key}`}
+                        >
+                          著作権年
+                        </label>
                         <input
+                          id={`license-${activeLicense.key}-copyright-years-${copyright.key}`}
                           value={copyright.years}
                           onChange={(e) => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)}
                           placeholder="(例: 2025)"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権者</label>
+                        <label
+                          className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                          htmlFor={`license-${activeLicense.key}-copyright-holder-${copyright.key}`}
+                        >
+                          著作権者
+                        </label>
                         <input
+                          id={`license-${activeLicense.key}-copyright-holder-${copyright.key}`}
                           value={copyright.holder}
                           onChange={(e) =>
                             onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)
@@ -707,13 +749,6 @@ const PackageImagesSection = memo(
         try {
           const appWindow = getCurrentWindow();
 
-          // Helper to check if point (x, y) is inside rect
-          const isInside = (rect, x, y) => {
-            if (!rect) return false;
-            // Tauri's drag-drop position is in logical pixels (CSS pixels).
-            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-          };
-
           // Helper to handle file reading
           const processDroppedFiles = async (paths) => {
             const files = [];
@@ -735,24 +770,22 @@ const PackageImagesSection = memo(
             return files;
           };
 
-          const handleDragEvent = (event, type) => {
+          const handleDragEvent = async (event, type) => {
             const { position } = event.payload;
             const thumbRect = thumbnailRef.current?.getBoundingClientRect();
             const infoRect = infoRef.current?.getBoundingClientRect();
 
-            const overThumbnail = isInside(thumbRect, position.x, position.y);
-            const overInfo = isInside(infoRect, position.x, position.y);
+            const overThumbnail = isInsideRect(thumbRect, position.x, position.y);
+            const overInfo = isInsideRect(infoRect, position.x, position.y);
 
             if (type === 'drop') {
               const { paths } = event.payload;
               if (overThumbnail && paths.length > 0) {
-                processDroppedFiles([paths[0]]).then((files) => {
-                  if (files.length > 0) onThumbnailChange(files[0]);
-                });
+                const files = await processDroppedFiles([paths[0]]);
+                if (files.length > 0) onThumbnailChange(files[0]);
               } else if (overInfo && paths.length > 0) {
-                processDroppedFiles(paths).then((files) => {
-                  if (files.length > 0) onAddInfoImages(files);
-                });
+                const files = await processDroppedFiles(paths);
+                if (files.length > 0) onAddInfoImages(files);
               }
               setIsDraggingOverThumbnail(false);
               setIsDraggingOverInfo(false);
@@ -765,12 +798,19 @@ const PackageImagesSection = memo(
             }
           };
 
-          // User requested "tauri/api/windowのonDragDropEvent()"
-          // We use listen('tauri://drag-drop') which is the v2 equivalent for window file drops.
-          unlistenDragDrop = await appWindow.listen('tauri://drag-drop', (e) => handleDragEvent(e, 'drop'));
-          unlistenDragEnter = await appWindow.listen('tauri://drag-enter', (e) => handleDragEvent(e, 'enter'));
-          unlistenDragOver = await appWindow.listen('tauri://drag-over', (e) => handleDragEvent(e, 'over'));
-          unlistenDragLeave = await appWindow.listen('tauri://drag-leave', (e) => handleDragEvent(e, 'leave'));
+          // ドラックアンドドロップイベントをリッスン
+          unlistenDragDrop = await appWindow.listen('tauri://drag-drop', (e) => {
+            void handleDragEvent(e, 'drop');
+          });
+          unlistenDragEnter = await appWindow.listen('tauri://drag-enter', (e) => {
+            void handleDragEvent(e, 'enter');
+          });
+          unlistenDragOver = await appWindow.listen('tauri://drag-over', (e) => {
+            void handleDragEvent(e, 'over');
+          });
+          unlistenDragLeave = await appWindow.listen('tauri://drag-leave', (e) => {
+            void handleDragEvent(e, 'leave');
+          });
         } catch (err) {
           console.error('Failed to setup drag and drop listeners', err);
         }
@@ -987,7 +1027,7 @@ const PackageInstallerSection = memo(
         </div>
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロード元</label>
+            <div className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロード元</div>
             <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/50">
               {INSTALLER_SOURCES.map((option) => {
                 const isActive = installer.sourceType === option.value;
@@ -1011,8 +1051,14 @@ const PackageInstallerSection = memo(
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             {installer.sourceType === 'direct' && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロードURL</label>
+                <label
+                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  htmlFor="installer-direct-url"
+                >
+                  ダウンロードURL
+                </label>
                 <input
+                  id="installer-direct-url"
                   value={installer.directUrl}
                   onChange={(e) => updateInstallerField('directUrl', e.target.value)}
                   placeholder="https://example.com/plugin.zip"
@@ -1021,8 +1067,11 @@ const PackageInstallerSection = memo(
             )}
             {installer.sourceType === 'booth' && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">BOOTH URL</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="installer-booth-url">
+                  BOOTH URL
+                </label>
                 <input
+                  id="installer-booth-url"
                   value={installer.boothUrl}
                   onChange={(e) => updateInstallerField('boothUrl', e.target.value)}
                   placeholder="https://booth.pm/downloadables/...で始まるパス"
@@ -1032,24 +1081,42 @@ const PackageInstallerSection = memo(
             {installer.sourceType === 'github' && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">GitHub ID (Owner)</label>
+                  <label
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                    htmlFor="installer-github-owner"
+                  >
+                    GitHub ID (Owner)
+                  </label>
                   <input
+                    id="installer-github-owner"
                     value={installer.githubOwner}
                     onChange={(e) => updateInstallerField('githubOwner', e.target.value)}
                     placeholder="例: neosku"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">レポジトリ名 (Repo)</label>
+                  <label
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                    htmlFor="installer-github-repo"
+                  >
+                    レポジトリ名 (Repo)
+                  </label>
                   <input
+                    id="installer-github-repo"
                     value={installer.githubRepo}
                     onChange={(e) => updateInstallerField('githubRepo', e.target.value)}
                     placeholder="例: aviutl2-catalog"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">正規表現パターン</label>
+                  <label
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                    htmlFor="installer-github-pattern"
+                  >
+                    正規表現パターン
+                  </label>
                   <input
+                    id="installer-github-pattern"
                     value={installer.githubPattern}
                     onChange={(e) => updateInstallerField('githubPattern', e.target.value)}
                     placeholder="^aviutl_plugin_.*\\.zip$"
@@ -1062,8 +1129,14 @@ const PackageInstallerSection = memo(
             )}
             {installer.sourceType === 'GoogleDrive' && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ファイルID</label>
+                <label
+                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  htmlFor="installer-google-drive-id"
+                >
+                  ファイルID
+                </label>
                 <input
+                  id="installer-google-drive-id"
                   value={installer.googleDriveId}
                   onChange={(e) => updateInstallerField('googleDriveId', e.target.value)}
                   placeholder="Google Drive の共有リンクに含まれるID（…/drive/folders/{フォルダID}）"
@@ -1100,15 +1173,14 @@ const PackageInstallerSection = memo(
                         {order}
                       </span>
                       {!isSpecialAction && (
-                        <span
+                        <button
+                          type="button"
                           className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
-                          role="button"
-                          tabIndex={0}
                           onPointerDown={(e) => startHandleDrag('install', idx, e)}
                           aria-label="ドラッグして並び替え"
                         >
                           <GripVertical size={16} />
-                        </span>
+                        </button>
                       )}
                     </div>
                     <div className="flex-1 min-w-[120px]">
@@ -1135,8 +1207,14 @@ const PackageInstallerSection = memo(
                   {!isSpecialAction && step.action === 'run' && (
                     <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">実行パス</label>
+                        <label
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                          htmlFor={`install-${step.key}-path`}
+                        >
+                          実行パス
+                        </label>
                         <input
+                          id={`install-${step.key}-path`}
                           value={step.path}
                           onChange={(e) => updateInstallStep(step.key, 'path', e.target.value)}
                           placeholder="{tmp}/setup.exe"
@@ -1144,10 +1222,14 @@ const PackageInstallerSection = memo(
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        <label
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                          htmlFor={`install-${step.key}-args`}
+                        >
                           引数 (カンマ区切り)
                         </label>
                         <input
+                          id={`install-${step.key}-args`}
                           value={step.argsText}
                           onChange={(e) => updateInstallStep(step.key, 'argsText', e.target.value)}
                           placeholder="--silent, --option"
@@ -1170,8 +1252,14 @@ const PackageInstallerSection = memo(
                   {!isSpecialAction && step.action === 'copy' && (
                     <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー元</label>
+                        <label
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                          htmlFor={`install-${step.key}-from`}
+                        >
+                          コピー元
+                        </label>
                         <input
+                          id={`install-${step.key}-from`}
                           value={step.from}
                           onChange={(e) => updateInstallStep(step.key, 'from', e.target.value)}
                           placeholder="（例：{tmp}/example.auo）"
@@ -1179,8 +1267,14 @@ const PackageInstallerSection = memo(
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー先</label>
+                        <label
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                          htmlFor={`install-${step.key}-to`}
+                        >
+                          コピー先
+                        </label>
                         <input
+                          id={`install-${step.key}-to`}
                           value={step.to}
                           onChange={(e) => updateInstallStep(step.key, 'to', e.target.value)}
                           placeholder="（例：{pluginsDir}）"
@@ -1225,15 +1319,14 @@ const PackageInstallerSection = memo(
                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         {order}
                       </span>
-                      <span
+                      <button
+                        type="button"
                         className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
-                        role="button"
-                        tabIndex={0}
                         onPointerDown={(e) => startHandleDrag('uninstall', idx, e)}
                         aria-label="ドラッグして並び替え"
                       >
                         <GripVertical size={16} />
-                      </span>
+                      </button>
                     </div>
                     <div className="flex-1 min-w-[120px]">
                       <ActionSelect
@@ -1249,8 +1342,14 @@ const PackageInstallerSection = memo(
                   </div>
                   <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">対象パス</label>
+                      <label
+                        className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                        htmlFor={`uninstall-${step.key}-path`}
+                      >
+                        対象パス
+                      </label>
                       <input
+                        id={`uninstall-${step.key}-path`}
                         value={step.path}
                         onChange={(e) => updateUninstallStep(step.key, 'path', e.target.value)}
                         placeholder={
@@ -1262,10 +1361,14 @@ const PackageInstallerSection = memo(
                     {step.action === 'run' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                          <label
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                            htmlFor={`uninstall-${step.key}-args`}
+                          >
                             引数 (カンマ区切り)
                           </label>
                           <input
+                            id={`uninstall-${step.key}-args`}
                             value={step.argsText}
                             onChange={(e) => updateUninstallStep(step.key, 'argsText', e.target.value)}
                             placeholder="(例: /VERYSILENT)"
@@ -1325,8 +1428,14 @@ const VersionFileCard = memo(
           <DeleteButton onClick={() => removeVersionFile(versionKey, file.key)} ariaLabel={`ファイル${order}を削除`} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">保存先パス (インストール時)</label>
+          <label
+            className="text-xs font-medium text-slate-600 dark:text-slate-400"
+            htmlFor={`version-${versionKey}-file-${file.key}-path`}
+          >
+            保存先パス (インストール時)
+          </label>
           <input
+            id={`version-${versionKey}-file-${file.key}-path`}
             value={file.path}
             onChange={(e) => updateVersionFile(versionKey, file.key, 'path', e.target.value)}
             placeholder="{pluginsDir}/plugin.dll"
@@ -1448,17 +1557,24 @@ const VersionItem = memo(
         <div className="border-t border-slate-100 p-4 dark:border-slate-800">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                htmlFor={`version-${version.key}-name`}
+              >
                 バージョン名<span className="text-red-500">*</span>
               </label>
               <input
+                id={`version-${version.key}-name`}
                 value={version.version}
                 onChange={(e) => updateVersionField(version.key, 'version', e.target.value)}
                 placeholder="v1.0.0"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                htmlFor={`version-${version.key}-release`}
+              >
                 公開日<span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-2">
@@ -1466,6 +1582,7 @@ const VersionItem = memo(
                   type="date"
                   max="9999-12-31"
                   className="flex-1"
+                  id={`version-${version.key}-release`}
                   value={version.release_date}
                   onChange={(e) => updateVersionField(version.key, 'release_date', e.target.value)}
                   ref={handleDateRef}
@@ -1618,21 +1735,6 @@ const PackageVersionSection = memo(
     prev.openDatePicker === next.openDatePicker &&
     prev.versionDateRefs === next.versionDateRefs,
 );
-
-function VisibilityBadge({ type = 'public', label }) {
-  const text = label || (type === 'public' ? '公開' : '非公開');
-  const tone =
-    type === 'public'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'
-      : 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone}`}
-    >
-      {text}
-    </span>
-  );
-}
 
 function parseInstallerSource(installer = {}) {
   if (!installer || typeof installer !== 'object') return createEmptyInstaller();
@@ -2249,7 +2351,7 @@ export default function Register() {
     uninstallerTestPhase === 'running' ? '実行中…' : uninstallerTestPhase === 'done' ? '完了' : '';
   const tagCandidates = useMemo(() => {
     const set = new Set(allTags || []);
-    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), 'ja'));
+    return Array.from(set).toSorted((a, b) => String(a).localeCompare(String(b), 'ja'));
   }, [allTags]);
   // TagEditor からの変更を受け取り、送信時に使う参照を最新化
   const handleTagsChange = useCallback((list) => {
@@ -2279,12 +2381,18 @@ export default function Register() {
 
   // 設定からテーマを読み込んでプレビューの初期値を設定
   useEffect(() => {
-    getSettings()
-      .then((settings) => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const settings = await getSettings();
+        if (cancelled) return;
         const theme = settings?.theme || 'darkmode';
         setPreviewDarkMode(theme !== 'lightmode');
-      })
-      .catch(() => {});
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // TagEditor に渡す初期タグが変わったら、送信用の参照値も合わせる
@@ -2335,8 +2443,9 @@ export default function Register() {
       setExternalDescriptionStatus('loading');
     }
     setDescriptionLoading(true);
-    fetch(descriptionSourceUrl)
-      .then(async (res) => {
+    (async () => {
+      try {
+        const res = await fetch(descriptionSourceUrl);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
@@ -2348,8 +2457,7 @@ export default function Register() {
           return;
         }
         setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: text } : prev));
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) return;
         if (isExternalDescription) {
           setExternalDescriptionText('');
@@ -2357,10 +2465,10 @@ export default function Register() {
           return;
         }
         setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: '' } : prev));
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setDescriptionLoading(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -2703,7 +2811,7 @@ export default function Register() {
     if (handle?.releasePointerCapture && pointerId != null) {
       try {
         handle.releasePointerCapture(pointerId);
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     }
@@ -2960,13 +3068,13 @@ export default function Register() {
     const previousScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     try {
       input.focus({ preventScroll: true });
-    } catch (_) {
+    } catch {
       input.focus();
     }
     if (input.showPicker) {
       try {
         input.showPicker();
-      } catch (_) {
+      } catch {
         input.click();
       }
     } else {
@@ -3001,7 +3109,7 @@ export default function Register() {
         if (installerTestTokenRef.current !== token) return;
         const detected = String((map && map[testItem.id]) || '');
         setInstallerTestDetectedVersion(detected);
-      } catch (_) {
+      } catch {
         if (installerTestTokenRef.current !== token) return;
         setInstallerTestDetectedVersion('');
       }
@@ -3191,7 +3299,12 @@ export default function Register() {
           aria-modal="true"
           aria-labelledby="submit-success-title"
         >
-          <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={closeSuccessDialog} />
+          <button
+            type="button"
+            aria-label="閉じる"
+            className="absolute inset-0 bg-black/50 transition-opacity"
+            onClick={closeSuccessDialog}
+          />
           <div className="relative w-full max-w-lg transform overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
               <h3 id="submit-success-title" className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -3342,10 +3455,11 @@ export default function Register() {
                   {/* Basic Identifiers */}
                   <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-id">
                         ID <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="package-id"
                         name="id"
                         value={packageForm.id}
                         onChange={(e) => updatePackageField('id', e.target.value)}
@@ -3355,10 +3469,11 @@ export default function Register() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">英数字と記号 ( . - _ ) のみ</p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-name">
                         パッケージ名 <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="package-name"
                         name="name"
                         value={packageForm.name}
                         onChange={(e) => updatePackageField('name', e.target.value)}
@@ -3371,10 +3486,14 @@ export default function Register() {
                   {/* Authors & Type */}
                   <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        htmlFor="package-author"
+                      >
                         作者名 <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="package-author"
                         name="author"
                         value={packageForm.author}
                         onChange={(e) => updatePackageField('author', e.target.value)}
@@ -3383,10 +3502,14 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        htmlFor="package-original-author"
+                      >
                         オリジナル作者名 (任意)
                       </label>
                       <input
+                        id="package-original-author"
                         name="originalAuthor"
                         value={packageForm.originalAuthor}
                         onChange={(e) => updatePackageField('originalAuthor', e.target.value)}
@@ -3394,10 +3517,11 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-type">
                         種類 <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="package-type"
                         name="type"
                         value={packageForm.type}
                         onChange={(e) => updatePackageField('type', e.target.value)}
@@ -3406,10 +3530,14 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        htmlFor="package-repo-url"
+                      >
                         パッケージのサイト <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="package-repo-url"
                         name="repoURL"
                         value={packageForm.repoURL}
                         onChange={(e) => updatePackageField('repoURL', e.target.value)}
@@ -3419,10 +3547,14 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                        htmlFor="package-niconi-commons-id"
+                      >
                         ニコニ・コモンズID (任意)
                       </label>
                       <input
+                        id="package-niconi-commons-id"
                         name="niconiCommonsId"
                         value={packageForm.niconiCommonsId}
                         onChange={(e) => updatePackageField('niconiCommonsId', e.target.value)}
@@ -3432,10 +3564,14 @@ export default function Register() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <label
+                      className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                      htmlFor="package-dependencies"
+                    >
                       依存パッケージ (現在非対応)
                     </label>
                     <input
+                      id="package-dependencies"
                       name="dependencies"
                       value={packageForm.dependenciesText}
                       onChange={(e) => updatePackageField('dependenciesText', e.target.value)}
@@ -3446,10 +3582,11 @@ export default function Register() {
                   <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={handleTagsChange} />
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-summary">
                       概要 <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="package-summary"
                       name="summary"
                       value={packageForm.summary}
                       maxLength={35}
@@ -3587,6 +3724,14 @@ export default function Register() {
                             className="prose prose-slate max-h-[400px] w-full max-w-none overflow-y-auto p-6 dark:prose-invert"
                             dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }}
                             onClick={async (e) => {
+                              const link = e.target.closest('a');
+                              if (link && link.href) {
+                                e.preventDefault();
+                                await open(link.href);
+                              }
+                            }}
+                            onKeyDown={async (e) => {
+                              if (e.key !== 'Enter' && e.key !== ' ') return;
                               const link = e.target.closest('a');
                               if (link && link.href) {
                                 e.preventDefault();

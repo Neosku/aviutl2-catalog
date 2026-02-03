@@ -10,13 +10,8 @@ import {
   MessagesSquare,
   RefreshCw,
   PackageSearch,
-  CheckCircle2,
-  Box,
-  Tags,
-  Layers,
   PanelLeftClose,
   PanelLeftOpen,
-  ListFilter,
   ExternalLink,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -33,7 +28,7 @@ export const SORT_OPTIONS = [
   { value: 'updated_desc', label: '最終更新日順' },
 ];
 
-function sortOrderFromQuery(sortKey, dir) {
+function sortOrderFromQuery(sortKey, _dir) {
   if (sortKey === 'popularity') return 'popularity_desc';
   if (sortKey === 'trend') return 'trend_desc';
   if (sortKey === 'added') return 'added_desc';
@@ -188,76 +183,6 @@ function SidebarButton({
   );
 }
 
-function usePortalTooltip(shortcut) {
-  const [hoverRect, setHoverRect] = useState(null);
-  const ref = useRef(null);
-  const timerRef = useRef(null);
-
-  const onMouseEnter = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    const delay = globalTooltipRecent ? 50 : 500;
-    timerRef.current = setTimeout(() => {
-      if (ref.current) {
-        setHoverRect(ref.current.getBoundingClientRect());
-        warmTooltip();
-      }
-    }, delay);
-  };
-
-  const onMouseLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (hoverRect) coolTooltip();
-    setHoverRect(null);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const tooltip = shortcut ? <PortalTooltip text={shortcut} rect={hoverRect} /> : null;
-
-  return { ref, onMouseEnter, onMouseLeave, tooltip };
-}
-
-// function TagButton({ label, selected, onClick }) {
-//   return (
-//     <button
-//       onClick={onClick}
-//       className={`px-2 py-1 text-[10px] rounded border transition-all text-left truncate max-w-full ${
-//         selected
-//           ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 shadow-sm font-medium'
-//           : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-//       }`}
-//       type="button"
-//     >
-//       {label}
-//     </button>
-//   );
-// }
-function TagButton({ label, selected, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`relative px-2 py-1 text-[10px] rounded border text-left max-w-full
-        truncate whitespace-nowrap cursor-pointer
-        transition-colors transition-shadow ${
-          selected
-            ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 shadow-sm'
-            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-        }`}
-    >
-      {/* 幅確保用（見えない太字）。レイアウトには参加する */}
-      <span className="invisible font-medium truncate block">{label}</span>
-
-      {/* 実表示（上に重ねる） */}
-      <span className={`absolute inset-0 px-2 py-1 truncate ${selected ? 'font-medium' : 'font-normal'}`}>{label}</span>
-    </button>
-  );
-}
-
 const AviUtlIcon = ({ size, className }) => (
   <img src={aviutl2Icon} alt="AviUtl2" style={{ width: size, height: size }} className={className} />
 );
@@ -285,11 +210,6 @@ export default function AppShell() {
   const [error, setError] = useState('');
   const scrollContainerRef = useRef(null);
   const homeScrollRef = useRef(0);
-
-  const folderTooltip = usePortalTooltip('データフォルダを開く (Alt+O)');
-  const launchTooltip = usePortalTooltip('AviUtl2を起動 (Alt+L)');
-  const sidebarCloseTooltip = usePortalTooltip('サイドバーを閉じる (Alt+B)');
-  const sidebarOpenTooltip = usePortalTooltip('サイドバーを開く (Alt+B)');
 
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const parseQuery = useMemo(() => {
@@ -397,7 +317,7 @@ export default function AppShell() {
     const afterTag = filterByTagsAndType(base, selectedTags, category ? [category] : []);
     const afterInstalled = filterInstalled ? afterTag.filter((item) => item.installed) : afterTag;
     const sorter = getSorter(parseQuery.sortKey, parseQuery.dir);
-    return [...afterInstalled].sort(sorter);
+    return afterInstalled.toSorted(sorter);
   }, [items, searchQuery, selectedTags, selectedCategory, filterInstalled, parseQuery]);
 
   const isFilterActive = filterInstalled || selectedCategory !== 'すべて' || selectedTags.length > 0;
@@ -433,7 +353,7 @@ export default function AppShell() {
         return;
       }
       setError('エクスプローラーを起動できませんでした。');
-    } catch (e) {
+    } catch {
       setError('データフォルダを開けませんでした。設定を確認してください。');
     }
   }

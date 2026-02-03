@@ -34,7 +34,7 @@ export function renderMarkdown(md = '') {
   try {
     const parsed = marked.parse(escaped);
     return enhanceMarkdownHtml(parsed);
-  } catch (_) {
+  } catch {
     // パース失敗時は簡易フォールバック
     return escaped.replace(/\n/g, '<br/>');
   }

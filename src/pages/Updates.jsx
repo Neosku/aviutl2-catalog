@@ -18,7 +18,6 @@ export default function Updates() {
 
   const bulkRatio = bulkProgress?.ratio ?? 0;
   const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
-  const bulkLabel = bulkProgress?.label ?? '更新処理中…';
   const bulkCurrent = bulkProgress?.current ?? 0;
   const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? updatableItems.length || 0 : 0);
 
@@ -70,7 +69,7 @@ export default function Updates() {
         failed.push({ item, msg });
         try {
           await logError(`[BulkUpdate] ${item.id}: ${msg}`);
-        } catch (_) {}
+        } catch {}
         setBulkProgress({
           ratio: 1,
           percent: 100,

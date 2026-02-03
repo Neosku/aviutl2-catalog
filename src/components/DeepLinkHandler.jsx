@@ -34,7 +34,7 @@ function parseDeepLink(rawUrl) {
   let url;
   try {
     url = new URL(trimmed);
-  } catch (_) {
+  } catch {
     return null;
   }
   if (url.protocol !== `${DEEP_LINK_SCHEME}:`) return null;
@@ -46,7 +46,7 @@ function parseDeepLink(rawUrl) {
   if (match) {
     try {
       packageId = decodeURIComponent(match[1]);
-    } catch (_) {
+    } catch {
       packageId = match[1];
     }
   }
@@ -74,7 +74,7 @@ async function bringWindowToFront() {
     if (!win) return;
     if (typeof win.show === 'function') await win.show();
     if (typeof win.setFocus === 'function') await win.setFocus();
-  } catch (_) {}
+  } catch {}
 }
 
 export default function DeepLinkHandler() {
@@ -111,7 +111,7 @@ export default function DeepLinkHandler() {
       void bringWindowToFront(); // 最前面化
       try {
         navigateRef.current(action.internalUrl);
-      } catch (_) {}
+      } catch {}
     });
   }, []);
 
@@ -140,7 +140,7 @@ export default function DeepLinkHandler() {
             }
           });
         }
-      } catch (_) {}
+      } catch {}
     })();
     return () => {
       cancelled = true;

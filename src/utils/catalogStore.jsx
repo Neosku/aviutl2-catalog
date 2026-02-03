@@ -117,7 +117,7 @@ function catalogReducerInternal(state, action) {
     case 'SET_DETECTED_ONE': {
       // 単一パッケージの検出結果を反映（インストール/アンインストール直後など）
       const { id, version } = action.payload || {};
-      const detectedMap = { ...(state.detectedMap || {}) };
+      const detectedMap = { ...state.detectedMap };
       if (id) detectedMap[id] = version || '';
       const items = state.items.map((it) => {
         const v = it.id === id ? version || '' : state.detectedMap?.[it.id] || '';

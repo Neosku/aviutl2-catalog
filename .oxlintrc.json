@@ -4,7 +4,7 @@
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
-    "perf": "warn",
+    "perf": "off",
     "pedantic": "off",
     "style": "off",
     "restriction": "off",
@@ -12,10 +12,9 @@
   },
   "rules": {
     "eslint/no-unused-vars": "error",
-    "react/react-in-jsx-scope": "off",
     "react/rules-of-hooks": "error",
-    "react/exhaustive-deps": "warn",
-    "eslint/no-console": "warn"
+    "react/exhaustive-deps": "off",
+    "eslint/no-console": "off"
   },
   "settings": {
     "jsx-a11y": {
@@ -28,7 +27,7 @@
       "linkComponents": [],
       "version": "19.2.3",
       "componentWrapperFunctions": []
-    },
+    }
   },
   "env": {
     "builtin": true,

@@ -106,9 +106,7 @@ export default function PackageCard({ item, listSearch = '' }) {
   }
 
   const downloadRatio = downloadProgress?.ratio ?? 0;
-  const downloadPercent = downloadProgress?.percent ?? Math.round(downloadRatio * 100);
   const updateRatio = updateProgress?.ratio ?? 0;
-  const updatePercent = updateProgress?.percent ?? Math.round(updateRatio * 100);
 
   // Layout constants
   const cardHeight = 'h-52'; // Increased height
@@ -120,8 +118,13 @@ export default function PackageCard({ item, listSearch = '' }) {
       <div
         className={`group relative flex flex-row ${cardHeight} min-w-[480px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-black/40 hover:border-blue-300/50 dark:hover:border-slate-600 transition-all duration-300 ease-out cursor-pointer hover:-translate-y-0.5`}
         onClick={() => navigate(`/package/${encodeURIComponent(item.id)}`, { state: { fromSearch } })}
-        role="button"
         tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            navigate(`/package/${encodeURIComponent(item.id)}`, { state: { fromSearch } });
+          }
+        }}
       >
         {/* Content Side (Left) */}
         <div className="flex-1 p-4 flex flex-col min-w-0 relative z-10">
@@ -183,10 +186,7 @@ export default function PackageCard({ item, listSearch = '' }) {
             </div>
 
             {/* Buttons */}
-            <div
-              className="flex items-center gap-2 shrink-0 w-[140px] justify-end"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="flex items-center gap-2 shrink-0 w-[140px] justify-end">
               {isInstalled ? (
                 <>
                   {hasUpdate ? (

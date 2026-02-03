@@ -97,14 +97,14 @@ export default function Feedback() {
       try {
         const info = await collectDeviceInfo();
         if (!cancelled) setDevice(info);
-      } catch (_) {
+      } catch {
         if (!cancelled) setDevice(null);
       }
       try {
         const app = await import('@tauri-apps/api/app');
         const v = app?.getVersion ? await app.getVersion() : '';
         if (!cancelled) setAppVersion(String(v || ''));
-      } catch (_) {
+      } catch {
         if (!cancelled) setAppVersion('');
       }
       try {
@@ -118,7 +118,7 @@ export default function Feedback() {
             .join('\n');
           setPluginsPreview(lines);
         }
-      } catch (_) {
+      } catch {
         if (!cancelled) {
           setPluginsPreview('');
           setPluginsCount(0);
@@ -127,7 +127,7 @@ export default function Feedback() {
       try {
         const text = await readAppLog();
         if (!cancelled) setAppLog(text || '');
-      } catch (_) {
+      } catch {
         if (!cancelled) setAppLog('');
       }
       if (!cancelled) setLoadingDiag(false);
@@ -164,7 +164,7 @@ export default function Feedback() {
     });
     try {
       if (e.target) e.target.value = '';
-    } catch (_) {
+    } catch {
       /* ignore */
     }
   }, []);
@@ -311,7 +311,9 @@ export default function Feedback() {
             aria-modal="true"
             aria-labelledby="submit-success-title"
           >
-            <div
+            <button
+              type="button"
+              aria-label="閉じる"
               className="absolute inset-0 bg-black/30 backdrop-blur-[2px] cursor-pointer"
               onClick={closeSuccessDialog}
             />
@@ -425,10 +427,11 @@ export default function Feedback() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="bug-title">
                       タイトル <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="bug-title"
                       name="title"
                       value={bug.title}
                       onChange={handleBugChange}
@@ -439,10 +442,11 @@ export default function Feedback() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="bug-detail">
                       詳細 <span className="text-red-500">*</span>
                     </label>
                     <textarea
+                      id="bug-detail"
                       name="detail"
                       value={bug.detail}
                       onChange={handleBugChange}
@@ -453,10 +457,11 @@ export default function Feedback() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="bug-contact">
                       連絡先 <span className="text-slate-400 font-normal text-xs ml-1">(任意)</span>
                     </label>
                     <input
+                      id="bug-contact"
                       name="contact"
                       value={bug.contact}
                       onChange={handleBugChange}
@@ -662,10 +667,11 @@ export default function Feedback() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="inq-title">
                       タイトル <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="inq-title"
                       name="title"
                       value={inq.title}
                       onChange={handleInqChange}
@@ -676,10 +682,11 @@ export default function Feedback() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="inq-detail">
                       詳細 <span className="text-red-500">*</span>
                     </label>
                     <textarea
+                      id="inq-detail"
                       name="detail"
                       value={inq.detail}
                       onChange={handleInqChange}
@@ -690,10 +697,11 @@ export default function Feedback() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>
+                    <label className={labelClass} htmlFor="inq-contact">
                       連絡先 <span className="text-slate-400 font-normal text-xs ml-1">(任意)</span>
                     </label>
                     <input
+                      id="inq-contact"
                       name="contact"
                       value={inq.contact}
                       onChange={handleInqChange}

@@ -14,7 +14,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] window module load failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
     try {
       const mod2 = await import('@tauri-apps/api/webviewWindow');
@@ -22,7 +22,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] webviewWindow module load failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
     return null;
   }
@@ -33,7 +33,7 @@ export default function TitleBar() {
     const syncMax = async (w) => {
       try {
         if (w?.isMaximized && !cancelled) setMax(await w.isMaximized());
-      } catch (_) {}
+      } catch {}
     };
 
     (async () => {
@@ -44,7 +44,7 @@ export default function TitleBar() {
         try {
           const off = await fn(syncMax.bind(null, w));
           if (typeof off === 'function') unlisten.push(off);
-        } catch (_) {}
+        } catch {}
       };
       await subscribe(w?.onResized?.bind(w));
       await subscribe(w?.onMoved?.bind(w));
@@ -64,7 +64,7 @@ export default function TitleBar() {
       unlisten.forEach((off) => {
         try {
           off();
-        } catch (_) {}
+        } catch {}
       });
     };
   }, []);
@@ -76,7 +76,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] minimize failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
   }
 
@@ -94,7 +94,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] toggleMaximize failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
   }
 
@@ -105,7 +105,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] close failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
   }
 
@@ -121,7 +121,7 @@ export default function TitleBar() {
     } catch (e) {
       try {
         await logError(`[titlebar] startDragging failed: ${e?.message || e}`);
-      } catch (_) {}
+      } catch {}
     }
   }
 
