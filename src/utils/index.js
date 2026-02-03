@@ -1474,12 +1474,6 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     } catch {}
     await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
     emitProgress(totalSteps, null, null, 'done');
-    // 後始末: パッケージ用の一時作業フォルダ削除（成功時のみ）
-    if (!import.meta.env?.DEV) {
-      try {
-        await deletePath(ctx.tmpDir);
-      } catch {}
-    }
   } catch (e) {
     const detail = (e && (e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e)))) || 'unknown error';
     try {
@@ -1487,6 +1481,12 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     } catch {}
     throw e;
   } finally {
+    // 後始末: パッケージ用の一時作業フォルダ削除（開発環境以外）
+    if (!import.meta.env?.DEV) {
+      try {
+        await deletePath(ctx.tmpDir);
+      } catch {}
+    }
     await closeBoothAuthWindow();
   }
 }
