@@ -3,9 +3,27 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { open } from '@tauri-apps/plugin-shell';
 import ImageCarousel from '../components/ImageCarousel.jsx';
-import { CheckCircle2, Download, ExternalLink, RefreshCw, Trash2, User, Calendar, ChevronRight, ArrowLeft } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  Trash2,
+  User,
+  Calendar,
+  ChevronRight,
+  ArrowLeft,
+} from 'lucide-react';
 import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
-import { formatDate, hasInstaller, runInstallerForItem, runUninstallerForItem, removeInstalledId, latestVersionOf, loadInstalledMap } from '../utils/index.js';
+import {
+  formatDate,
+  hasInstaller,
+  runInstallerForItem,
+  runUninstallerForItem,
+  removeInstalledId,
+  latestVersionOf,
+  loadInstalledMap,
+} from '../utils/index.js';
 import { renderMarkdown } from '../utils/markdown.js';
 import ErrorDialog from '../components/ErrorDialog.jsx';
 import ProgressCircle from '../components/ProgressCircle.jsx';
@@ -26,11 +44,11 @@ function resolveMarkdownURL(path, baseUrl) {
   // 絶対URLならそのまま返す
   try {
     return new URL(trimmed).toString();
-  } catch (_) { }
+  } catch (_) {}
   // 相対URLならbaseUrlを基準に解決
   try {
     return new URL(trimmed, baseUrl).toString();
-  } catch (_) { }
+  } catch (_) {}
   throw new Error('Unable to resolve markdown path');
 }
 
@@ -38,21 +56,32 @@ function LicenseModal({ license, onClose }) {
   if (!license) return null;
   const body = license.body ?? buildLicenseBody(license);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="license-modal-title">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="license-modal-title"
+    >
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
-          <h3 id="license-modal-title" className="text-lg font-bold">ライセンス: {license.type || '不明'}</h3>
+          <h3 id="license-modal-title" className="text-lg font-bold">
+            ライセンス: {license.type || '不明'}
+          </h3>
         </div>
         <div className="px-6 py-4">
           {body ? (
-            <pre className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200">{body}</pre>
+            <pre className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200">
+              {body}
+            </pre>
           ) : (
             <div className="text-sm text-slate-500 dark:text-slate-400">ライセンス本文がありません。</div>
           )}
         </div>
         <div className="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button type="button" className="btn btn--secondary" onClick={onClose}>閉じる</button>
+          <button type="button" className="btn btn--secondary" onClick={onClose}>
+            閉じる
+          </button>
         </div>
       </div>
     </div>
@@ -70,21 +99,21 @@ export default function Package() {
   const listLink = fromSearch ? { pathname: '/', search: fromSearch } : '/';
 
   // URLパラメータのIDに基づいてアイテムを検索
-  const item = useMemo(() => items.find(i => i.id === id), [items, id]);
+  const item = useMemo(() => items.find((i) => i.id === id), [items, id]);
   const imageGroups = Array.isArray(item?.images) ? item.images : [];
   const heroImage = (() => {
     for (const group of imageGroups) {
       if (!Array.isArray(group?.infoImg)) continue;
-      const candidate = group.infoImg.find(src => typeof src === 'string' && src.trim());
+      const candidate = group.infoImg.find((src) => typeof src === 'string' && src.trim());
       if (candidate) return candidate.trim();
     }
     return '';
   })();
   const carouselImages = (() => {
     const result = [];
-    imageGroups.forEach(group => {
+    imageGroups.forEach((group) => {
       if (!Array.isArray(group?.infoImg)) return;
-      group.infoImg.forEach(src => {
+      group.infoImg.forEach((src) => {
         if (typeof src === 'string' && src.trim()) {
           result.push({ src: src.trim(), alt: '' });
         }
@@ -101,16 +130,16 @@ export default function Package() {
   const [removing, setRemoving] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [updateProgress, setUpdateProgress] = useState(null);
-  const [descriptionHtml, setDescriptionHtml] = useState(() => (
-    isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource)
-  ));
+  const [descriptionHtml, setDescriptionHtml] = useState(() =>
+    isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource),
+  );
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
   const [openLicense, setOpenLicense] = useState(null);
   // install=true の自動実行を1回に抑制
   const autoInstallRef = useRef('');
 
-  const baseURL = "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/"
+  const baseURL = 'https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/';
   // MarkdownファイルのベースURL（相対パス解決用）
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +187,7 @@ export default function Package() {
   }, [descriptionSource, baseURL]);
 
   // インストール可能かどうかの判定
-  const canInstall = item ? (hasInstaller(item) || !!item.downloadURL) : false;
+  const canInstall = item ? hasInstaller(item) || !!item.downloadURL : false;
   const downloadRatio = downloadProgress?.ratio ?? 0;
   const downloadPercent = downloadProgress?.percent ?? Math.round(downloadRatio * 100);
   const downloadLabel = downloadProgress?.label ?? '準備中…';
@@ -183,11 +212,9 @@ export default function Package() {
     }
     return entries;
   }, [item]);
-  const renderableLicenses = useMemo(() => licenseEntries.filter(entry => entry.body), [licenseEntries]);
+  const renderableLicenses = useMemo(() => licenseEntries.filter((entry) => entry.body), [licenseEntries]);
   const licenseTypesLabel = useMemo(() => {
-    const types = Array.isArray(item?.licenses)
-      ? item.licenses.map(l => l?.type).filter(Boolean)
-      : [];
+    const types = Array.isArray(item?.licenses) ? item.licenses.map((l) => l?.type).filter(Boolean) : [];
     if (!types.length && item?.license) types.push(item.license);
     return types.length ? types.join(', ') : '?';
   }, [item]);
@@ -269,7 +296,7 @@ export default function Package() {
         await removeInstalledId(item.id);
         const installedMap = await loadInstalledMap();
         dispatch({ type: 'SET_INSTALLED_MAP', payload: installedMap });
-        const detectedMap = await import('../utils/index.js').then(m => m.detectInstalledVersionsMap([item]));
+        const detectedMap = await import('../utils/index.js').then((m) => m.detectInstalledVersionsMap([item]));
         const detected = String((detectedMap && detectedMap[item.id]) || '');
         dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
       }
@@ -294,14 +321,18 @@ export default function Package() {
           パッケージ一覧
         </Link>
         <ChevronRight size={16} className="mx-2" />
-        <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
-          {item.name}
-        </span>
+        <span className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.name}</span>
       </nav>
 
-      <section className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${heroImage ? 'min-h-[160px]' : ''}`}>
+      <section
+        className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${heroImage ? 'min-h-[160px]' : ''}`}
+      >
         {heroImage && (
-          <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${heroImage})` }} aria-hidden />
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-25"
+            style={{ backgroundImage: `url(${heroImage})` }}
+            aria-hidden
+          />
         )}
         <div className="relative p-6 space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -363,7 +394,9 @@ export default function Package() {
                 />
               )}
               {descriptionError ? (
-                <p className="error mt-3" role="alert">{descriptionError}</p>
+                <p className="error mt-3" role="alert">
+                  {descriptionError}
+                </p>
               ) : null}
             </section>
           )}
@@ -379,103 +412,135 @@ export default function Package() {
         <aside className="flex flex-col gap-4 lg:gap-0 h-full">
           <div className="contents lg:block lg:sticky lg:top-6 lg:z-10 lg:space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-              <span>作者</span>
-              <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200"><User size={14} />{item.author || '?'}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-              <span>更新日</span>
-              <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200"><Calendar size={14} />{updated}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-              <span>最新バージョン</span>
-              <span className="text-slate-800 dark:text-slate-200">{latest}</span>
-            </div>
-            {item.installedVersion ? (
               <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                <span>現在のバージョン</span>
-                <span className="text-slate-800 dark:text-slate-200">{item.installedVersion}</span>
+                <span>作者</span>
+                <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <User size={14} />
+                  {item.author || '?'}
+                </span>
               </div>
-            ) : null}
-            {item.niconiCommonsId ? (
               <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                <span>ニコニコモンズID</span>
-                <span className="text-slate-800 dark:text-slate-200 font-mono">{item.niconiCommonsId}</span>
+                <span>更新日</span>
+                <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <Calendar size={14} />
+                  {updated}
+                </span>
               </div>
-            ) : null}
-            <div className="space-y-2">
-              <span className="text-sm text-slate-600 dark:text-slate-400">ライセンス</span>
-              <div className="flex flex-wrap gap-2">
-                {renderableLicenses.length ? (
-                  renderableLicenses.map((license) => (
-                    <button
-                      type="button"
-                      key={license.key}
-                      className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
-                      onClick={() => setOpenLicense(license)}
-                      aria-label={`ライセンス ${license.type || '不明'} の本文を表示`}
-                    >
-                      {license.type || '不明'}
-                    </button>
-                  ))
-                ) : (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{licenseTypesLabel}</span>
-                )}
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                <span>最新バージョン</span>
+                <span className="text-slate-800 dark:text-slate-200">{latest}</span>
               </div>
+              {item.installedVersion ? (
+                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <span>現在のバージョン</span>
+                  <span className="text-slate-800 dark:text-slate-200">{item.installedVersion}</span>
+                </div>
+              ) : null}
+              {item.niconiCommonsId ? (
+                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <span>ニコニコモンズID</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono">{item.niconiCommonsId}</span>
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <span className="text-sm text-slate-600 dark:text-slate-400">ライセンス</span>
+                <div className="flex flex-wrap gap-2">
+                  {renderableLicenses.length ? (
+                    renderableLicenses.map((license) => (
+                      <button
+                        type="button"
+                        key={license.key}
+                        className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                        onClick={() => setOpenLicense(license)}
+                        aria-label={`ライセンス ${license.type || '不明'} の本文を表示`}
+                      >
+                        {license.type || '不明'}
+                      </button>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{licenseTypesLabel}</span>
+                  )}
+                </div>
+              </div>
+              {item.repoURL ? (
+                <a
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline dark:text-blue-400 break-all"
+                  href={item.repoURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink size={16} className="shrink-0" /> {item.repoURL}
+                </a>
+              ) : null}
             </div>
-            {item.repoURL ? (
-              <a className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline dark:text-blue-400 break-all" href={item.repoURL} target="_blank" rel="noopener noreferrer">
-                <ExternalLink size={16} className="shrink-0" /> {item.repoURL}
-              </a>
-            ) : null}
-          </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
-            {item.installed ? (
-              <>
-                {item.isLatest ? (
-                  <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                    <CheckCircle2 size={14} /> 最新{item.installedVersion ? `（${item.installedVersion}）` : ''}
-                  </div>
-                ) : (
-                  <button
-                    className="h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 w-full"
-                    onClick={onUpdate}
-                    disabled={!canInstall || updating}
-                    type="button"
-                  >
-                    {updating ? (
-                      <span className="flex items-center gap-2">
-                        <ProgressCircle value={updateRatio} size={20} strokeWidth={3} className="text-amber-600 dark:text-amber-400" ariaLabel={`${updateLabel} ${updatePercent}%`} />
-                        {updateLabel} {`${updatePercent}%`}
-                      </span>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+              {item.installed ? (
+                <>
+                  {item.isLatest ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                      <CheckCircle2 size={14} /> 最新{item.installedVersion ? `（${item.installedVersion}）` : ''}
+                    </div>
+                  ) : (
+                    <button
+                      className="h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 w-full"
+                      onClick={onUpdate}
+                      disabled={!canInstall || updating}
+                      type="button"
+                    >
+                      {updating ? (
+                        <span className="flex items-center gap-2">
+                          <ProgressCircle
+                            value={updateRatio}
+                            size={20}
+                            strokeWidth={3}
+                            className="text-amber-600 dark:text-amber-400"
+                            ariaLabel={`${updateLabel} ${updatePercent}%`}
+                          />
+                          {updateLabel} {`${updatePercent}%`}
+                        </span>
+                      ) : (
+                        <>
+                          <RefreshCw size={18} /> 更新
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button className="btn btn--danger w-full" onClick={onRemove} disabled={removing} type="button">
+                    {removing ? (
+                      '削除中…'
                     ) : (
                       <>
-                        <RefreshCw size={18} /> 更新
+                        <Trash2 size={18} /> 削除
                       </>
                     )}
                   </button>
-                )}
-                <button className="btn btn--danger w-full" onClick={onRemove} disabled={removing} type="button">
-                  {removing ? '削除中…' : (<><Trash2 size={18} /> 削除</>)}
+                </>
+              ) : (
+                <button
+                  className="btn btn--primary w-full"
+                  onClick={onDownload}
+                  disabled={!canInstall || downloading}
+                  type="button"
+                >
+                  {downloading ? (
+                    <span className="flex items-center gap-2">
+                      <ProgressCircle
+                        value={downloadRatio}
+                        size={20}
+                        strokeWidth={3}
+                        ariaLabel={`${downloadLabel} ${downloadPercent}%`}
+                      />
+                      {downloadLabel} {`${downloadPercent}%`}
+                    </span>
+                  ) : (
+                    <>
+                      <Download size={18} /> インストール
+                    </>
+                  )}
                 </button>
-              </>
-            ) : (
-              <button className="btn btn--primary w-full" onClick={onDownload} disabled={!canInstall || downloading} type="button">
-                {downloading ? (
-                  <span className="flex items-center gap-2">
-                    <ProgressCircle value={downloadRatio} size={20} strokeWidth={3} ariaLabel={`${downloadLabel} ${downloadPercent}%`} />
-                    {downloadLabel} {`${downloadPercent}%`}
-                  </span>
-                ) : (
-                  <>
-                    <Download size={18} /> インストール
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-
+              )}
+            </div>
           </div>
           <div className="contents lg:block lg:sticky lg:bottom-0 lg:z-10 lg:mt-auto lg:pt-4">
             <Link to={listLink} className="btn btn--secondary w-full justify-center flex items-center gap-2">

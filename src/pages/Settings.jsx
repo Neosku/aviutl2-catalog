@@ -2,7 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Moon, Sun, FolderOpen, Download, Upload, Info, Check } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
-import { detectInstalledVersionsMap, getSettings, loadInstalledMap, logError, runInstallerForItem, runUninstallerForItem, saveInstalledSnapshot, hasInstaller, resetPackageStateLocalState } from '../utils/index.js';
+import {
+  detectInstalledVersionsMap,
+  getSettings,
+  loadInstalledMap,
+  logError,
+  runInstallerForItem,
+  runUninstallerForItem,
+  saveInstalledSnapshot,
+  hasInstaller,
+  resetPackageStateLocalState,
+} from '../utils/index.js';
 
 const THEME_OPTIONS = [
   { value: 'darkmode', label: 'ダークモード', icon: Moon },
@@ -52,40 +62,46 @@ export default function Settings() {
           applyTheme(theme);
         }
       } catch (e) {
-        try { await logError(`[settings] getSettings failed: ${e?.message || e}`); } catch (_) { }
+        try {
+          await logError(`[settings] getSettings failed: ${e?.message || e}`);
+        } catch (_) {}
       }
 
       try {
         const app = await import('@tauri-apps/api/app');
-        const v = (app?.getVersion) ? await app.getVersion() : '';
+        const v = app?.getVersion ? await app.getVersion() : '';
         if (mounted) setAppVersion(String(v || ''));
       } catch (e) {
-        try { await logError(`[settings] getVersion failed: ${e?.message || e}`); } catch (_) { }
+        try {
+          await logError(`[settings] getVersion failed: ${e?.message || e}`);
+        } catch (_) {}
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function onChange(e) {
     const { name, value, type, checked } = e.target;
-    const v = (type === 'checkbox') ? !!checked : value;
-    setForm(prev => ({ ...prev, [name]: v }));
+    const v = type === 'checkbox' ? !!checked : value;
+    setForm((prev) => ({ ...prev, [name]: v }));
     if (name === 'theme') applyTheme(v);
   }
 
   function handlePortableToggle(next) {
-    setForm(prev => ({ ...prev, isPortableMode: !!next }));
+    setForm((prev) => ({ ...prev, isPortableMode: !!next }));
   }
 
   function handlePackageStateEnabledToggle(nextEnabled) {
-    setForm(prev => ({ ...prev, packageStateOptOut: !nextEnabled }));
+    setForm((prev) => ({ ...prev, packageStateOptOut: !nextEnabled }));
   }
 
   async function pickDir(field, title) {
     try {
       const dialog = await import('@tauri-apps/plugin-dialog');
       const p = await dialog.open({ directory: true, multiple: false, title });
-      if (p) setForm(prev => ({ ...prev, [field]: String(p) }));
+      if (p) setForm((prev) => ({ ...prev, [field]: String(p) }));
     } catch (e) {
       setError('ディレクトリ選択に失敗しました');
     }
@@ -117,13 +133,15 @@ export default function Settings() {
       try {
         const detected = await detectInstalledVersionsMap(items || []);
         dispatch({ type: 'SET_DETECTED_MAP', payload: detected });
-      } catch (_) { }
+      } catch (_) {}
 
       setSuccess('設定を保存しました。');
       setTimeout(() => setSuccess(''), 3000);
     } catch (e) {
       setError(e?.message ? String(e.message) : '保存に失敗しました。権限やパスをご確認ください。');
-      try { await logError(`[settings] save failed: ${e?.message || e}`); } catch (_) { }
+      try {
+        await logError(`[settings] save failed: ${e?.message || e}`);
+      } catch (_) {}
     } finally {
       setSaving(false);
     }
@@ -157,10 +175,12 @@ export default function Settings() {
       await fs.writeTextFile(String(savePath), payload);
       try {
         await dialog.message('エクスポートを保存しました。', { title: 'エクスポート', kind: 'info' });
-      } catch (_) { }
+      } catch (_) {}
     } catch (e) {
       setError('エクスポートに失敗しました。\n権限や保存先を確認してください。');
-      try { await logError(`[settings] export failed: ${e?.message || e}`); } catch (_) { }
+      try {
+        await logError(`[settings] export failed: ${e?.message || e}`);
+      } catch (_) {}
     } finally {
       setSyncBusy(false);
       setSyncStatus('');
@@ -174,10 +194,10 @@ export default function Settings() {
     setSyncStatus('インポート準備中…');
     try {
       const dialog = await import('@tauri-apps/plugin-dialog');
-      const ok = await dialog.confirm(
-        'インポート内容に合わせてパッケージをインストール/削除します。\n続行しますか？',
-        { title: 'インポート', kind: 'warning' },
-      );
+      const ok = await dialog.confirm('インポート内容に合わせてパッケージをインストール/削除します。\n続行しますか？', {
+        title: 'インポート',
+        kind: 'warning',
+      });
       if (!ok) return;
       setSyncStatus('インポートファイルを選択しています…');
       const filePath = await dialog.open({
@@ -208,7 +228,7 @@ export default function Settings() {
       if (!catalogItems.length) throw new Error('カタログ情報が読み込まれていません。');
 
       const idToItem = new Map(catalogItems.map((item) => [String(item.id), item]));
-      const unknownIds = targetIds.filter(id => !idToItem.has(id));
+      const unknownIds = targetIds.filter((id) => !idToItem.has(id));
 
       setSyncStatus('インストール状態を検出中…');
       const detected = await detectInstalledVersionsMap(catalogItems);
@@ -216,8 +236,8 @@ export default function Settings() {
         .filter(([, v]) => v)
         .map(([id]) => id);
 
-      const toInstall = targetIds.filter(id => idToItem.has(id) && !detected?.[id]);
-      const toRemove = currentIds.filter(id => !targetIdSet.has(id));
+      const toInstall = targetIds.filter((id) => idToItem.has(id) && !detected?.[id]);
+      const toRemove = currentIds.filter((id) => !targetIdSet.has(id));
 
       const skippedInstall = [];
       const skippedRemove = [];
@@ -275,23 +295,30 @@ export default function Settings() {
       if (skippedRemove.length) summary.push(`削除不可: ${skippedRemove.join(', ')}`);
       if (failedInstall.length) summary.push(`インストール失敗: ${failedInstall.join(', ')}`);
       if (failedRemove.length) summary.push(`削除失敗: ${failedRemove.join(', ')}`);
-      const hasIssues = unknownIds.length || skippedInstall.length || skippedRemove.length || failedInstall.length || failedRemove.length;
+      const hasIssues =
+        unknownIds.length ||
+        skippedInstall.length ||
+        skippedRemove.length ||
+        failedInstall.length ||
+        failedRemove.length;
       try {
         await dialog.message(summary.join('\n'), {
           title: 'インポート結果',
           kind: hasIssues ? 'warning' : 'info',
         });
-      } catch (_) { }
+      } catch (_) {}
     } catch (e) {
       setError(e?.message ? String(e.message) : 'インポートに失敗しました。');
-      try { await logError(`[settings] import failed: ${e?.message || e}`); } catch (_) { }
+      try {
+        await logError(`[settings] import failed: ${e?.message || e}`);
+      } catch (_) {}
     } finally {
       setSyncBusy(false);
       setSyncStatus('');
     }
   }
 
-  const selectedTheme = THEME_OPTIONS.find(opt => opt.value === form.theme) || THEME_OPTIONS[0];
+  const selectedTheme = THEME_OPTIONS.find((opt) => opt.value === form.theme) || THEME_OPTIONS[0];
   const packageStateEnabled = !form.packageStateOptOut;
 
   return (
@@ -315,7 +342,9 @@ export default function Settings() {
         <div className="p-6 space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium">AviUtl2 フォルダ</label>
-            <div className="text-xs text-slate-500 dark:text-slate-400">aviutl2.exeを含むフォルダを指定してください。</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              aviutl2.exeを含むフォルダを指定してください。
+            </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 name="aviutl2Root"
@@ -338,15 +367,22 @@ export default function Settings() {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <div className="text-sm font-medium">ポータブルモード <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">（オフ推奨）</span></div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに保存します</div>
+                <div className="text-sm font-medium">
+                  ポータブルモード{' '}
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">（オフ推奨）</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに保存します
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => handlePortableToggle(!form.isPortableMode)}
                 className={`shrink-0 relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${form.isPortableMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.isPortableMode ? 'translate-x-8' : 'translate-x-1'}`} />
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.isPortableMode ? 'translate-x-8' : 'translate-x-1'}`}
+                />
               </button>
             </div>
           </div>
@@ -359,13 +395,15 @@ export default function Settings() {
               <button
                 onClick={() => {
                   const next = form.theme === 'lightmode' ? 'darkmode' : 'lightmode';
-                  setForm(prev => ({ ...prev, theme: next }));
+                  setForm((prev) => ({ ...prev, theme: next }));
                   applyTheme(next);
                 }}
                 className={`shrink-0 relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${form.theme === 'lightmode' ? 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                 type="button"
               >
-                <span className={`flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.theme === 'lightmode' ? 'translate-x-1' : 'translate-x-8'}`}>
+                <span
+                  className={`flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.theme === 'lightmode' ? 'translate-x-1' : 'translate-x-8'}`}
+                >
                   {form.theme === 'lightmode' ? (
                     <Sun size={12} className="text-slate-400" style={{ display: 'block' }} />
                   ) : (
@@ -389,17 +427,18 @@ export default function Settings() {
                 onClick={() => handlePackageStateEnabledToggle(!packageStateEnabled)}
                 className={`shrink-0 relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${packageStateEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${packageStateEnabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${packageStateEnabled ? 'translate-x-8' : 'translate-x-1'}`}
+                />
               </button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-slate-100 dark:border-slate-800">
             <button
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 disabled:opacity-60 cursor-pointer ${success
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 disabled:opacity-60 cursor-pointer ${
+                success ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
               onClick={onSave}
               disabled={saving || !!success}
               type="button"

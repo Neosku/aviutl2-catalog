@@ -11,11 +11,19 @@ export default function TitleBar() {
       if (typeof mod.getCurrent === 'function') return mod.getCurrent();
       if (typeof mod.getCurrentWindow === 'function') return mod.getCurrentWindow();
       if (mod?.appWindow) return mod.appWindow;
-    } catch (e) { try { await logError(`[titlebar] window module load failed: ${e?.message || e}`); } catch (_) {} }
+    } catch (e) {
+      try {
+        await logError(`[titlebar] window module load failed: ${e?.message || e}`);
+      } catch (_) {}
+    }
     try {
       const mod2 = await import('@tauri-apps/api/webviewWindow');
       if (typeof mod2.getCurrent === 'function') return mod2.getCurrent();
-    } catch (e) { try { await logError(`[titlebar] webviewWindow module load failed: ${e?.message || e}`); } catch (_) {} }
+    } catch (e) {
+      try {
+        await logError(`[titlebar] webviewWindow module load failed: ${e?.message || e}`);
+      } catch (_) {}
+    }
     return null;
   }
 
@@ -23,7 +31,9 @@ export default function TitleBar() {
     let cancelled = false;
     const unlisten = [];
     const syncMax = async (w) => {
-      try { if (w?.isMaximized && !cancelled) setMax(await w.isMaximized()); } catch (_) {}
+      try {
+        if (w?.isMaximized && !cancelled) setMax(await w.isMaximized());
+      } catch (_) {}
     };
 
     (async () => {
@@ -41,7 +51,9 @@ export default function TitleBar() {
       await subscribe(w?.onFocusChanged?.bind(w));
       await subscribe(w?.onScaleChanged?.bind(w));
       if (typeof window !== 'undefined' && window.addEventListener) {
-        const onResize = () => { syncMax(w); };
+        const onResize = () => {
+          syncMax(w);
+        };
         window.addEventListener('resize', onResize);
         unlisten.push(() => window.removeEventListener('resize', onResize));
       }
@@ -49,27 +61,52 @@ export default function TitleBar() {
 
     return () => {
       cancelled = true;
-      unlisten.forEach((off) => { try { off(); } catch (_) {} });
+      unlisten.forEach((off) => {
+        try {
+          off();
+        } catch (_) {}
+      });
     };
   }, []);
 
   async function minimize() {
     const w = await getWindow();
-    try { await w?.minimize(); } catch (e) { try { await logError(`[titlebar] minimize failed: ${e?.message || e}`); } catch (_) {} }
+    try {
+      await w?.minimize();
+    } catch (e) {
+      try {
+        await logError(`[titlebar] minimize failed: ${e?.message || e}`);
+      } catch (_) {}
+    }
   }
 
   async function toggleMaximize() {
     const w = await getWindow();
     try {
-      const m = (w?.isMaximized) ? await w.isMaximized() : false;
-      if (m) { await w.unmaximize(); setMax(false); }
-      else { await w?.maximize(); setMax(true); }
-    } catch (e) { try { await logError(`[titlebar] toggleMaximize failed: ${e?.message || e}`); } catch (_) {} }
+      const m = w?.isMaximized ? await w.isMaximized() : false;
+      if (m) {
+        await w.unmaximize();
+        setMax(false);
+      } else {
+        await w?.maximize();
+        setMax(true);
+      }
+    } catch (e) {
+      try {
+        await logError(`[titlebar] toggleMaximize failed: ${e?.message || e}`);
+      } catch (_) {}
+    }
   }
 
   async function close() {
     const w = await getWindow();
-    try { await w?.close(); } catch (e) { try { await logError(`[titlebar] close failed: ${e?.message || e}`); } catch (_) {} }
+    try {
+      await w?.close();
+    } catch (e) {
+      try {
+        await logError(`[titlebar] close failed: ${e?.message || e}`);
+      } catch (_) {}
+    }
   }
 
   async function startDragIfAllowed(event) {
@@ -82,7 +119,9 @@ export default function TitleBar() {
       event.preventDefault();
       await w.startDragging();
     } catch (e) {
-      try { await logError(`[titlebar] startDragging failed: ${e?.message || e}`); } catch (_) {}
+      try {
+        await logError(`[titlebar] startDragging failed: ${e?.message || e}`);
+      } catch (_) {}
     }
   }
 
@@ -106,14 +145,41 @@ export default function TitleBar() {
       <div className="text-xs font-semibold tracking-wide flex items-center" data-tauri-drag-region>
         AviUtl2 Catalog
       </div>
-      <div className="flex items-stretch" data-tauri-drag-region="false" data-no-drag="true" style={{ WebkitAppRegion: 'no-drag' }}>
-        <button className={`${baseBtn} ${controlBtn}`} onClick={minimize} title="最小化" aria-label="最小化" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+      <div
+        className="flex items-stretch"
+        data-tauri-drag-region="false"
+        data-no-drag="true"
+        style={{ WebkitAppRegion: 'no-drag' }}
+      >
+        <button
+          className={`${baseBtn} ${controlBtn}`}
+          onClick={minimize}
+          title="最小化"
+          aria-label="最小化"
+          type="button"
+          style={{ WebkitAppRegion: 'no-drag' }}
+        >
           <Minus size={14} />
         </button>
-        <button className={`${baseBtn} ${controlBtn}`} onClick={toggleMaximize} onDoubleClick={toggleMaximize} title={max ? '元に戻す' : '最大化'} aria-label="最大化" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+        <button
+          className={`${baseBtn} ${controlBtn}`}
+          onClick={toggleMaximize}
+          onDoubleClick={toggleMaximize}
+          title={max ? '元に戻す' : '最大化'}
+          aria-label="最大化"
+          type="button"
+          style={{ WebkitAppRegion: 'no-drag' }}
+        >
           {max ? <Copy size={13} /> : <Square size={13} />}
         </button>
-        <button className={`${baseBtn} hover:bg-red-600 hover:text-white active:bg-red-700`} onClick={close} title="閉じる" aria-label="閉じる" type="button" style={{ WebkitAppRegion: 'no-drag' }}>
+        <button
+          className={`${baseBtn} hover:bg-red-600 hover:text-white active:bg-red-700`}
+          onClick={close}
+          title="閉じる"
+          aria-label="閉じる"
+          type="button"
+          style={{ WebkitAppRegion: 'no-drag' }}
+        >
           <X size={14} />
         </button>
       </div>

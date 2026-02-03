@@ -14,10 +14,8 @@ import {
   Box,
   Tags,
   Layers,
-
   PanelLeftClose,
   PanelLeftOpen,
-
   ListFilter,
   ExternalLink,
 } from 'lucide-react';
@@ -99,11 +97,21 @@ function PortalTooltip({ text, rect }) {
     >
       {text}
     </div>,
-    document.body
+    document.body,
   );
 }
 
-function SidebarButton({ icon, label, onClick, isActive, isCollapsed, variant = 'default', badgeCount = 0, shortcut, rightIcon: RightIcon }) {
+function SidebarButton({
+  icon,
+  label,
+  onClick,
+  isActive,
+  isCollapsed,
+  variant = 'default',
+  badgeCount = 0,
+  shortcut,
+  rightIcon: RightIcon,
+}) {
   const [hoverRect, setHoverRect] = useState(null);
   const buttonRef = useRef(null);
   const timerRef = useRef(null);
@@ -136,7 +144,8 @@ function SidebarButton({ icon, label, onClick, isActive, isCollapsed, variant = 
     default: isActive
       ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20'
       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800',
-    action: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+    action:
+      'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
     ghost: isActive
       ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20'
       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800',
@@ -145,10 +154,12 @@ function SidebarButton({ icon, label, onClick, isActive, isCollapsed, variant = 
   const iconClass = `shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`;
   const iconElement = React.isValidElement(icon)
     ? React.cloneElement(icon, {
-      className: `${icon.props?.className || ''} ${iconClass}`.trim(),
-      'aria-hidden': icon.props?.['aria-hidden'] ?? true,
-    })
-    : (icon ? React.createElement(icon, { size: 20, className: iconClass }) : null);
+        className: `${icon.props?.className || ''} ${iconClass}`.trim(),
+        'aria-hidden': icon.props?.['aria-hidden'] ?? true,
+      })
+    : icon
+      ? React.createElement(icon, { size: 20, className: iconClass })
+      : null;
 
   return (
     <>
@@ -160,9 +171,7 @@ function SidebarButton({ icon, label, onClick, isActive, isCollapsed, variant = 
         className={`${baseClasses} ${variants[variant]}`}
         type="button"
       >
-        <div className="w-14 shrink-0 flex items-center justify-center">
-          {iconElement}
-        </div>
+        <div className="w-14 shrink-0 flex items-center justify-center">{iconElement}</div>
         {!isCollapsed && <span className="truncate flex-1 pr-2">{label}</span>}
         {!isCollapsed && RightIcon && <RightIcon size={18} className="opacity-50 shrink-0 mr-3" />}
         {!isCollapsed && badgeCount > 0 && (
@@ -234,21 +243,17 @@ function TagButton({ label, selected, onClick }) {
       onClick={onClick}
       className={`relative px-2 py-1 text-[10px] rounded border text-left max-w-full
         truncate whitespace-nowrap cursor-pointer
-        transition-colors transition-shadow ${selected
-          ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 shadow-sm'
-          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+        transition-colors transition-shadow ${
+          selected
+            ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 shadow-sm'
+            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
         }`}
     >
       {/* 幅確保用（見えない太字）。レイアウトには参加する */}
       <span className="invisible font-medium truncate block">{label}</span>
 
       {/* 実表示（上に重ねる） */}
-      <span
-        className={`absolute inset-0 px-2 py-1 truncate ${selected ? 'font-medium' : 'font-normal'
-          }`}
-      >
-        {label}
-      </span>
+      <span className={`absolute inset-0 px-2 py-1 truncate ${selected ? 'font-medium' : 'font-normal'}`}>{label}</span>
     </button>
   );
 }
@@ -257,9 +262,11 @@ const AviUtlIcon = ({ size, className }) => (
   <img src={aviutl2Icon} alt="AviUtl2" style={{ width: size, height: size }} className={className} />
 );
 
-function SidebarSectionLabel({ label, isCollapsed, hideDivider = false, className = "" }) {
+function SidebarSectionLabel({ label, isCollapsed, hideDivider = false, className = '' }) {
   return (
-    <div className={`h-4 flex items-center shrink-0 transition-all duration-200 ${className} ${isCollapsed ? 'justify-center px-0' : 'px-4'}`}>
+    <div
+      className={`h-4 flex items-center shrink-0 transition-all duration-200 ${className} ${isCollapsed ? 'justify-center px-0' : 'px-4'}`}
+    >
       {isCollapsed ? (
         !hideDivider && <div className="w-8 h-[1px] bg-slate-200 dark:bg-slate-800" />
       ) : (
@@ -292,7 +299,7 @@ export default function AppShell() {
     if (!['popularity', 'newest', 'trend', 'added'].includes(sortKey)) {
       sortKey = 'popularity';
     }
-    const dir = sortKey === 'newest' ? 'desc' : (params.get('dir') || 'desc');
+    const dir = sortKey === 'newest' ? 'desc' : params.get('dir') || 'desc';
     const type = params.get('type') || '';
     const tags = (params.get('tags') || '').split(',').filter(Boolean);
     const installed = params.get('installed') === '1';
@@ -347,7 +354,8 @@ export default function AppShell() {
 
     // Clean up defaults
     if (params.get('sort') === 'popularity') params.delete('sort');
-    if (params.get('dir') === 'desc' && (!params.get('sort') || params.get('sort') === 'popularity')) params.delete('dir');
+    if (params.get('dir') === 'desc' && (!params.get('sort') || params.get('sort') === 'popularity'))
+      params.delete('dir');
 
     navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
@@ -384,21 +392,19 @@ export default function AppShell() {
   const categories = useMemo(() => ['すべて', ...(allTypes || [])], [allTypes]);
 
   const filteredPackages = useMemo(() => {
-    const base = searchQuery ? items.filter(item => matchQuery(item, searchQuery)) : items;
+    const base = searchQuery ? items.filter((item) => matchQuery(item, searchQuery)) : items;
     const category = selectedCategory === 'すべて' ? '' : selectedCategory;
     const afterTag = filterByTagsAndType(base, selectedTags, category ? [category] : []);
-    const afterInstalled = filterInstalled ? afterTag.filter(item => item.installed) : afterTag;
+    const afterInstalled = filterInstalled ? afterTag.filter((item) => item.installed) : afterTag;
     const sorter = getSorter(parseQuery.sortKey, parseQuery.dir);
     return [...afterInstalled].sort(sorter);
   }, [items, searchQuery, selectedTags, selectedCategory, filterInstalled, parseQuery]);
 
   const isFilterActive = filterInstalled || selectedCategory !== 'すべて' || selectedTags.length > 0;
-  const updateAvailableCount = useMemo(() => items.filter(item => item.installed && !item.isLatest).length, [items]);
+  const updateAvailableCount = useMemo(() => items.filter((item) => item.installed && !item.isLatest).length, [items]);
 
   const toggleTag = (tag) => {
-    const newTags = selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
-      : [...selectedTags, tag];
+    const newTags = selectedTags.includes(tag) ? selectedTags.filter((t) => t !== tag) : [...selectedTags, tag];
     updateUrl({ tags: newTags });
   };
 
@@ -415,7 +421,7 @@ export default function AppShell() {
   async function openDataDir() {
     try {
       const dirs = await invoke('get_app_dirs');
-      const target = (dirs && typeof dirs.aviutl2_data === 'string') ? dirs.aviutl2_data.trim() : '';
+      const target = dirs && typeof dirs.aviutl2_data === 'string' ? dirs.aviutl2_data.trim() : '';
       if (!target) {
         setError('データフォルダの場所を取得できませんでした。設定画面で AviUtl2 のフォルダを確認してください。');
         return;
@@ -478,7 +484,7 @@ export default function AppShell() {
             break;
           case 'KeyB': // Sidebar Toggle
             e.preventDefault();
-            setSidebarCollapsed(prev => !prev);
+            setSidebarCollapsed((prev) => !prev);
             break;
           default:
             break;
@@ -491,21 +497,22 @@ export default function AppShell() {
   }, [navigate, openDataDir, isHome, setSidebarCollapsed]);
 
   const activePath = location.pathname;
-  const activePage = activePath === '/'
-    ? 'home'
-    : activePath.startsWith('/updates')
-      ? 'updates'
-      : activePath.startsWith('/register')
-        ? 'register'
-        : activePath.startsWith('/niconi-commons')
-          ? 'niconi-commons'
-          : activePath.startsWith('/feedback')
-            ? 'feedback'
-            : activePath.startsWith('/settings')
-              ? 'settings'
-              : activePath.startsWith('/package')
-                ? 'package'
-                : '';
+  const activePage =
+    activePath === '/'
+      ? 'home'
+      : activePath.startsWith('/updates')
+        ? 'updates'
+        : activePath.startsWith('/register')
+          ? 'register'
+          : activePath.startsWith('/niconi-commons')
+            ? 'niconi-commons'
+            : activePath.startsWith('/feedback')
+              ? 'feedback'
+              : activePath.startsWith('/settings')
+                ? 'settings'
+                : activePath.startsWith('/package')
+                  ? 'package'
+                  : '';
 
   // ニコニ・コモンズ用のインラインSVG（枠線のみ）
   const niconiCommonsIcon = (
@@ -533,7 +540,9 @@ export default function AppShell() {
           </div>
           {!isSidebarCollapsed && (
             <div className="flex-1 flex items-center min-w-0 pr-4">
-              <span className="font-bold text-lg text-slate-900 dark:text-slate-50 truncate tracking-tight">AviUtl2カタログ</span>
+              <span className="font-bold text-lg text-slate-900 dark:text-slate-50 truncate tracking-tight">
+                AviUtl2カタログ
+              </span>
             </div>
           )}
         </div>
@@ -629,7 +638,7 @@ export default function AppShell() {
           />
           <SidebarButton
             icon={isSidebarCollapsed ? PanelLeftOpen : PanelLeftClose}
-            label={isSidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
+            label={isSidebarCollapsed ? 'サイドバーを開く' : 'サイドバーを閉じる'}
             variant="ghost"
             isCollapsed={isSidebarCollapsed}
             onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
@@ -666,7 +675,10 @@ export default function AppShell() {
           </header>
         )}
 
-        <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}>
+        <div
+          ref={scrollContainerRef}
+          className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}
+        >
           <Outlet
             context={{
               filteredPackages,

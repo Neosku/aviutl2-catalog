@@ -63,7 +63,10 @@ export default function ImageCarousel({ images = [] }) {
           <ChevronRight size={18} className="mx-auto" />
         </button>
       )}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1" role="tablist">
+      <div
+        className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1"
+        role="tablist"
+      >
         {images.map((_, i) => (
           <button
             key={i}

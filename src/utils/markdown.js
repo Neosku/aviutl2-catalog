@@ -22,9 +22,7 @@ const CALLOUT_ICON_COMPONENTS = {
 };
 
 function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
 export function renderMarkdown(md = '') {
@@ -57,9 +55,7 @@ function transformCallouts(root) {
   if (!root?.querySelectorAll) return;
   const blockquotes = root.querySelectorAll('blockquote');
   blockquotes.forEach((blockquote) => {
-    const firstElement = Array.from(blockquote.childNodes).find(
-      (node) => node.nodeType === Node.ELEMENT_NODE
-    );
+    const firstElement = Array.from(blockquote.childNodes).find((node) => node.nodeType === Node.ELEMENT_NODE);
     if (!firstElement || firstElement.tagName !== 'P') return;
     const markerMatch = (firstElement.textContent || '').match(CALLOUT_LABEL_RE);
     if (!markerMatch) return;

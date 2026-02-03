@@ -47,7 +47,7 @@ export default function ProgressCircle({
           fill="none"
         />
         <circle
-          className={className ? "" : "text-blue-600"}
+          className={className ? '' : 'text-blue-600'}
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -63,13 +63,7 @@ export default function ProgressCircle({
         <span className="absolute text-[10px] font-semibold text-slate-600 dark:text-slate-200">{percent}</span>
       ) : null}
       {isComplete ? (
-        <svg
-          className="absolute"
-          viewBox="0 0 24 24"
-          width={iconSize}
-          height={iconSize}
-          aria-hidden="true"
-        >
+        <svg className="absolute" viewBox="0 0 24 24" width={iconSize} height={iconSize} aria-hidden="true">
           <path
             d="M20 6L9 17L4 12"
             fill="none"

@@ -19,31 +19,29 @@ export default function NiconiCommons() {
   // 対象となるアイテムを抽出
   const eligibleItems = useMemo(() => {
     return (items || [])
-      .filter(item => item && item.installed)
-      .map(item => ({ ...item, niconiCommonsId: toNiconiId(item.niconiCommonsId) }))
-      .filter(item => item.niconiCommonsId);
+      .filter((item) => item && item.installed)
+      .map((item) => ({ ...item, niconiCommonsId: toNiconiId(item.niconiCommonsId) }))
+      .filter((item) => item.niconiCommonsId);
   }, [items]);
 
   const sortedEligible = useMemo(() => {
-    return eligibleItems
-      .slice()
-      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
+    return eligibleItems.slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
   }, [eligibleItems]);
 
   const queryKey = useMemo(() => normalize(query || ''), [query]);
 
   const filteredItems = useMemo(() => {
     if (!queryKey) return sortedEligible;
-    return sortedEligible.filter(item => {
+    return sortedEligible.filter((item) => {
       const nameKey = normalize(item.name || '');
       const idKey = normalize(item.id || '');
       const authorKey = normalize(item.author || '');
       const commonsKey = normalize(item.niconiCommonsId || '');
       return (
-        nameKey.includes(queryKey)
-        || idKey.includes(queryKey)
-        || authorKey.includes(queryKey)
-        || commonsKey.includes(queryKey)
+        nameKey.includes(queryKey) ||
+        idKey.includes(queryKey) ||
+        authorKey.includes(queryKey) ||
+        commonsKey.includes(queryKey)
       );
     });
   }, [sortedEligible, queryKey]);
@@ -59,11 +57,11 @@ export default function NiconiCommons() {
           deselectedIdsRef.current = parsed.map(String).filter(Boolean);
         }
       }
-    } catch (_) { }
+    } catch (_) {}
     const deselectedSet = new Set(deselectedIdsRef.current);
     setSelectedMap(() => {
       const next = {};
-      eligibleItems.forEach(item => {
+      eligibleItems.forEach((item) => {
         if (!deselectedSet.has(item.id)) next[item.id] = true;
       });
       return next;
@@ -77,27 +75,25 @@ export default function NiconiCommons() {
       skipPersistRef.current = false;
       return;
     }
-    const deselected = eligibleItems
-      .filter(item => !selectedMap[item.id])
-      .map(item => item.id);
+    const deselected = eligibleItems.filter((item) => !selectedMap[item.id]).map((item) => item.id);
     deselectedIdsRef.current = deselected;
     try {
       window.localStorage.setItem('niconiCommonsDeselectedIds', JSON.stringify(deselected));
-    } catch (_) { }
+    } catch (_) {}
   }, [eligibleItems, selectedMap]);
 
   const selectedItems = useMemo(() => {
-    return eligibleItems.filter(item => selectedMap[item.id]);
+    return eligibleItems.filter((item) => selectedMap[item.id]);
   }, [eligibleItems, selectedMap]);
 
   const selectedIds = useMemo(() => {
-    return selectedItems.map(item => item.niconiCommonsId).filter(Boolean);
+    return selectedItems.map((item) => item.niconiCommonsId).filter(Boolean);
   }, [selectedItems]);
 
   const selectedCount = selectedIds.length;
   const totalEligible = eligibleItems.length;
   const visibleCount = filteredItems.length;
-  const allVisibleSelected = visibleCount > 0 && filteredItems.every(item => selectedMap[item.id]);
+  const allVisibleSelected = visibleCount > 0 && filteredItems.every((item) => selectedMap[item.id]);
 
   // 一覧用のカスタムチェックボックス
   function Checkbox({ checked, onChange, ariaLabel }) {
@@ -108,10 +104,11 @@ export default function NiconiCommons() {
         aria-checked={checked}
         aria-label={ariaLabel}
         onClick={onChange}
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${checked
-          ? 'border-blue-500 bg-blue-600 shadow-sm shadow-blue-500/30'
-          : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-slate-500'
-          }`}
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${
+          checked
+            ? 'border-blue-500 bg-blue-600 shadow-sm shadow-blue-500/30'
+            : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-slate-500'
+        }`}
       >
         <Check size={14} className={`transition-opacity ${checked ? 'opacity-100' : 'opacity-0'}`} />
       </button>
@@ -119,21 +116,21 @@ export default function NiconiCommons() {
   }
 
   function toggleItem(id) {
-    setSelectedMap(prev => ({
+    setSelectedMap((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
   }
 
   function toggleAllVisible() {
-    setSelectedMap(prev => {
+    setSelectedMap((prev) => {
       const next = { ...prev };
       if (allVisibleSelected) {
-        filteredItems.forEach(item => {
+        filteredItems.forEach((item) => {
           delete next[item.id];
         });
       } else {
-        filteredItems.forEach(item => {
+        filteredItems.forEach((item) => {
           next[item.id] = true;
         });
       }
@@ -187,11 +184,19 @@ export default function NiconiCommons() {
           <ChevronDown size={16} className="text-slate-400 transition-transform duration-200 group-open:rotate-180" />
         </summary>
         <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-          <p className="leading-relaxed"><b>ニコニ・コモンズ</b>は、クリエイターの創作活動を支援し、安心して創作活動がおこなえるように、クリエイター同士の交流とコラボレーションや作品利用を促すサービスです。<br />
-              ニコニコでは、制作に使ったツールや素材（例：AviUtl2本体、プラグイン、スクリプト、素材など）を<b>親作品</b>として登録し、作品同士のつながり（コンテンツツリー）を作れます。<br />
-              ニコニコへの動画投稿時に親作品を登録すると、ツールや素材の製作者さんに応援の気持ちが届き、制作活動の励みになります。<br />
-              さらにニコニコでは、「子ども手当」などの仕組みを通じて、製作者さんへの金銭的な還元にもつながります。<br />
-              ぜひ親作品の登録をしてみてください。</p>
+          <p className="leading-relaxed">
+            <b>ニコニ・コモンズ</b>
+            は、クリエイターの創作活動を支援し、安心して創作活動がおこなえるように、クリエイター同士の交流とコラボレーションや作品利用を促すサービスです。
+            <br />
+            ニコニコでは、制作に使ったツールや素材（例：AviUtl2本体、プラグイン、スクリプト、素材など）を<b>親作品</b>
+            として登録し、作品同士のつながり（コンテンツツリー）を作れます。
+            <br />
+            ニコニコへの動画投稿時に親作品を登録すると、ツールや素材の製作者さんに応援の気持ちが届き、制作活動の励みになります。
+            <br />
+            さらにニコニコでは、「子ども手当」などの仕組みを通じて、製作者さんへの金銭的な還元にもつながります。
+            <br />
+            ぜひ親作品の登録をしてみてください。
+          </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             ※注意：親作品を登録しても、あなた自身の収益が減ることはありません。
           </p>
@@ -200,7 +205,7 @@ export default function NiconiCommons() {
             onClick={async () => {
               try {
                 await open('https://qa.nicovideo.jp/faq/show/863');
-              } catch (_) { }
+              } catch (_) {}
             }}
             type="button"
           >
@@ -238,11 +243,7 @@ export default function NiconiCommons() {
             <div className="min-w-[720px]">
               <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide grid grid-cols-[2.5rem_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-2">
                 <div className="flex items-center justify-center">
-                  <Checkbox
-                    checked={allVisibleSelected}
-                    onChange={toggleAllVisible}
-                    ariaLabel="表示中をすべて選択"
-                  />
+                  <Checkbox checked={allVisibleSelected} onChange={toggleAllVisible} ariaLabel="表示中をすべて選択" />
                 </div>
                 <span>パッケージ名</span>
                 <span>作者名</span>
@@ -276,14 +277,13 @@ export default function NiconiCommons() {
                       <div className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
                         {item.name || item.id}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                        {item.id}
-                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{item.id}</div>
                     </div>
-                    <div className="min-w-0 text-sm text-slate-600 dark:text-slate-300 truncate">
-                      {item.author}
-                    </div>
-                    <div className="text-sm font-mono text-slate-700 dark:text-slate-200 truncate" title={item.niconiCommonsId}>
+                    <div className="min-w-0 text-sm text-slate-600 dark:text-slate-300 truncate">{item.author}</div>
+                    <div
+                      className="text-sm font-mono text-slate-700 dark:text-slate-200 truncate"
+                      title={item.niconiCommonsId}
+                    >
                       {item.niconiCommonsId}
                     </div>
                   </div>

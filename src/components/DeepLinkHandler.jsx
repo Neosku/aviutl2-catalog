@@ -64,15 +64,17 @@ function isAllowedInternalPath(path) {
 async function bringWindowToFront() {
   try {
     const mod = await import('@tauri-apps/api/window');
-    const getCurrent = typeof mod.getCurrent === 'function'
-      ? mod.getCurrent
-      : (typeof mod.getCurrentWindow === 'function' ? mod.getCurrentWindow : null);
-    const win = getCurrent ? getCurrent() : (mod.appWindow || null);
+    const getCurrent =
+      typeof mod.getCurrent === 'function'
+        ? mod.getCurrent
+        : typeof mod.getCurrentWindow === 'function'
+          ? mod.getCurrentWindow
+          : null;
+    const win = getCurrent ? getCurrent() : mod.appWindow || null;
     if (!win) return;
     if (typeof win.show === 'function') await win.show();
     if (typeof win.setFocus === 'function') await win.setFocus();
-  } catch (_) {
-  }
+  } catch (_) {}
 }
 
 export default function DeepLinkHandler() {
@@ -106,7 +108,7 @@ export default function DeepLinkHandler() {
         void logError(`[deep-link] ignored path=${action.internalPath}`).catch(() => {});
         return;
       }
-      void bringWindowToFront();// 最前面化
+      void bringWindowToFront(); // 最前面化
       try {
         navigateRef.current(action.internalUrl);
       } catch (_) {}
@@ -138,8 +140,7 @@ export default function DeepLinkHandler() {
             }
           });
         }
-      } catch (_) {
-      }
+      } catch (_) {}
     })();
     return () => {
       cancelled = true;

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue, memo } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { readFile } from '@tauri-apps/plugin-fs';
@@ -65,8 +64,14 @@ const SUBMIT_ACTIONS = {
 const PACKAGE_GUIDE_FALLBACK_URL = 'https://github.com/Neosku/aviutl2-catalog-data/blob/main/register-package.md';
 const LICENSE_TEMPLATE_TYPES = new Set(Object.keys(LICENSE_TEMPLATES));
 // ステップ選択で使う選択肢（ラベルを毎回手書きしないために先に展開）
-const INSTALL_ACTION_OPTIONS = INSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
-const UNINSTALL_ACTION_OPTIONS = UNINSTALL_ACTIONS.map(action => ({ value: action, label: ACTION_LABELS[action] || action }));
+const INSTALL_ACTION_OPTIONS = INSTALL_ACTIONS.map((action) => ({
+  value: action,
+  label: ACTION_LABELS[action] || action,
+}));
+const UNINSTALL_ACTION_OPTIONS = UNINSTALL_ACTIONS.map((action) => ({
+  value: action,
+  label: ACTION_LABELS[action] || action,
+}));
 
 // UIで安定したkeyを作るための簡易ID生成
 function generateKey() {
@@ -75,13 +80,13 @@ function generateKey() {
 
 // 共通の配列/文字列ユーティリティ群
 function normalizeArrayText(values = []) {
-  return (Array.isArray(values) ? values : []).map(v => String(v || '').trim()).filter(Boolean);
+  return (Array.isArray(values) ? values : []).map((v) => String(v || '').trim()).filter(Boolean);
 }
 
 function commaListToArray(text) {
   return String(text || '')
     .split(',')
-    .map(v => v.trim())
+    .map((v) => v.trim())
     .filter(Boolean);
 }
 
@@ -118,7 +123,11 @@ function buildPreviewUrl(src, baseUrl) {
 
 function revokePreviewUrl(url) {
   if (typeof url === 'string' && url.startsWith('blob:')) {
-    try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+    try {
+      URL.revokeObjectURL(url);
+    } catch (_) {
+      /* ignore */
+    }
   }
 }
 
@@ -126,7 +135,7 @@ function cleanupImagePreviews(images) {
   if (!images) return;
   if (images.thumbnail?.previewUrl) revokePreviewUrl(images.thumbnail.previewUrl);
   if (Array.isArray(images.info)) {
-    images.info.forEach(entry => {
+    images.info.forEach((entry) => {
       if (entry?.previewUrl) revokePreviewUrl(entry.previewUrl);
     });
   }
@@ -135,7 +144,10 @@ function cleanupImagePreviews(images) {
 function resolveBaseUrl(rawUrl) {
   if (!rawUrl) return null;
   try {
-    const absolute = new URL(rawUrl, (typeof window !== 'undefined' && window.location && window.location.href) || 'app://localhost/');
+    const absolute = new URL(
+      rawUrl,
+      (typeof window !== 'undefined' && window.location && window.location.href) || 'app://localhost/',
+    );
     return new URL('.', absolute).toString();
   } catch (_) {
     const stripped = String(rawUrl).split(/[?#]/)[0];
@@ -164,83 +176,90 @@ function basename(path) {
 }
 
 // シンプルなカスタムセレクト（WebView標準のプルダウンを避ける）
-const ActionSelect = memo(function ActionSelect({ value, onChange, options, ariaLabel }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const normalized = Array.isArray(options) ? options : [];
-  const selected = normalized.find(opt => opt.value === value) || normalized[0] || { value: '', label: '' };
-  const dropdownOptions = normalized.filter(opt => opt.value !== '');
+const ActionSelect = memo(
+  function ActionSelect({ value, onChange, options, ariaLabel }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    const normalized = Array.isArray(options) ? options : [];
+    const selected = normalized.find((opt) => opt.value === value) || normalized[0] || { value: '', label: '' };
+    const dropdownOptions = normalized.filter((opt) => opt.value !== '');
 
-  useEffect(() => {
-    // ドロップダウン外をクリックしたら閉じる
-    function handleClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
+    useEffect(() => {
+      // ドロップダウン外をクリックしたら閉じる
+      function handleClickOutside(e) {
+        if (ref.current && !ref.current.contains(e.target)) {
+          setOpen(false);
+        }
       }
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+      // 選択値が変わったらドロップダウンを閉じる
+      setOpen(false);
+    }, [value]);
+
+    function choose(val) {
+      setOpen(false);
+      onChange?.(val);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  useEffect(() => {
-    // 選択値が変わったらドロップダウンを閉じる
-    setOpen(false);
-  }, [value]);
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
 
-  function choose(val) {
-    setOpen(false);
-    onChange?.(val);
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Escape') setOpen(false);
-  }
-
-  return (
-    <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
-      <button
-        type="button"
-        className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${open
-          ? 'border-blue-500 ring-2 ring-blue-500/20 z-10'
-          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700'
+    return (
+      <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
+        <button
+          type="button"
+          className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            open
+              ? 'border-blue-500 ring-2 ring-blue-500/20 z-10'
+              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700'
           }`}
-        onClick={() => setOpen(prev => !prev)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-      >
-        <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
-        <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden>
-          <ChevronDown size={16} />
-        </span>
-      </button>
-      {open && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-900/5 dark:border-slate-700 dark:bg-slate-800 dark:ring-white/10" role="listbox">
-          {dropdownOptions.map(opt => (
-            <button
-              type="button"
-              key={opt.value}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${opt.value === value
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50'
+          onClick={() => setOpen((prev) => !prev)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={ariaLabel}
+        >
+          <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
+          <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden>
+            <ChevronDown size={16} />
+          </span>
+        </button>
+        {open && (
+          <div
+            className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-900/5 dark:border-slate-700 dark:bg-slate-800 dark:ring-white/10"
+            role="listbox"
+          >
+            {dropdownOptions.map((opt) => (
+              <button
+                type="button"
+                key={opt.value}
+                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  opt.value === value
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50'
                 }`}
-              role="option"
-              aria-selected={opt.value === value}
-              onMouseDown={e => { e.preventDefault(); choose(opt.value); }}
-            >
-              <span className="truncate">{opt.label}</span>
-              {opt.value === value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}, (prev, next) => (
-  prev.value === next.value
-  && prev.ariaLabel === next.ariaLabel
-  && prev.options === next.options
-));
+                role="option"
+                aria-selected={opt.value === value}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  choose(opt.value);
+                }}
+              >
+                <span className="truncate">{opt.label}</span>
+                {opt.value === value && <Check size={14} />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  },
+  (prev, next) => prev.value === next.value && prev.ariaLabel === next.ariaLabel && prev.options === next.options,
+);
 
 // 空のインストーラ、バージョン、パッケージ入力の初期値を生成
 function createEmptyInstaller() {
@@ -272,8 +291,10 @@ function createEmptyVersion() {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    timeZone: 'Asia/Tokyo'
-  }).format(now).replace(/\//g, '-');
+    timeZone: 'Asia/Tokyo',
+  })
+    .format(now)
+    .replace(/\//g, '-');
   return {
     key: generateKey(),
     version: '',
@@ -353,51 +374,63 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
     setInputValue('');
   }, [initialTags]);
 
-  const handleAddTagsFromInput = useCallback((text) => {
-    const parts = String(text || '')
-      .split(',')
-      .map(v => v.trim())
-      .filter(Boolean);
-    if (!parts.length) {
-      setInputValue('');
-      return;
-    }
-    const next = [...tags];
-    let updated = false;
-    parts.forEach(tag => {
-      if (!next.includes(tag)) {
-        next.push(tag);
-        updated = true;
+  const handleAddTagsFromInput = useCallback(
+    (text) => {
+      const parts = String(text || '')
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (!parts.length) {
+        setInputValue('');
+        return;
       }
-    });
-    if (updated) {
+      const next = [...tags];
+      let updated = false;
+      parts.forEach((tag) => {
+        if (!next.includes(tag)) {
+          next.push(tag);
+          updated = true;
+        }
+      });
+      if (updated) {
+        setTags(next);
+        onChange?.(next);
+      }
+      setInputValue('');
+    },
+    [tags, onChange],
+  );
+
+  const handleToggleTag = useCallback(
+    (tag) => {
+      if (tags.includes(tag)) {
+        const next = tags.filter((t) => t !== tag);
+        setTags(next);
+        onChange?.(next);
+        return;
+      }
+      handleAddTagsFromInput(tag);
+    },
+    [handleAddTagsFromInput, onChange, tags],
+  );
+
+  const handleRemoveTag = useCallback(
+    (tag) => {
+      const next = tags.filter((t) => t !== tag);
       setTags(next);
       onChange?.(next);
-    }
-    setInputValue('');
-  }, [tags, onChange]);
+    },
+    [tags, onChange],
+  );
 
-  const handleToggleTag = useCallback((tag) => {
-    if (tags.includes(tag)) {
-      const next = tags.filter(t => t !== tag);
-      setTags(next);
-      onChange?.(next);
-      return;
-    }
-    handleAddTagsFromInput(tag);
-  }, [handleAddTagsFromInput, onChange, tags]);
-
-  const handleRemoveTag = useCallback((tag) => {
-    const next = tags.filter(t => t !== tag);
-    setTags(next);
-    onChange?.(next);
-  }, [tags, onChange]);
-
-  const handleTagInputKeyDown = useCallback((e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    handleAddTagsFromInput(inputValue);
-  }, [handleAddTagsFromInput, inputValue]);
+  const handleTagInputKeyDown = useCallback(
+    (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      handleAddTagsFromInput(inputValue);
+    },
+    [handleAddTagsFromInput, inputValue],
+  );
 
   return (
     <div className="space-y-2">
@@ -406,10 +439,21 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
         className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
         onClick={() => inputRef.current?.focus()}
       >
-        {tags.map(tag => (
-          <span key={tag} className="inline-flex animate-in fade-in zoom-in duration-200 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex animate-in fade-in zoom-in duration-200 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+          >
             <span className="max-w-[160px] truncate">{tag}</span>
-            <button type="button" className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-600 dark:hover:text-slate-200" onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }} aria-label={`${tag} を削除`}>
+            <button
+              type="button"
+              className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveTag(tag);
+              }}
+              aria-label={`${tag} を削除`}
+            >
               <X size={12} />
             </button>
           </span>
@@ -419,26 +463,27 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
           name="tags"
           className="min-w-[120px] flex-1 border-0 bg-transparent p-1 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 dark:text-slate-100"
           value={inputValue}
-          onChange={e => setInputValue(e.target.value)}
+          onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleTagInputKeyDown}
           aria-label="タグを入力"
-          placeholder={tags.length === 0 ? "タグを入力 (Enterで追加)" : ""}
+          placeholder={tags.length === 0 ? 'タグを入力 (Enterで追加)' : ''}
         />
       </div>
       {suggestions.length > 0 && (
         <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/50">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">既存タグ</div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {suggestions.map(tag => {
+            {suggestions.map((tag) => {
               const isSelected = tags.includes(tag);
               return (
                 <button
                   type="button"
                   key={tag}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${isSelected
-                    ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500/20 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-500/40'
-                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'
-                    }`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                    isSelected
+                      ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500/20 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-500/40'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'
+                  }`}
                   onClick={() => handleToggleTag(tag)}
                 >
                   <span>{tag}</span>
@@ -453,671 +498,661 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
   );
 });
 
-const PackageLicenseSection = memo(function PackageLicenseSection({
-  license,
-  onUpdateLicenseField,
-  onToggleTemplate,
-  onUpdateCopyright,
-}) {
-  const activeLicense = license || createEmptyLicense();
-  const type = activeLicense.type;
-  const isOtherType = type === 'その他';
-  const isUnknown = type === '不明';
-  const forceBodyInput = isOtherType;
-  const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
-  const needsCopyrightInput = useTemplate && type !== 'CC0-1.0';
-  const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
-  const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
-  const [copied, setCopied] = useState(false);
+const PackageLicenseSection = memo(
+  function PackageLicenseSection({ license, onUpdateLicenseField, onToggleTemplate, onUpdateCopyright }) {
+    const activeLicense = license || createEmptyLicense();
+    const type = activeLicense.type;
+    const isOtherType = type === 'その他';
+    const isUnknown = type === '不明';
+    const forceBodyInput = isOtherType;
+    const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
+    const needsCopyrightInput = useTemplate && type !== 'CC0-1.0';
+    const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
+    const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
+    const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setCopied(false);
-  }, [templatePreview, activeLicense.key]);
+    useEffect(() => {
+      setCopied(false);
+    }, [templatePreview, activeLicense.key]);
 
-  // クリップボードにプレビュー本文をコピー
-  async function handleCopyPreview(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!templatePreview) return;
-    try {
-      await navigator.clipboard.writeText(templatePreview);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (_) { }
-  }
-  return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">ライセンス</h2>
-      </div>
-      <div className="space-y-4">
-        <div key={activeLicense.key} className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">種類<span className="text-red-500">*</span></label>
-              <ActionSelect
-                value={activeLicense.type}
-                onChange={val => onUpdateLicenseField(activeLicense.key, 'type', val)}
-                options={[{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS]}
-                ariaLabel="ライセンスの種類を選択"
-              />
-            </div>
-            {isOtherType && (
+    // クリップボードにプレビュー本文をコピー
+    async function handleCopyPreview(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!templatePreview) return;
+      try {
+        await navigator.clipboard.writeText(templatePreview);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (_) {}
+    }
+    return (
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">ライセンス</h2>
+        </div>
+        <div className="space-y-4">
+          <div
+            key={activeLicense.key}
+            className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ライセンス名<span className="text-red-500">*</span></label>
-                <input
-                  value={activeLicense.licenseName}
-                  onChange={e => onUpdateLicenseField(activeLicense.key, 'licenseName', e.target.value)}
-                  placeholder="ライセンス名を入力してください"
-                  required
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400">カスタムライセンスの場合は「カスタムライセンス」と入力してください。</p>
-              </div>
-            )}
-            {!isUnknown && !isOtherType && (
-              <div className="relative flex items-end pb-1">
-                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    className="peer sr-only"
-                    checked={useTemplate}
-                    onChange={e => onToggleTemplate(activeLicense.key, e.target.checked)}
-                    disabled={forceBodyInput}
-                  />
-                  <div className="relative inline-flex h-6 w-11 flex-none items-center rounded-full bg-slate-200 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-checked:bg-blue-600 dark:bg-slate-700">
-                    <span className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${useTemplate ? 'translate-x-5' : ''}`} />
-                  </div>
-                  <span>テンプレートを使用する</span>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  種類<span className="text-red-500">*</span>
                 </label>
+                <ActionSelect
+                  value={activeLicense.type}
+                  onChange={(val) => onUpdateLicenseField(activeLicense.key, 'type', val)}
+                  options={[{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS]}
+                  ariaLabel="ライセンスの種類を選択"
+                />
               </div>
-            )}
-          </div>
-          {showBodyInput ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                ライセンス本文{forceBodyInput ? <span className="text-red-500">*</span> : ''}
-              </label>
-              <textarea
-                className="min-h-[160px] font-mono text-xs leading-relaxed"
-                value={activeLicense.licenseBody}
-                onChange={e => onUpdateLicenseField(activeLicense.key, 'licenseBody', e.target.value)}
-                placeholder="ライセンス本文を入力してください"
-                required={forceBodyInput}
-              />
+              {isOtherType && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    ライセンス名<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={activeLicense.licenseName}
+                    onChange={(e) => onUpdateLicenseField(activeLicense.key, 'licenseName', e.target.value)}
+                    placeholder="ライセンス名を入力してください"
+                    required
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    カスタムライセンスの場合は「カスタムライセンス」と入力してください。
+                  </p>
+                </div>
+              )}
+              {!isUnknown && !isOtherType && (
+                <div className="relative flex items-end pb-1">
+                  <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={useTemplate}
+                      onChange={(e) => onToggleTemplate(activeLicense.key, e.target.checked)}
+                      disabled={forceBodyInput}
+                    />
+                    <div className="relative inline-flex h-6 w-11 flex-none items-center rounded-full bg-slate-200 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-checked:bg-blue-600 dark:bg-slate-700">
+                      <span
+                        className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${useTemplate ? 'translate-x-5' : ''}`}
+                      />
+                    </div>
+                    <span>テンプレートを使用する</span>
+                  </label>
+                </div>
+              )}
             </div>
-          ) : isUnknown ? (
-            null
-          ) : (
-            needsCopyrightInput ? (
+            {showBodyInput ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  ライセンス本文{forceBodyInput ? <span className="text-red-500">*</span> : ''}
+                </label>
+                <textarea
+                  className="min-h-[160px] font-mono text-xs leading-relaxed"
+                  value={activeLicense.licenseBody}
+                  onChange={(e) => onUpdateLicenseField(activeLicense.key, 'licenseBody', e.target.value)}
+                  placeholder="ライセンス本文を入力してください"
+                  required={forceBodyInput}
+                />
+              </div>
+            ) : isUnknown ? null : needsCopyrightInput ? (
               <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-200">
                 テンプレートを使用します。著作権年と著作権者を入力してください。
               </div>
-            ) : null
-          )}
-          {useTemplate && (
-            <div className="space-y-4">
-              {needsCopyrightInput && (
-                activeLicense.copyrights.map(copyright => (
-                  <div key={copyright.key} className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権年</label>
-                      <input value={copyright.years} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)} placeholder="(例: 2025)" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権者</label>
-                      <input value={copyright.holder} onChange={e => onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)} placeholder="(例: KENくん)" />
-                    </div>
-                  </div>
-                ))
-              )}
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                <details className="group">
-                  <summary className="flex cursor-pointer items-center justify-between bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-                    <span>プレビュー</span>
-                    <div className="flex items-center gap-2">
-                      {copied && <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in slide-in-from-right-1">コピーしました</span>}
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCopyPreview(e);
-                        }}
-                        disabled={!templatePreview}
-                        aria-label="ライセンス本文をコピー"
-                        title="クリップボードにコピー"
-                      >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                      </button>
-                      <span className="text-slate-400 transition-transform group-open:rotate-180">
-                        <ChevronDown size={16} />
-                      </span>
-                    </div>
-                  </summary>
-                  <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-                    {templatePreview ? (
-                      <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">{templatePreview}</pre>
-                    ) : (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">プレビューは種類と著作権者を入力すると表示されます。</p>
-                    )}
-                  </div>
-                </details>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}, (prev, next) => (
-  prev.license === next.license
-  && prev.onUpdateLicenseField === next.onUpdateLicenseField
-  && prev.onToggleTemplate === next.onToggleTemplate
-  && prev.onUpdateCopyright === next.onUpdateCopyright
-));
-
-const PackageImagesSection = memo(function PackageImagesSection({
-  images,
-  packageId,
-  onThumbnailChange,
-  onRemoveThumbnail,
-  onAddInfoImages,
-  onRemoveInfoImage,
-}) {
-  const thumbnailRef = useRef(null);
-  const infoRef = useRef(null);
-  const [isDraggingOverThumbnail, setIsDraggingOverThumbnail] = useState(false);
-  const [isDraggingOverInfo, setIsDraggingOverInfo] = useState(false);
-
-  useEffect(() => {
-    let unlistenDragDrop = null;
-    let unlistenDragEnter = null;
-    let unlistenDragOver = null;
-    let unlistenDragLeave = null;
-
-    const setupDragDrop = async () => {
-      try {
-        const appWindow = getCurrentWindow();
-
-        // Helper to check if point (x, y) is inside rect
-        const isInside = (rect, x, y) => {
-          if (!rect) return false;
-          // Tauri's drag-drop position is in logical pixels (CSS pixels).
-          return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-        };
-
-        // Helper to handle file reading
-        const processDroppedFiles = async (paths) => {
-          const files = [];
-          for (const p of paths) {
-            try {
-              const bytes = await readFile(p);
-              const name = basename(p);
-              // Simple mime type deduction
-              const ext = getFileExtension(name) || 'bin';
-              let type = 'application/octet-stream';
-              if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) type = `image/${ext}`;
-
-              const file = new File([bytes], name, { type });
-              files.push(file);
-            } catch (err) {
-              console.error(`Failed to read dropped file: ${p}`, err);
-            }
-          }
-          return files;
-        };
-
-        const handleDragEvent = (event, type) => {
-          const { position } = event.payload;
-          const thumbRect = thumbnailRef.current?.getBoundingClientRect();
-          const infoRect = infoRef.current?.getBoundingClientRect();
-
-          const overThumbnail = isInside(thumbRect, position.x, position.y);
-          const overInfo = isInside(infoRect, position.x, position.y);
-
-          if (type === 'drop') {
-            const { paths } = event.payload;
-            if (overThumbnail && paths.length > 0) {
-              processDroppedFiles([paths[0]]).then(files => {
-                if (files.length > 0) onThumbnailChange(files[0]);
-              });
-            } else if (overInfo && paths.length > 0) {
-              processDroppedFiles(paths).then(files => {
-                if (files.length > 0) onAddInfoImages(files);
-              });
-            }
-            setIsDraggingOverThumbnail(false);
-            setIsDraggingOverInfo(false);
-          } else if (type === 'enter' || type === 'over') {
-            setIsDraggingOverThumbnail(overThumbnail);
-            setIsDraggingOverInfo(overInfo);
-          } else {
-            setIsDraggingOverThumbnail(false);
-            setIsDraggingOverInfo(false);
-          }
-        };
-
-        // User requested "tauri/api/windowのonDragDropEvent()"
-        // We use listen('tauri://drag-drop') which is the v2 equivalent for window file drops.
-        unlistenDragDrop = await appWindow.listen('tauri://drag-drop', e => handleDragEvent(e, 'drop'));
-        unlistenDragEnter = await appWindow.listen('tauri://drag-enter', e => handleDragEvent(e, 'enter'));
-        unlistenDragOver = await appWindow.listen('tauri://drag-over', e => handleDragEvent(e, 'over'));
-        unlistenDragLeave = await appWindow.listen('tauri://drag-leave', e => handleDragEvent(e, 'leave'));
-
-      } catch (err) {
-        console.error('Failed to setup drag and drop listeners', err);
-      }
-    };
-
-    setupDragDrop();
-
-    return () => {
-      if (unlistenDragDrop) unlistenDragDrop();
-      if (unlistenDragEnter) unlistenDragEnter();
-      if (unlistenDragOver) unlistenDragOver();
-      if (unlistenDragLeave) unlistenDragLeave();
-    };
-  }, [onThumbnailChange, onAddInfoImages]);
-
-  const thumbnailPreview = images.thumbnail?.previewUrl || images.thumbnail?.existingPath || '';
-  return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">画像</h2>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* サムネイル */}
-        <div
-          ref={thumbnailRef}
-          className={`space-y-3 rounded-xl border p-5 shadow-sm transition-colors ${isDraggingOverThumbnail
-            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
-            : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-            }`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">サムネイル</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">パッケージ一覧に表示します (1枚)</p>
-              <p className="text-[11px] text-blue-500 dark:text-blue-400">
-                ※推奨：縦横比1:1 (206×206px前後)<br />
-                一覧を見やすくするため、可能であればご登録ください
-              </p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-              <ImagePlus size={16} />
-              <span>画像を選択</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (file) onThumbnailChange(file);
-                  e.target.value = '';
-                }}
-                className="sr-only"
-              />
-            </label>
-          </div>
-          {isDraggingOverThumbnail ? (
-            <div className="flex h-52 items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-              <div className="text-center">
-                <Download size={32} className="mx-auto mb-2 animate-bounce" />
-                <span className="text-sm font-bold">ここにドロップして追加</span>
-              </div>
-            </div>
-          ) : images.thumbnail ? (
-            <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-              <div className="relative aspect-square w-full bg-slate-100 dark:bg-slate-900">
-                <div
-                  className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${thumbnailPreview ? '' : 'text-slate-400'}`}
-                  style={thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined}
-                >
-                  {!thumbnailPreview && <span>プレビューなし</span>}
-                </div>
-                <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
-              </div>
-              <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-                <span className="truncate text-xs font-medium text-slate-700 dark:text-slate-300" title={images.thumbnail.file?.name || images.thumbnail.existingPath}>
-                  {images.thumbnail.file?.name || images.thumbnail.existingPath || '未設定'}
-                </span>
-                <DeleteButton onClick={onRemoveThumbnail} ariaLabel="サムネイルを削除" />
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
-              <Image size={32} className="mb-2 opacity-50" />
-              <span className="text-xs font-medium">サムネイルが未設定です</span>
-              <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
-            </div>
-          )}
-        </div>
-
-        {/* 説明画像 */}
-        <div
-          ref={infoRef}
-          className={`flex flex-col space-y-3 rounded-xl border p-5 shadow-sm transition-colors lg:col-span-2 ${isDraggingOverInfo
-            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
-            : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-            }`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">説明画像</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">パッケージ詳細ページに表示する説明画像 (複数可)</p>
-              <p className="text-[10px] text-blue-500 dark:text-blue-400">※縦横比は16:9を推奨します</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-              <Images size={16} />
-              <span>画像を追加</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={e => {
-                  const files = e.target.files;
-                  if (files?.length) onAddInfoImages(files);
-                  e.target.value = '';
-                }}
-                className="sr-only"
-              />
-            </label>
-          </div>
-          {isDraggingOverInfo ? (
-            <div className="flex flex-1 min-h-[13rem] items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-              <div className="text-center">
-                <Download size={32} className="mx-auto mb-2 animate-bounce" />
-                <span className="text-sm font-bold">ここにドロップして追加</span>
-              </div>
-            </div>
-          ) : images.info.length ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              {images.info.map((entry, idx) => {
-                const preview = entry.previewUrl || entry.existingPath || '';
-                const filename = entry.file?.name || entry.existingPath || `./image/${packageId}_${idx + 1}.(拡張子)`;
-                return (
-                  <div key={entry.key} className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                    <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-900">
-                      <div
-                        className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${preview ? '' : 'text-slate-400'}`}
-                        style={preview ? { backgroundImage: `url(${preview})` } : undefined}
-                      >
-                        {!preview && <span>No Preview</span>}
+            ) : null}
+            {useTemplate && (
+              <div className="space-y-4">
+                {needsCopyrightInput &&
+                  activeLicense.copyrights.map((copyright) => (
+                    <div key={copyright.key} className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権年</label>
+                        <input
+                          value={copyright.years}
+                          onChange={(e) => onUpdateCopyright(activeLicense.key, copyright.key, 'years', e.target.value)}
+                          placeholder="(例: 2025)"
+                        />
                       </div>
-                      <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
-                      <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">著作権者</label>
+                        <input
+                          value={copyright.holder}
+                          onChange={(e) =>
+                            onUpdateCopyright(activeLicense.key, copyright.key, 'holder', e.target.value)
+                          }
+                          placeholder="(例: KENくん)"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+                  <details className="group">
+                    <summary className="flex cursor-pointer items-center justify-between bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                      <span>プレビュー</span>
+                      <div className="flex items-center gap-2">
+                        {copied && (
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in slide-in-from-right-1">
+                            コピーしました
+                          </span>
+                        )}
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm backdrop-blur-sm transition hover:bg-red-50 hover:text-red-700 dark:bg-slate-900/90 dark:text-red-400 dark:hover:bg-red-900/40"
-                          onClick={() => onRemoveInfoImage(entry.key)}
-                          aria-label="削除"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCopyPreview(e);
+                          }}
+                          disabled={!templatePreview}
+                          aria-label="ライセンス本文をコピー"
+                          title="クリップボードにコピー"
                         >
-                          <Trash2 size={14} />
+                          {copied ? <Check size={16} /> : <Copy size={16} />}
                         </button>
+                        <span className="text-slate-400 transition-transform group-open:rotate-180">
+                          <ChevronDown size={16} />
+                        </span>
+                      </div>
+                    </summary>
+                    <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+                      {templatePreview ? (
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                          {templatePreview}
+                        </pre>
+                      ) : (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          プレビューは種類と著作権者を入力すると表示されます。
+                        </p>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  },
+  (prev, next) =>
+    prev.license === next.license &&
+    prev.onUpdateLicenseField === next.onUpdateLicenseField &&
+    prev.onToggleTemplate === next.onToggleTemplate &&
+    prev.onUpdateCopyright === next.onUpdateCopyright,
+);
+
+const PackageImagesSection = memo(
+  function PackageImagesSection({
+    images,
+    packageId,
+    onThumbnailChange,
+    onRemoveThumbnail,
+    onAddInfoImages,
+    onRemoveInfoImage,
+  }) {
+    const thumbnailRef = useRef(null);
+    const infoRef = useRef(null);
+    const [isDraggingOverThumbnail, setIsDraggingOverThumbnail] = useState(false);
+    const [isDraggingOverInfo, setIsDraggingOverInfo] = useState(false);
+
+    useEffect(() => {
+      let unlistenDragDrop = null;
+      let unlistenDragEnter = null;
+      let unlistenDragOver = null;
+      let unlistenDragLeave = null;
+
+      const setupDragDrop = async () => {
+        try {
+          const appWindow = getCurrentWindow();
+
+          // Helper to check if point (x, y) is inside rect
+          const isInside = (rect, x, y) => {
+            if (!rect) return false;
+            // Tauri's drag-drop position is in logical pixels (CSS pixels).
+            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+          };
+
+          // Helper to handle file reading
+          const processDroppedFiles = async (paths) => {
+            const files = [];
+            for (const p of paths) {
+              try {
+                const bytes = await readFile(p);
+                const name = basename(p);
+                // Simple mime type deduction
+                const ext = getFileExtension(name) || 'bin';
+                let type = 'application/octet-stream';
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) type = `image/${ext}`;
+
+                const file = new File([bytes], name, { type });
+                files.push(file);
+              } catch (err) {
+                console.error(`Failed to read dropped file: ${p}`, err);
+              }
+            }
+            return files;
+          };
+
+          const handleDragEvent = (event, type) => {
+            const { position } = event.payload;
+            const thumbRect = thumbnailRef.current?.getBoundingClientRect();
+            const infoRect = infoRef.current?.getBoundingClientRect();
+
+            const overThumbnail = isInside(thumbRect, position.x, position.y);
+            const overInfo = isInside(infoRect, position.x, position.y);
+
+            if (type === 'drop') {
+              const { paths } = event.payload;
+              if (overThumbnail && paths.length > 0) {
+                processDroppedFiles([paths[0]]).then((files) => {
+                  if (files.length > 0) onThumbnailChange(files[0]);
+                });
+              } else if (overInfo && paths.length > 0) {
+                processDroppedFiles(paths).then((files) => {
+                  if (files.length > 0) onAddInfoImages(files);
+                });
+              }
+              setIsDraggingOverThumbnail(false);
+              setIsDraggingOverInfo(false);
+            } else if (type === 'enter' || type === 'over') {
+              setIsDraggingOverThumbnail(overThumbnail);
+              setIsDraggingOverInfo(overInfo);
+            } else {
+              setIsDraggingOverThumbnail(false);
+              setIsDraggingOverInfo(false);
+            }
+          };
+
+          // User requested "tauri/api/windowのonDragDropEvent()"
+          // We use listen('tauri://drag-drop') which is the v2 equivalent for window file drops.
+          unlistenDragDrop = await appWindow.listen('tauri://drag-drop', (e) => handleDragEvent(e, 'drop'));
+          unlistenDragEnter = await appWindow.listen('tauri://drag-enter', (e) => handleDragEvent(e, 'enter'));
+          unlistenDragOver = await appWindow.listen('tauri://drag-over', (e) => handleDragEvent(e, 'over'));
+          unlistenDragLeave = await appWindow.listen('tauri://drag-leave', (e) => handleDragEvent(e, 'leave'));
+        } catch (err) {
+          console.error('Failed to setup drag and drop listeners', err);
+        }
+      };
+
+      setupDragDrop();
+
+      return () => {
+        if (unlistenDragDrop) unlistenDragDrop();
+        if (unlistenDragEnter) unlistenDragEnter();
+        if (unlistenDragOver) unlistenDragOver();
+        if (unlistenDragLeave) unlistenDragLeave();
+      };
+    }, [onThumbnailChange, onAddInfoImages]);
+
+    const thumbnailPreview = images.thumbnail?.previewUrl || images.thumbnail?.existingPath || '';
+    return (
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">画像</h2>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* サムネイル */}
+          <div
+            ref={thumbnailRef}
+            className={`space-y-3 rounded-xl border p-5 shadow-sm transition-colors ${
+              isDraggingOverThumbnail
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
+                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">サムネイル</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">パッケージ一覧に表示します (1枚)</p>
+                <p className="text-[11px] text-blue-500 dark:text-blue-400">
+                  ※推奨：縦横比1:1 (206×206px前後)
+                  <br />
+                  一覧を見やすくするため、可能であればご登録ください
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                <ImagePlus size={16} />
+                <span>画像を選択</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onThumbnailChange(file);
+                    e.target.value = '';
+                  }}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            {isDraggingOverThumbnail ? (
+              <div className="flex h-52 items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <div className="text-center">
+                  <Download size={32} className="mx-auto mb-2 animate-bounce" />
+                  <span className="text-sm font-bold">ここにドロップして追加</span>
+                </div>
+              </div>
+            ) : images.thumbnail ? (
+              <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+                <div className="relative aspect-square w-full bg-slate-100 dark:bg-slate-900">
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${thumbnailPreview ? '' : 'text-slate-400'}`}
+                    style={thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined}
+                  >
+                    {!thumbnailPreview && <span>プレビューなし</span>}
+                  </div>
+                  <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                </div>
+                <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                  <span
+                    className="truncate text-xs font-medium text-slate-700 dark:text-slate-300"
+                    title={images.thumbnail.file?.name || images.thumbnail.existingPath}
+                  >
+                    {images.thumbnail.file?.name || images.thumbnail.existingPath || '未設定'}
+                  </span>
+                  <DeleteButton onClick={onRemoveThumbnail} ariaLabel="サムネイルを削除" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
+                <Image size={32} className="mb-2 opacity-50" />
+                <span className="text-xs font-medium">サムネイルが未設定です</span>
+                <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
+              </div>
+            )}
+          </div>
+
+          {/* 説明画像 */}
+          <div
+            ref={infoRef}
+            className={`flex flex-col space-y-3 rounded-xl border p-5 shadow-sm transition-colors lg:col-span-2 ${
+              isDraggingOverInfo
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
+                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">説明画像</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  パッケージ詳細ページに表示する説明画像 (複数可)
+                </p>
+                <p className="text-[10px] text-blue-500 dark:text-blue-400">※縦横比は16:9を推奨します</p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                <Images size={16} />
+                <span>画像を追加</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files?.length) onAddInfoImages(files);
+                    e.target.value = '';
+                  }}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            {isDraggingOverInfo ? (
+              <div className="flex flex-1 min-h-[13rem] items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <div className="text-center">
+                  <Download size={32} className="mx-auto mb-2 animate-bounce" />
+                  <span className="text-sm font-bold">ここにドロップして追加</span>
+                </div>
+              </div>
+            ) : images.info.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                {images.info.map((entry, idx) => {
+                  const preview = entry.previewUrl || entry.existingPath || '';
+                  const filename = entry.file?.name || entry.existingPath || `./image/${packageId}_${idx + 1}.(拡張子)`;
+                  return (
+                    <div
+                      key={entry.key}
+                      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50"
+                    >
+                      <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-900">
+                        <div
+                          className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${preview ? '' : 'text-slate-400'}`}
+                          style={preview ? { backgroundImage: `url(${preview})` } : undefined}
+                        >
+                          {!preview && <span>No Preview</span>}
+                        </div>
+                        <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                        <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm backdrop-blur-sm transition hover:bg-red-50 hover:text-red-700 dark:bg-slate-900/90 dark:text-red-400 dark:hover:bg-red-900/40"
+                            onClick={() => onRemoveInfoImage(entry.key)}
+                            aria-label="削除"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-100 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
+                        <p
+                          className="truncate text-[10px] font-medium text-slate-700 dark:text-slate-300"
+                          title={filename}
+                        >
+                          {filename}
+                        </p>
                       </div>
                     </div>
-                    <div className="border-t border-slate-100 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
-                      <p className="truncate text-[10px] font-medium text-slate-700 dark:text-slate-300" title={filename}>{filename}</p>
-                    </div>
-                  </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-1 min-h-[13rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
+                <Image size={32} className="mb-2 opacity-50" />
+                <span className="text-xs font-medium">説明画像が未設定です</span>
+                <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  },
+  (prev, next) =>
+    prev.images === next.images &&
+    prev.packageId === next.packageId &&
+    prev.onThumbnailChange === next.onThumbnailChange &&
+    prev.onRemoveThumbnail === next.onRemoveThumbnail &&
+    prev.onAddInfoImages === next.onAddInfoImages &&
+    prev.onRemoveInfoImage === next.onRemoveInfoImage,
+);
+
+const PackageInstallerSection = memo(
+  function PackageInstallerSection({
+    installer,
+    installListRef,
+    uninstallListRef,
+    addInstallStep,
+    addUninstallStep,
+    removeInstallStep,
+    removeUninstallStep,
+    startHandleDrag,
+    updateInstallStep,
+    updateInstallerField,
+    updateUninstallStep,
+  }) {
+    return (
+      <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">インストーラ</h2>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロード元</label>
+            <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/50">
+              {INSTALLER_SOURCES.map((option) => {
+                const isActive = installer.sourceType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isActive
+                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400'
+                        : 'text-slate-600 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50'
+                    }`}
+                    onClick={() => updateInstallerField('sourceType', option.value)}
+                  >
+                    {option.label}
+                  </button>
                 );
               })}
             </div>
-          ) : (
-            <div className="flex flex-1 min-h-[13rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
-              <Image size={32} className="mb-2 opacity-50" />
-              <span className="text-xs font-medium">説明画像が未設定です</span>
-              <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}, (prev, next) => (
-  prev.images === next.images
-  && prev.packageId === next.packageId
-  && prev.onThumbnailChange === next.onThumbnailChange
-  && prev.onRemoveThumbnail === next.onRemoveThumbnail
-  && prev.onAddInfoImages === next.onAddInfoImages
-  && prev.onRemoveInfoImage === next.onRemoveInfoImage
-));
-
-const PackageInstallerSection = memo(function PackageInstallerSection({
-  installer,
-  installListRef,
-  uninstallListRef,
-  addInstallStep,
-  addUninstallStep,
-  removeInstallStep,
-  removeUninstallStep,
-  startHandleDrag,
-  updateInstallStep,
-  updateInstallerField,
-  updateUninstallStep,
-}) {
-  return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">インストーラ</h2>
-      </div>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロード元</label>
-          <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/50">
-            {INSTALLER_SOURCES.map(option => {
-              const isActive = installer.sourceType === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isActive
-                    ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400'
-                    : 'text-slate-600 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50'
-                    }`}
-                  onClick={() => updateInstallerField('sourceType', option.value)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            {installer.sourceType === 'direct' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロードURL</label>
+                <input
+                  value={installer.directUrl}
+                  onChange={(e) => updateInstallerField('directUrl', e.target.value)}
+                  placeholder="https://example.com/plugin.zip"
+                />
+              </div>
+            )}
+            {installer.sourceType === 'booth' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">BOOTH URL</label>
+                <input
+                  value={installer.boothUrl}
+                  onChange={(e) => updateInstallerField('boothUrl', e.target.value)}
+                  placeholder="https://booth.pm/downloadables/...で始まるパス"
+                />
+              </div>
+            )}
+            {installer.sourceType === 'github' && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">GitHub ID (Owner)</label>
+                  <input
+                    value={installer.githubOwner}
+                    onChange={(e) => updateInstallerField('githubOwner', e.target.value)}
+                    placeholder="例: neosku"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">レポジトリ名 (Repo)</label>
+                  <input
+                    value={installer.githubRepo}
+                    onChange={(e) => updateInstallerField('githubRepo', e.target.value)}
+                    placeholder="例: aviutl2-catalog"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">正規表現パターン</label>
+                  <input
+                    value={installer.githubPattern}
+                    onChange={(e) => updateInstallerField('githubPattern', e.target.value)}
+                    placeholder="^aviutl_plugin_.*\\.zip$"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    リリースファイル名に一致する正規表現を指定してください。
+                  </p>
+                </div>
+              </div>
+            )}
+            {installer.sourceType === 'GoogleDrive' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ファイルID</label>
+                <input
+                  value={installer.googleDriveId}
+                  onChange={(e) => updateInstallerField('googleDriveId', e.target.value)}
+                  placeholder="Google Drive の共有リンクに含まれるID（…/drive/folders/{フォルダID}）"
+                />
+              </div>
+            )}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          {installer.sourceType === 'direct' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロードURL</label>
-              <input value={installer.directUrl} onChange={e => updateInstallerField('directUrl', e.target.value)} placeholder="https://example.com/plugin.zip" />
-            </div>
-          )}
-          {installer.sourceType === 'booth' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">BOOTH URL</label>
-              <input value={installer.boothUrl} onChange={e => updateInstallerField('boothUrl', e.target.value)} placeholder="https://booth.pm/downloadables/...で始まるパス" />
-            </div>
-          )}
-          {installer.sourceType === 'github' && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">GitHub ID (Owner)</label>
-                <input value={installer.githubOwner} onChange={e => updateInstallerField('githubOwner', e.target.value)} placeholder="例: neosku" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">レポジトリ名 (Repo)</label>
-                <input value={installer.githubRepo} onChange={e => updateInstallerField('githubRepo', e.target.value)} placeholder="例: aviutl2-catalog" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">正規表現パターン</label>
-                <input value={installer.githubPattern} onChange={e => updateInstallerField('githubPattern', e.target.value)} placeholder="^aviutl_plugin_.*\\.zip$" />
-                <p className="text-xs text-slate-500 dark:text-slate-400">リリースファイル名に一致する正規表現を指定してください。</p>
-              </div>
-            </div>
-          )}
-          {installer.sourceType === 'GoogleDrive' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ファイルID</label>
-              <input value={installer.googleDriveId} onChange={e => updateInstallerField('googleDriveId', e.target.value)} placeholder="Google Drive の共有リンクに含まれるID（…/drive/folders/{フォルダID}）" />
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">インストール手順</h3>
-          <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={addInstallStep}>
-            <Plus size={14} />
-            <span>ステップを追加</span>
-          </button>
-        </div>
-        <div
-          className="space-y-3"
-          ref={installListRef}
-        >
-          {installer.installSteps.map((step, idx) => {
-            const order = idx + 1;
-            const isSpecialAction = SPECIAL_INSTALL_ACTIONS.includes(step.action);
-            return (
-              <div
-                key={step.key}
-                className="step-card group relative space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{order}</span>
-                    {!isSpecialAction && (
-                      <span
-                        className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
-                        role="button"
-                        tabIndex={0}
-                        onPointerDown={e => startHandleDrag('install', idx, e)}
-                        aria-label="ドラッグして並び替え"
-                      >
-                        <GripVertical size={16} />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">インストール手順</h3>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              onClick={addInstallStep}
+            >
+              <Plus size={14} />
+              <span>ステップを追加</span>
+            </button>
+          </div>
+          <div className="space-y-3" ref={installListRef}>
+            {installer.installSteps.map((step, idx) => {
+              const order = idx + 1;
+              const isSpecialAction = SPECIAL_INSTALL_ACTIONS.includes(step.action);
+              return (
+                <div
+                  key={step.key}
+                  className="step-card group relative space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {order}
                       </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-[120px]">
-                    {isSpecialAction ? (
-                      <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {ACTION_LABELS[step.action] || step.action}
-                        <span className="ml-auto text-xs font-normal text-slate-400">固定ステップ</span>
-                      </div>
-                    ) : (
-                      <ActionSelect
-                        value={step.action}
-                        onChange={(val) => updateInstallStep(step.key, 'action', val)}
-                        options={INSTALL_ACTION_OPTIONS}
-                        ariaLabel="ステップの種類を選択"
-                      />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!isSpecialAction && (
-                      <DeleteButton onClick={() => removeInstallStep(step.key)} ariaLabel="ステップを削除" />
-                    )}
-                  </div>
-                </div>
-                {!isSpecialAction && step.action === 'run' && (
-                  <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">実行パス</label>
-                      <input value={step.path} onChange={e => updateInstallStep(step.key, 'path', e.target.value)} placeholder="{tmp}/setup.exe" className="!bg-white dark:!bg-slate-800" />
+                      {!isSpecialAction && (
+                        <span
+                          className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
+                          role="button"
+                          tabIndex={0}
+                          onPointerDown={(e) => startHandleDrag('install', idx, e)}
+                          aria-label="ドラッグして並び替え"
+                        >
+                          <GripVertical size={16} />
+                        </span>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">引数 (カンマ区切り)</label>
-                      <input value={step.argsText} onChange={e => updateInstallStep(step.key, 'argsText', e.target.value)} placeholder="--silent, --option" className="!bg-white dark:!bg-slate-800" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
-                        <input
-                          type="checkbox"
-                          className="accent-blue-600"
-                          checked={!!step.elevate}
-                          onChange={e => updateInstallStep(step.key, 'elevate', e.target.checked)}
+                    <div className="flex-1 min-w-[120px]">
+                      {isSpecialAction ? (
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {ACTION_LABELS[step.action] || step.action}
+                          <span className="ml-auto text-xs font-normal text-slate-400">固定ステップ</span>
+                        </div>
+                      ) : (
+                        <ActionSelect
+                          value={step.action}
+                          onChange={(val) => updateInstallStep(step.key, 'action', val)}
+                          options={INSTALL_ACTION_OPTIONS}
+                          ariaLabel="ステップの種類を選択"
                         />
-                        <span>管理者権限で実行する</span>
-                      </label>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!isSpecialAction && (
+                        <DeleteButton onClick={() => removeInstallStep(step.key)} ariaLabel="ステップを削除" />
+                      )}
                     </div>
                   </div>
-                )}
-                {!isSpecialAction && step.action === 'copy' && (
-                  <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー元</label>
-                      <input value={step.from} onChange={e => updateInstallStep(step.key, 'from', e.target.value)} placeholder="（例：{tmp}/example.auo）" className="!bg-white dark:!bg-slate-800" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー先</label>
-                      <input value={step.to} onChange={e => updateInstallStep(step.key, 'to', e.target.value)} placeholder="（例：{pluginsDir}）" className="!bg-white dark:!bg-slate-800" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {!installer.installSteps.length && (
-            <div className="flex h-24 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-800/50">
-              <span className="text-xs">ステップを追加してインストール手順を定義してください</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">アンインストール手順</h3>
-          <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={addUninstallStep}>
-            <Plus size={14} />
-            <span>ステップを追加</span>
-          </button>
-        </div>
-        <div
-          className="space-y-3"
-          ref={uninstallListRef}
-        >
-          {installer.uninstallSteps.map((step, idx) => {
-            const order = idx + 1;
-            return (
-              <div
-                key={step.key}
-                className="step-card group relative space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{order}</span>
-                    <span
-                      className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
-                      role="button"
-                      tabIndex={0}
-                      onPointerDown={e => startHandleDrag('uninstall', idx, e)}
-                      aria-label="ドラッグして並び替え"
-                    >
-                      <GripVertical size={16} />
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-[120px]">
-                    <ActionSelect
-                      value={step.action}
-                      onChange={(val) => updateUninstallStep(step.key, 'action', val)}
-                      options={UNINSTALL_ACTION_OPTIONS}
-                      ariaLabel="ステップの種類を選択"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
-                  </div>
-                </div>
-                <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">対象パス</label>
-                    <input value={step.path} onChange={e => updateUninstallStep(step.key, 'path', e.target.value)} placeholder={step.action === 'delete' ? '(例: {pluginsDir}/example.auo)' : '(例: {appDir}/uninstall.exe)'} className="!bg-white dark:!bg-slate-800" />
-                  </div>
-                  {step.action === 'run' && (
-                    <>
+                  {!isSpecialAction && step.action === 'run' && (
+                    <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">引数 (カンマ区切り)</label>
-                        <input value={step.argsText} onChange={e => updateUninstallStep(step.key, 'argsText', e.target.value)} placeholder="(例: /VERYSILENT)" className="!bg-white dark:!bg-slate-800" />
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">実行パス</label>
+                        <input
+                          value={step.path}
+                          onChange={(e) => updateInstallStep(step.key, 'path', e.target.value)}
+                          placeholder="{tmp}/setup.exe"
+                          className="!bg-white dark:!bg-slate-800"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                          引数 (カンマ区切り)
+                        </label>
+                        <input
+                          value={step.argsText}
+                          onChange={(e) => updateInstallStep(step.key, 'argsText', e.target.value)}
+                          placeholder="--silent, --option"
+                          className="!bg-white dark:!bg-slate-800"
+                        />
                       </div>
                       <div className="md:col-span-2">
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -1125,317 +1160,475 @@ const PackageInstallerSection = memo(function PackageInstallerSection({
                             type="checkbox"
                             className="accent-blue-600"
                             checked={!!step.elevate}
-                            onChange={e => updateUninstallStep(step.key, 'elevate', e.target.checked)}
+                            onChange={(e) => updateInstallStep(step.key, 'elevate', e.target.checked)}
                           />
                           <span>管理者権限で実行する</span>
                         </label>
                       </div>
-                    </>
+                    </div>
+                  )}
+                  {!isSpecialAction && step.action === 'copy' && (
+                    <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー元</label>
+                        <input
+                          value={step.from}
+                          onChange={(e) => updateInstallStep(step.key, 'from', e.target.value)}
+                          placeholder="（例：{tmp}/example.auo）"
+                          className="!bg-white dark:!bg-slate-800"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">コピー先</label>
+                        <input
+                          value={step.to}
+                          onChange={(e) => updateInstallStep(step.key, 'to', e.target.value)}
+                          placeholder="（例：{pluginsDir}）"
+                          className="!bg-white dark:!bg-slate-800"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
+              );
+            })}
+            {!installer.installSteps.length && (
+              <div className="flex h-24 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-800/50">
+                <span className="text-xs">ステップを追加してインストール手順を定義してください</span>
               </div>
-            );
-          })}
-          {!installer.uninstallSteps.length && (
-            <div className="flex h-24 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-800/50">
-              <span className="text-xs">ステップを追加してアンインストール手順を定義してください</span>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">アンインストール手順</h3>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              onClick={addUninstallStep}
+            >
+              <Plus size={14} />
+              <span>ステップを追加</span>
+            </button>
+          </div>
+          <div className="space-y-3" ref={uninstallListRef}>
+            {installer.uninstallSteps.map((step, idx) => {
+              const order = idx + 1;
+              return (
+                <div
+                  key={step.key}
+                  className="step-card group relative space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {order}
+                      </span>
+                      <span
+                        className="cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:text-slate-400"
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => startHandleDrag('uninstall', idx, e)}
+                        aria-label="ドラッグして並び替え"
+                      >
+                        <GripVertical size={16} />
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-[120px]">
+                      <ActionSelect
+                        value={step.action}
+                        onChange={(val) => updateUninstallStep(step.key, 'action', val)}
+                        options={UNINSTALL_ACTION_OPTIONS}
+                        ariaLabel="ステップの種類を選択"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DeleteButton onClick={() => removeUninstallStep(step.key)} ariaLabel="ステップを削除" />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">対象パス</label>
+                      <input
+                        value={step.path}
+                        onChange={(e) => updateUninstallStep(step.key, 'path', e.target.value)}
+                        placeholder={
+                          step.action === 'delete' ? '(例: {pluginsDir}/example.auo)' : '(例: {appDir}/uninstall.exe)'
+                        }
+                        className="!bg-white dark:!bg-slate-800"
+                      />
+                    </div>
+                    {step.action === 'run' && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            引数 (カンマ区切り)
+                          </label>
+                          <input
+                            value={step.argsText}
+                            onChange={(e) => updateUninstallStep(step.key, 'argsText', e.target.value)}
+                            placeholder="(例: /VERYSILENT)"
+                            className="!bg-white dark:!bg-slate-800"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <input
+                              type="checkbox"
+                              className="accent-blue-600"
+                              checked={!!step.elevate}
+                              onChange={(e) => updateUninstallStep(step.key, 'elevate', e.target.checked)}
+                            />
+                            <span>管理者権限で実行する</span>
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {!installer.uninstallSteps.length && (
+              <div className="flex h-24 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-800/50">
+                <span className="text-xs">ステップを追加してアンインストール手順を定義してください</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  },
+  (prev, next) =>
+    prev.installer === next.installer &&
+    prev.installListRef === next.installListRef &&
+    prev.uninstallListRef === next.uninstallListRef &&
+    prev.addInstallStep === next.addInstallStep &&
+    prev.addUninstallStep === next.addUninstallStep &&
+    prev.removeInstallStep === next.removeInstallStep &&
+    prev.removeUninstallStep === next.removeUninstallStep &&
+    prev.startHandleDrag === next.startHandleDrag &&
+    prev.updateInstallStep === next.updateInstallStep &&
+    prev.updateInstallerField === next.updateInstallerField &&
+    prev.updateUninstallStep === next.updateUninstallStep,
+);
+
+const VersionFileCard = memo(
+  function VersionFileCard({ versionKey, file, index, removeVersionFile, updateVersionFile, chooseFileForHash }) {
+    const order = index + 1;
+    return (
+      <div className="group relative space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100/50 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-900">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-300">
+            File {order}
+          </span>
+          <DeleteButton onClick={() => removeVersionFile(versionKey, file.key)} ariaLabel={`ファイル${order}を削除`} />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">保存先パス (インストール時)</label>
+          <input
+            value={file.path}
+            onChange={(e) => updateVersionFile(versionKey, file.key, 'path', e.target.value)}
+            placeholder="{pluginsDir}/plugin.dll"
+            className="!bg-white dark:!bg-slate-800"
+          />
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-800/50">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <dl className="grid gap-1 text-xs">
+              <div>
+                <dt className="font-semibold text-slate-500 dark:text-slate-400">ハッシュ値 (XXH3_128)</dt>
+                <dd
+                  className={`font-mono ${file.hash ? 'text-slate-700 dark:text-slate-300' : 'text-amber-600 dark:text-amber-500'}`}
+                >
+                  {file.hash ? file.hash : '未計算'}
+                </dd>
+              </div>
+              {file.fileName && (
+                <div className="mt-1">
+                  <dt className="font-semibold text-slate-500 dark:text-slate-400">元ファイル名</dt>
+                  <dd className="text-slate-600 dark:text-slate-300">{file.fileName}</dd>
+                </div>
+              )}
+            </dl>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              onClick={() => chooseFileForHash(versionKey, file.key)}
+            >
+              <FileSearch size={14} />
+              <span>ファイルを選択して計算</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  (prev, next) =>
+    prev.file === next.file &&
+    prev.index === next.index &&
+    prev.versionKey === next.versionKey &&
+    prev.removeVersionFile === next.removeVersionFile &&
+    prev.updateVersionFile === next.updateVersionFile &&
+    prev.chooseFileForHash === next.chooseFileForHash,
+);
+
+const VersionItem = memo(
+  function VersionItem({
+    version,
+    isOpen,
+    toggleVersionOpen,
+    removeVersion,
+    updateVersionField,
+    addVersionFile,
+    removeVersionFile,
+    updateVersionFile,
+    chooseFileForHash,
+    openDatePicker,
+    versionDateRefs,
+  }) {
+    const handleToggle = useCallback(
+      (event) => {
+        toggleVersionOpen(version.key, event.target.open);
+      },
+      [toggleVersionOpen, version.key],
+    );
+
+    const handleRemove = useCallback(
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        removeVersion(version.key);
+      },
+      [removeVersion, version.key],
+    );
+
+    const handleDateRef = useCallback(
+      (el) => {
+        if (el) {
+          versionDateRefs.current.set(version.key, el);
+        } else {
+          versionDateRefs.current.delete(version.key);
+        }
+      },
+      [versionDateRefs, version.key],
+    );
+
+    return (
+      <details
+        open={isOpen}
+        onToggle={handleToggle}
+        className="group rounded-xl border border-slate-200 bg-white shadow-sm transition-all open:ring-2 open:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${isOpen ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}
+            >
+              {isOpen ? <FolderOpen size={18} /> : <Folder size={18} />}
+            </div>
+            <div className="flex flex-col">
+              <span
+                className={`text-sm font-bold ${version.version ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 italic'}`}
+              >
+                {version.version || 'バージョン未設定'}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {version.release_date ? `公開日: ${version.release_date}` : '公開日未設定'}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <DeleteButton onClick={handleRemove} ariaLabel="このバージョンを削除" />
+            <span className="text-slate-400 transition-transform group-open:rotate-180">
+              <ChevronDown size={20} />
+            </span>
+          </div>
+        </summary>
+        <div className="border-t border-slate-100 p-4 dark:border-slate-800">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                バージョン名<span className="text-red-500">*</span>
+              </label>
+              <input
+                value={version.version}
+                onChange={(e) => updateVersionField(version.key, 'version', e.target.value)}
+                placeholder="v1.0.0"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                公開日<span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  max="9999-12-31"
+                  className="flex-1"
+                  value={version.release_date}
+                  onChange={(e) => updateVersionField(version.key, 'release_date', e.target.value)}
+                  ref={handleDateRef}
+                />
+                <button
+                  type="button"
+                  className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                  onClick={() => openDatePicker(version.key)}
+                  aria-label="カレンダーを開く"
+                >
+                  <Calendar size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">ファイル構成</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">主要ファイルのハッシュ値を計算してください</p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                onClick={() => addVersionFile(version.key)}
+              >
+                <Plus size={14} />
+                <span>ファイルを追加</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {version.files.map((file, idx) => (
+                <VersionFileCard
+                  key={file.key}
+                  versionKey={version.key}
+                  file={file}
+                  index={idx}
+                  removeVersionFile={removeVersionFile}
+                  updateVersionFile={updateVersionFile}
+                  chooseFileForHash={chooseFileForHash}
+                />
+              ))}
+              {!version.files.length && (
+                <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+                  ファイルを追加してください
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </details>
+    );
+  },
+  (prev, next) =>
+    prev.version === next.version &&
+    prev.isOpen === next.isOpen &&
+    prev.toggleVersionOpen === next.toggleVersionOpen &&
+    prev.removeVersion === next.removeVersion &&
+    prev.updateVersionField === next.updateVersionField &&
+    prev.addVersionFile === next.addVersionFile &&
+    prev.removeVersionFile === next.removeVersionFile &&
+    prev.updateVersionFile === next.updateVersionFile &&
+    prev.chooseFileForHash === next.chooseFileForHash &&
+    prev.openDatePicker === next.openDatePicker &&
+    prev.versionDateRefs === next.versionDateRefs,
+);
+
+const PackageVersionSection = memo(
+  function PackageVersionSection({
+    versions,
+    expandedVersionKeys,
+    toggleVersionOpen,
+    removeVersion,
+    updateVersionField,
+    addVersion,
+    addVersionFile,
+    removeVersionFile,
+    updateVersionFile,
+    chooseFileForHash,
+    openDatePicker,
+    versionDateRefs,
+  }) {
+    const [showAll, setShowAll] = useState(false);
+    const hiddenCount = versions.length - 3;
+    const visibleVersions = showAll ? versions : versions.slice(Math.max(0, versions.length - 3));
+
+    return (
+      <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">バージョン履歴</h2>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500"
+            onClick={addVersion}
+          >
+            <Plus size={16} />
+            <span>新しいバージョンを追加</span>
+          </button>
+        </div>
+        <div className="space-y-4">
+          {!showAll && hiddenCount > 0 && (
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-3 text-xs font-semibold text-slate-500 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+              onClick={() => setShowAll(true)}
+            >
+              <ChevronUp size={14} />
+              <span>以前のバージョン ({hiddenCount}件) を表示</span>
+            </button>
+          )}
+          {visibleVersions.map((ver) => (
+            <VersionItem
+              key={ver.key}
+              version={ver}
+              isOpen={expandedVersionKeys.has(ver.key)}
+              toggleVersionOpen={toggleVersionOpen}
+              removeVersion={removeVersion}
+              updateVersionField={updateVersionField}
+              addVersionFile={addVersionFile}
+              removeVersionFile={removeVersionFile}
+              updateVersionFile={updateVersionFile}
+              chooseFileForHash={chooseFileForHash}
+              openDatePicker={openDatePicker}
+              versionDateRefs={versionDateRefs}
+            />
+          ))}
+          {!versions.length && (
+            <div className="flex h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+              <History size={32} className="mb-2 opacity-50" />
+              <p className="text-sm font-medium">バージョン情報がありません</p>
+              <p className="text-xs opacity-70">右上のボタンから追加してください</p>
             </div>
           )}
         </div>
-      </div>
-    </section>
-  );
-}, (prev, next) => (
-  prev.installer === next.installer
-  && prev.installListRef === next.installListRef
-  && prev.uninstallListRef === next.uninstallListRef
-  && prev.addInstallStep === next.addInstallStep
-  && prev.addUninstallStep === next.addUninstallStep
-  && prev.removeInstallStep === next.removeInstallStep
-  && prev.removeUninstallStep === next.removeUninstallStep
-  && prev.startHandleDrag === next.startHandleDrag
-  && prev.updateInstallStep === next.updateInstallStep
-  && prev.updateInstallerField === next.updateInstallerField
-  && prev.updateUninstallStep === next.updateUninstallStep
-));
-
-
-
-const VersionFileCard = memo(function VersionFileCard({
-  versionKey,
-  file,
-  index,
-  removeVersionFile,
-  updateVersionFile,
-  chooseFileForHash,
-}) {
-  const order = index + 1;
-  return (
-    <div className="group relative space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100/50 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-900">
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-300">File {order}</span>
-        <DeleteButton onClick={() => removeVersionFile(versionKey, file.key)} ariaLabel={`ファイル${order}を削除`} />
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">保存先パス (インストール時)</label>
-        <input value={file.path} onChange={e => updateVersionFile(versionKey, file.key, 'path', e.target.value)} placeholder="{pluginsDir}/plugin.dll" className="!bg-white dark:!bg-slate-800" />
-      </div>
-      <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-800/50">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <dl className="grid gap-1 text-xs">
-            <div>
-              <dt className="font-semibold text-slate-500 dark:text-slate-400">ハッシュ値 (XXH3_128)</dt>
-              <dd className={`font-mono ${file.hash ? 'text-slate-700 dark:text-slate-300' : 'text-amber-600 dark:text-amber-500'}`}>
-                {file.hash ? file.hash : '未計算'}
-              </dd>
-            </div>
-            {file.fileName && (
-              <div className="mt-1">
-                <dt className="font-semibold text-slate-500 dark:text-slate-400">元ファイル名</dt>
-                <dd className="text-slate-600 dark:text-slate-300">{file.fileName}</dd>
-              </div>
-            )}
-          </dl>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={() => chooseFileForHash(versionKey, file.key)}
-          >
-            <FileSearch size={14} />
-            <span>ファイルを選択して計算</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}, (prev, next) => (
-  prev.file === next.file
-  && prev.index === next.index
-  && prev.versionKey === next.versionKey
-  && prev.removeVersionFile === next.removeVersionFile
-  && prev.updateVersionFile === next.updateVersionFile
-  && prev.chooseFileForHash === next.chooseFileForHash
-));
-
-const VersionItem = memo(function VersionItem({
-  version,
-  isOpen,
-  toggleVersionOpen,
-  removeVersion,
-  updateVersionField,
-  addVersionFile,
-  removeVersionFile,
-  updateVersionFile,
-  chooseFileForHash,
-  openDatePicker,
-  versionDateRefs,
-}) {
-  const handleToggle = useCallback((event) => {
-    toggleVersionOpen(version.key, event.target.open);
-  }, [toggleVersionOpen, version.key]);
-
-  const handleRemove = useCallback((event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    removeVersion(version.key);
-  }, [removeVersion, version.key]);
-
-  const handleDateRef = useCallback((el) => {
-    if (el) {
-      versionDateRefs.current.set(version.key, el);
-    } else {
-      versionDateRefs.current.delete(version.key);
-    }
-  }, [versionDateRefs, version.key]);
-
-  return (
-    <details open={isOpen} onToggle={handleToggle} className="group rounded-xl border border-slate-200 bg-white shadow-sm transition-all open:ring-2 open:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900">
-      <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-        <div className="flex items-center gap-3">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${isOpen ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-            {isOpen ? <FolderOpen size={18} /> : <Folder size={18} />}
-          </div>
-          <div className="flex flex-col">
-            <span className={`text-sm font-bold ${version.version ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 italic'}`}>
-              {version.version || "バージョン未設定"}
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              {version.release_date ? `公開日: ${version.release_date}` : "公開日未設定"}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <DeleteButton
-            onClick={handleRemove}
-            ariaLabel="このバージョンを削除"
-          />
-          <span className="text-slate-400 transition-transform group-open:rotate-180">
-            <ChevronDown size={20} />
-          </span>
-        </div>
-      </summary>
-      <div className="border-t border-slate-100 p-4 dark:border-slate-800">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">バージョン名<span className="text-red-500">*</span></label>
-            <input value={version.version} onChange={e => updateVersionField(version.key, 'version', e.target.value)} placeholder="v1.0.0" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">公開日<span className="text-red-500">*</span></label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                max="9999-12-31"
-                className="flex-1"
-                value={version.release_date}
-                onChange={e => updateVersionField(version.key, 'release_date', e.target.value)}
-                ref={handleDateRef}
-              />
-              <button
-                type="button"
-                className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-                onClick={() => openDatePicker(version.key)}
-                aria-label="カレンダーを開く"
-              >
-                <Calendar size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">ファイル構成</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">主要ファイルのハッシュ値を計算してください</p>
-            </div>
-            <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" onClick={() => addVersionFile(version.key)}>
-              <Plus size={14} />
-              <span>ファイルを追加</span>
-            </button>
-          </div>
-          <div className="space-y-3">
-            {version.files.map((file, idx) => (
-              <VersionFileCard
-                key={file.key}
-                versionKey={version.key}
-                file={file}
-                index={idx}
-                removeVersionFile={removeVersionFile}
-                updateVersionFile={updateVersionFile}
-                chooseFileForHash={chooseFileForHash}
-              />
-            ))}
-            {!version.files.length && <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">ファイルを追加してください</div>}
-          </div>
-        </div>
-      </div>
-    </details>
-  );
-}, (prev, next) => (
-  prev.version === next.version
-  && prev.isOpen === next.isOpen
-  && prev.toggleVersionOpen === next.toggleVersionOpen
-  && prev.removeVersion === next.removeVersion
-  && prev.updateVersionField === next.updateVersionField
-  && prev.addVersionFile === next.addVersionFile
-  && prev.removeVersionFile === next.removeVersionFile
-  && prev.updateVersionFile === next.updateVersionFile
-  && prev.chooseFileForHash === next.chooseFileForHash
-  && prev.openDatePicker === next.openDatePicker
-  && prev.versionDateRefs === next.versionDateRefs
-));
-
-const PackageVersionSection = memo(function PackageVersionSection({
-  versions,
-  expandedVersionKeys,
-  toggleVersionOpen,
-  removeVersion,
-  updateVersionField,
-  addVersion,
-  addVersionFile,
-  removeVersionFile,
-  updateVersionFile,
-  chooseFileForHash,
-  openDatePicker,
-  versionDateRefs,
-}) {
-  const [showAll, setShowAll] = useState(false);
-  const hiddenCount = versions.length - 3;
-  const visibleVersions = showAll ? versions : versions.slice(Math.max(0, versions.length - 3));
-
-  return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">バージョン履歴</h2>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500"
-          onClick={addVersion}
-        >
-          <Plus size={16} />
-          <span>新しいバージョンを追加</span>
-        </button>
-      </div>
-      <div className="space-y-4">
-        {!showAll && hiddenCount > 0 && (
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-3 text-xs font-semibold text-slate-500 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
-            onClick={() => setShowAll(true)}
-          >
-            <ChevronUp size={14} />
-            <span>以前のバージョン ({hiddenCount}件) を表示</span>
-          </button>
-        )}
-        {visibleVersions.map(ver => (
-          <VersionItem
-            key={ver.key}
-            version={ver}
-            isOpen={expandedVersionKeys.has(ver.key)}
-            toggleVersionOpen={toggleVersionOpen}
-            removeVersion={removeVersion}
-            updateVersionField={updateVersionField}
-            addVersionFile={addVersionFile}
-            removeVersionFile={removeVersionFile}
-            updateVersionFile={updateVersionFile}
-            chooseFileForHash={chooseFileForHash}
-            openDatePicker={openDatePicker}
-            versionDateRefs={versionDateRefs}
-          />
-        ))}
-        {!versions.length && (
-          <div className="flex h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-            <History size={32} className="mb-2 opacity-50" />
-            <p className="text-sm font-medium">バージョン情報がありません</p>
-            <p className="text-xs opacity-70">右上のボタンから追加してください</p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}, (prev, next) => (
-  prev.versions === next.versions
-  && prev.expandedVersionKeys === next.expandedVersionKeys
-  && prev.toggleVersionOpen === next.toggleVersionOpen
-  && prev.removeVersion === next.removeVersion
-  && prev.updateVersionField === next.updateVersionField
-  && prev.addVersion === next.addVersion
-  && prev.addVersionFile === next.addVersionFile
-  && prev.removeVersionFile === next.removeVersionFile
-  && prev.updateVersionFile === next.updateVersionFile
-  && prev.chooseFileForHash === next.chooseFileForHash
-  && prev.openDatePicker === next.openDatePicker
-  && prev.versionDateRefs === next.versionDateRefs
-));
+      </section>
+    );
+  },
+  (prev, next) =>
+    prev.versions === next.versions &&
+    prev.expandedVersionKeys === next.expandedVersionKeys &&
+    prev.toggleVersionOpen === next.toggleVersionOpen &&
+    prev.removeVersion === next.removeVersion &&
+    prev.updateVersionField === next.updateVersionField &&
+    prev.addVersion === next.addVersion &&
+    prev.addVersionFile === next.addVersionFile &&
+    prev.removeVersionFile === next.removeVersionFile &&
+    prev.updateVersionFile === next.updateVersionFile &&
+    prev.chooseFileForHash === next.chooseFileForHash &&
+    prev.openDatePicker === next.openDatePicker &&
+    prev.versionDateRefs === next.versionDateRefs,
+);
 
 function VisibilityBadge({ type = 'public', label }) {
   const text = label || (type === 'public' ? '公開' : '非公開');
-  const tone = type === 'public'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'
-    : 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
+  const tone =
+    type === 'public'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'
+      : 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone}`}
+    >
       {text}
     </span>
   );
@@ -1461,27 +1654,36 @@ function parseInstallerSource(installer = {}) {
     next.googleDriveId = String(source.GoogleDrive?.id || '');
   }
   const installSteps = Array.isArray(installer.install) ? installer.install : [];
-  next.installSteps = installSteps.map(step => {
+  next.installSteps = installSteps.map((step) => {
     const action = step?.action;
-    const normalizedAction = INSTALL_ACTIONS.includes(action) || SPECIAL_INSTALL_ACTIONS.includes(action)
-      ? action
-      : 'download';
+    const normalizedAction =
+      INSTALL_ACTIONS.includes(action) || SPECIAL_INSTALL_ACTIONS.includes(action) ? action : 'download';
     return {
       key: generateKey(),
       action: normalizedAction,
       path: String(step?.path || ''),
-      argsText: Array.isArray(step?.args) ? step.args.map(arg => String(arg || '')).filter(Boolean).join(', ') : '',
+      argsText: Array.isArray(step?.args)
+        ? step.args
+            .map((arg) => String(arg || ''))
+            .filter(Boolean)
+            .join(', ')
+        : '',
       from: String(step?.from || ''),
       to: String(step?.to || ''),
       elevate: !!step?.elevate,
     };
   });
   const uninstallSteps = Array.isArray(installer.uninstall) ? installer.uninstall : [];
-  next.uninstallSteps = uninstallSteps.map(step => ({
+  next.uninstallSteps = uninstallSteps.map((step) => ({
     key: generateKey(),
     action: UNINSTALL_ACTIONS.includes(step?.action) ? step.action : 'delete',
     path: String(step?.path || ''),
-    argsText: Array.isArray(step?.args) ? step.args.map(arg => String(arg || '')).filter(Boolean).join(', ') : '',
+    argsText: Array.isArray(step?.args)
+      ? step.args
+          .map((arg) => String(arg || ''))
+          .filter(Boolean)
+          .join(', ')
+      : '',
     elevate: !!step?.elevate,
   }));
   return next;
@@ -1490,18 +1692,20 @@ function parseInstallerSource(installer = {}) {
 function parseVersions(rawVersions) {
   const arr = Array.isArray(rawVersions) ? rawVersions : [];
   if (!arr.length) return [];
-  return arr.map(ver => {
+  return arr.map((ver) => {
     const files = Array.isArray(ver?.file) ? ver.file : [];
     return {
       key: generateKey(),
       version: String(ver?.version || ''),
       release_date: String(ver?.release_date || ''),
-      files: files.length ? files.map(f => ({
-        key: generateKey(),
-        path: String(f?.path || ''),
-        hash: String(f?.XXH3_128 || f?.xxh3_128 || ''),
-        fileName: '',
-      })) : [createEmptyVersionFile()],
+      files: files.length
+        ? files.map((f) => ({
+            key: generateKey(),
+            path: String(f?.path || ''),
+            hash: String(f?.XXH3_128 || f?.xxh3_128 || ''),
+            fileName: '',
+          }))
+        : [createEmptyVersionFile()],
     };
   });
 }
@@ -1514,14 +1718,14 @@ function parseImages(rawImages, baseUrl = '') {
   const thumbnailPath = typeof first.thumbnail === 'string' ? first.thumbnail : '';
   const thumbnail = thumbnailPath
     ? {
-      existingPath: thumbnailPath,
-      file: null,
-      previewUrl: buildPreviewUrl(thumbnailPath, baseUrl),
-      key: generateKey(),
-    }
+        existingPath: thumbnailPath,
+        file: null,
+        previewUrl: buildPreviewUrl(thumbnailPath, baseUrl),
+        key: generateKey(),
+      }
     : null;
   const infoImg = Array.isArray(first.infoImg) ? first.infoImg : [];
-  const info = infoImg.map(src => ({
+  const info = infoImg.map((src) => ({
     existingPath: String(src || ''),
     file: null,
     previewUrl: buildPreviewUrl(String(src || ''), baseUrl),
@@ -1537,38 +1741,43 @@ function parseLicenses(rawLicenses, legacyLicense = '') {
     const rawType = String(target?.type || '');
     const isUnknown = rawType === '不明';
     const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
-    const type = (isUnknown || isTemplateType) ? rawType : 'その他';
-    const licenseName = (!isUnknown && !isTemplateType) ? rawType : '';
+    const type = isUnknown || isTemplateType ? rawType : 'その他';
+    const licenseName = !isUnknown && !isTemplateType ? rawType : '';
     const licenseBody = typeof target?.licenseBody === 'string' ? target.licenseBody : '';
     const isCustom = !!target?.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
-    const copyrights = Array.isArray(target?.copyrights) && target.copyrights.length
-      ? target.copyrights.slice(0, 1).map(c => ({
+    const copyrights =
+      Array.isArray(target?.copyrights) && target.copyrights.length
+        ? target.copyrights.slice(0, 1).map((c) => ({
+            key: generateKey(),
+            years: String(c?.years || ''),
+            holder: String(c?.holder || ''),
+          }))
+        : [createEmptyCopyright()];
+    return [
+      {
         key: generateKey(),
-        years: String(c?.years || ''),
-        holder: String(c?.holder || ''),
-      }))
-      : [createEmptyCopyright()];
-    return [{
-      key: generateKey(),
-      type,
-      licenseName,
-      isCustom,
-      licenseBody,
-      copyrights,
-    }];
+        type,
+        licenseName,
+        isCustom,
+        licenseBody,
+        copyrights,
+      },
+    ];
   }
   if (legacyLicense) {
     const rawType = String(legacyLicense || '');
     const isUnknown = rawType === '不明';
     const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
-    const type = (isUnknown || isTemplateType) ? rawType : 'その他';
-    const licenseName = (!isUnknown && !isTemplateType) ? rawType : '';
-    return [{
-      ...createEmptyLicense(),
-      type,
-      licenseName,
-      isCustom: false,
-    }];
+    const type = isUnknown || isTemplateType ? rawType : 'その他';
+    const licenseName = !isUnknown && !isTemplateType ? rawType : '';
+    return [
+      {
+        ...createEmptyLicense(),
+        type,
+        licenseName,
+        isCustom: false,
+      },
+    ];
   }
   return [createEmptyLicense()];
 }
@@ -1589,7 +1798,8 @@ function entryToForm(item, baseUrl = '') {
   form.descriptionPath = descriptionValue;
   form.descriptionMode = isExternalDescription ? 'external' : 'inline';
   form.descriptionUrl = isExternalDescription ? descriptionValue : '';
-  form.descriptionText = (!isExternalDescription && descriptionValue && !isMarkdownPath(descriptionValue)) ? descriptionValue : '';
+  form.descriptionText =
+    !isExternalDescription && descriptionValue && !isMarkdownPath(descriptionValue) ? descriptionValue : '';
   form.repoURL = String(item.repoURL || '');
   form.licenses = parseLicenses(item.licenses, item.license);
   form.tagsText = arrayToCommaList(item.tags);
@@ -1632,7 +1842,10 @@ function serializeInstallStep(step) {
   }
   if (step.action === 'run') {
     if (step.argsText) {
-      payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
+      payload.args = step.argsText
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
     }
     if (step.elevate) payload.elevate = true;
   }
@@ -1650,7 +1863,10 @@ function serializeUninstallStep(step) {
   if (step.action === 'run') {
     if (step.path) payload.path = step.path;
     if (step.argsText) {
-      payload.args = step.argsText.split(',').map(v => v.trim()).filter(Boolean);
+      payload.args = step.argsText
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
     }
     if (step.elevate) payload.elevate = true;
   } else if (step.action === 'delete' && step.path) {
@@ -1670,22 +1886,19 @@ function buildInstallerPayload(form) {
 
 function buildLicensesPayload(form) {
   return (form.licenses || [])
-    .map(license => {
+    .map((license) => {
       const type = String(license.type || '').trim();
       const licenseName = String(license.licenseName || '').trim();
       const resolvedType = type === 'その他' ? licenseName : type;
       const licenseBody = String(license.licenseBody || '').trim();
-      const isCustom = license.isCustom
-        || type === '不明'
-        || type === 'その他'
-        || licenseBody.length > 0;
+      const isCustom = license.isCustom || type === '不明' || type === 'その他' || licenseBody.length > 0;
       const copyrights = Array.isArray(license.copyrights)
         ? license.copyrights
-          .map(c => ({
-            years: String(c?.years || '').trim(),
-            holder: String(c?.holder || '').trim(),
-          }))
-          .filter(c => c.years && c.holder)
+            .map((c) => ({
+              years: String(c?.years || '').trim(),
+              holder: String(c?.holder || '').trim(),
+            }))
+            .filter((c) => c.years && c.holder)
         : [];
       if (!resolvedType) return null;
       return {
@@ -1727,10 +1940,10 @@ function buildImagesPayload(form) {
 }
 
 function buildVersionPayload(form) {
-  return form.versions.map(ver => ({
+  return form.versions.map((ver) => ({
     version: ver.version.trim(),
     release_date: ver.release_date.trim(),
-    file: ver.files.map(f => ({
+    file: ver.files.map((f) => ({
       path: f.path.trim(),
       XXH3_128: f.hash.trim(),
     })),
@@ -1746,9 +1959,7 @@ function computeLatestVersion(form) {
 
 async function computeHashFromFile(fileOrPath) {
   if (!fileOrPath) return '';
-  const path = typeof fileOrPath === 'string'
-    ? fileOrPath
-    : (fileOrPath.path || '');
+  const path = typeof fileOrPath === 'string' ? fileOrPath : fileOrPath.path || '';
   if (!path) {
     throw new Error('XXH3_128 を計算するにはローカルファイルのパスが必要です。');
   }
@@ -1815,7 +2026,11 @@ function validateInstallerForTest(form) {
   } else if (sourceType === 'booth') {
     if (!form.installer.boothUrl.trim()) return 'BOOTH URL を入力してください';
   } else if (sourceType === 'github') {
-    if (!form.installer.githubOwner.trim() || !form.installer.githubRepo.trim() || !form.installer.githubPattern.trim()) {
+    if (
+      !form.installer.githubOwner.trim() ||
+      !form.installer.githubRepo.trim() ||
+      !form.installer.githubPattern.trim()
+    ) {
       return 'GitHub ID/レポジトリ名/正規表現パターンすべてを入力してください';
     }
   } else if (sourceType === 'GoogleDrive') {
@@ -1867,13 +2082,15 @@ function validatePackageForm(form) {
     const type = String(license.type || '').trim();
     if (!type) return 'ライセンスの種類を選択してください';
     if (type === 'その他' && !String(license.licenseName || '').trim()) return 'ライセンス名を入力してください';
-    const needsCustomBody = type === 'その他' || (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
+    const needsCustomBody =
+      type === 'その他' ||
+      (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
     if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'ライセンス本文を入力してください';
     const usesTemplate = type !== '不明' && type !== 'その他' && !license.isCustom;
     const requiresCopyright = usesTemplate && type !== 'CC0-1.0';
     if (requiresCopyright) {
       const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
-      const hasCopyright = entries.some(c => String(c?.years || '').trim() && String(c?.holder || '').trim());
+      const hasCopyright = entries.some((c) => String(c?.years || '').trim() && String(c?.holder || '').trim());
       if (!hasCopyright) return '標準ライセンスを使用する場合は著作権者を入力してください';
     }
   }
@@ -1883,7 +2100,11 @@ function validatePackageForm(form) {
   } else if (sourceType === 'booth') {
     if (!form.installer.boothUrl.trim()) return 'installer.source の booth URL を入力してください';
   } else if (sourceType === 'github') {
-    if (!form.installer.githubOwner.trim() || !form.installer.githubRepo.trim() || !form.installer.githubPattern.trim()) {
+    if (
+      !form.installer.githubOwner.trim() ||
+      !form.installer.githubRepo.trim() ||
+      !form.installer.githubPattern.trim()
+    ) {
       return 'installer.source github の owner/repo/pattern は全て必須です';
     }
   } else if (sourceType === 'GoogleDrive') {
@@ -1914,7 +2135,8 @@ function validatePackageForm(form) {
     }
     if (step.action === 'run') {
       if (!step.path.trim()) return 'uninstall run の path は必須です';
-      if (step.elevate && typeof step.elevate !== 'boolean') return 'uninstall run の elevate は true/false で指定してください';
+      if (step.elevate && typeof step.elevate !== 'boolean')
+        return 'uninstall run の elevate は true/false で指定してください';
     } else if (step.elevate) {
       return 'uninstall の elevate は action: run のときのみ指定できます';
     }
@@ -1969,7 +2191,14 @@ export default function Register() {
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [expandedVersionKeys, setExpandedVersionKeys] = useState(() => new Set());
   const versionDateRefs = useRef(new Map());
-  const [successDialog, setSuccessDialog] = useState({ open: false, message: '', url: '', packageName: '', packageAction: '', packageId: '' });
+  const [successDialog, setSuccessDialog] = useState({
+    open: false,
+    message: '',
+    url: '',
+    packageName: '',
+    packageAction: '',
+    packageId: '',
+  });
   const installListRef = useRef(null);
   const uninstallListRef = useRef(null);
   const dragHandleRef = useRef({ active: false, type: '', index: -1 });
@@ -1987,18 +2216,19 @@ export default function Register() {
   const isExternalDescriptionLoaded = hasExternalDescriptionUrl && externalDescriptionStatus === 'success';
   const descriptionSourceUrl = useMemo(
     () => getDescriptionSourceUrl(packageForm, catalogBaseUrl),
-    [packageForm.descriptionMode, packageForm.descriptionUrl, packageForm.descriptionPath, catalogBaseUrl]
+    [packageForm.descriptionMode, packageForm.descriptionUrl, packageForm.descriptionPath, catalogBaseUrl],
   );
   const installerTestValidation = useMemo(() => validateInstallerForTest(packageForm), [packageForm]);
   const installerTestRatio = installerTestProgress?.ratio ?? 0;
   const installerTestPercent = installerTestProgress?.percent ?? Math.round(installerTestRatio * 100);
   const installerTestLabel = installerTestProgress?.label ?? '';
   const installerTestPhase = installerTestProgress?.phase ?? 'idle';
-  const installerTestTone = installerTestPhase === 'error'
-    ? 'text-red-600 dark:text-red-400'
-    : installerTestPhase === 'done'
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : 'text-blue-600 dark:text-blue-400';
+  const installerTestTone =
+    installerTestPhase === 'error'
+      ? 'text-red-600 dark:text-red-400'
+      : installerTestPhase === 'done'
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : 'text-blue-600 dark:text-blue-400';
   const uninstallerTestValidation = useMemo(() => validateUninstallerForTest(packageForm), [packageForm]);
   const uninstallerTestPhase = uninstallerTestError
     ? 'error'
@@ -2007,18 +2237,16 @@ export default function Register() {
       : uninstallerTestDone
         ? 'done'
         : 'idle';
-  const uninstallerTestTone = uninstallerTestPhase === 'error'
-    ? 'text-red-600 dark:text-red-400'
-    : uninstallerTestPhase === 'done'
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : 'text-blue-600 dark:text-blue-400';
+  const uninstallerTestTone =
+    uninstallerTestPhase === 'error'
+      ? 'text-red-600 dark:text-red-400'
+      : uninstallerTestPhase === 'done'
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : 'text-blue-600 dark:text-blue-400';
   const uninstallerTestRatio = uninstallerTestPhase === 'done' ? 1 : uninstallerTestPhase === 'running' ? 0.4 : 0;
   const uninstallerTestPercent = Math.round(uninstallerTestRatio * 100);
-  const uninstallerTestLabel = uninstallerTestPhase === 'running'
-    ? '実行中…'
-    : uninstallerTestPhase === 'done'
-      ? '完了'
-      : '';
+  const uninstallerTestLabel =
+    uninstallerTestPhase === 'running' ? '実行中…' : uninstallerTestPhase === 'done' ? '完了' : '';
   const tagCandidates = useMemo(() => {
     const set = new Set(allTags || []);
     return Array.from(set).sort((a, b) => String(a).localeCompare(String(b), 'ja'));
@@ -2032,7 +2260,9 @@ export default function Register() {
 
   useEffect(() => {
     document.body.classList.add('route-register');
-    return () => { document.body.classList.remove('route-register'); };
+    return () => {
+      document.body.classList.remove('route-register');
+    };
   }, []);
 
   useEffect(() => {
@@ -2049,10 +2279,12 @@ export default function Register() {
 
   // 設定からテーマを読み込んでプレビューの初期値を設定
   useEffect(() => {
-    getSettings().then(settings => {
-      const theme = settings?.theme || 'darkmode';
-      setPreviewDarkMode(theme !== 'lightmode');
-    }).catch(() => { });
+    getSettings()
+      .then((settings) => {
+        const theme = settings?.theme || 'darkmode';
+        setPreviewDarkMode(theme !== 'lightmode');
+      })
+      .catch(() => {});
   }, []);
 
   // TagEditor に渡す初期タグが変わったら、送信用の参照値も合わせる
@@ -2104,7 +2336,7 @@ export default function Register() {
     }
     setDescriptionLoading(true);
     fetch(descriptionSourceUrl)
-      .then(async res => {
+      .then(async (res) => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
@@ -2115,7 +2347,7 @@ export default function Register() {
           setExternalDescriptionStatus('success');
           return;
         }
-        setPackageForm(prev => (prev.id === targetId ? { ...prev, descriptionText: text } : prev));
+        setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: text } : prev));
       })
       .catch(() => {
         if (cancelled) return;
@@ -2124,7 +2356,7 @@ export default function Register() {
           setExternalDescriptionStatus('error');
           return;
         }
-        setPackageForm(prev => (prev.id === targetId ? { ...prev, descriptionText: '' } : prev));
+        setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: '' } : prev));
       })
       .finally(() => {
         if (!cancelled) setDescriptionLoading(false);
@@ -2136,11 +2368,11 @@ export default function Register() {
 
   // モードごとに body クラスを付け替え（スタイル分岐用）
   useEffect(() => {
-    setExpandedVersionKeys(prev => {
-      const versionKeys = new Set(packageForm.versions.map(ver => ver.key));
+    setExpandedVersionKeys((prev) => {
+      const versionKeys = new Set(packageForm.versions.map((ver) => ver.key));
       const next = new Set();
       let changed = false;
-      prev.forEach(key => {
+      prev.forEach((key) => {
         if (versionKeys.has(key)) {
           next.add(key);
         } else {
@@ -2161,7 +2393,7 @@ export default function Register() {
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const list = Array.isArray(json) ? json : (Array.isArray(json?.packages) ? json.packages : []);
+      const list = Array.isArray(json) ? json : Array.isArray(json?.packages) ? json.packages : [];
       setCatalogItems(list);
       const base = resolveBaseUrl(res.url || endpoint) || '';
       setCatalogBaseUrl(base);
@@ -2174,7 +2406,7 @@ export default function Register() {
         setInitialTags(initialTagList);
         tagListRef.current = initialTagList;
         setCurrentTags(initialTagList);
-        setPackageForm(prev => {
+        setPackageForm((prev) => {
           cleanupImagePreviews(prev.images);
           return form;
         });
@@ -2197,7 +2429,7 @@ export default function Register() {
     const query = deferredPackageSearch.trim().toLowerCase();
     const items = Array.isArray(catalogItems) ? catalogItems : [];
     if (!query) return items;
-    return items.filter(item => {
+    return items.filter((item) => {
       const name = String(item?.name || '').toLowerCase();
       const author = String(item?.author || '').toLowerCase();
       return name.includes(query) || author.includes(query);
@@ -2205,37 +2437,40 @@ export default function Register() {
   }, [catalogItems, deferredPackageSearch]);
 
   // サイドバーのパッケージ選択/新規開始時の状態遷移
-  const handleSelectPackage = useCallback(async (item) => {
-    if (!item) {
-      setSelectedPackageId('');
-      setInitialTags([]);
-      tagListRef.current = [];
-      setPackageForm(prev => {
+  const handleSelectPackage = useCallback(
+    async (item) => {
+      if (!item) {
+        setSelectedPackageId('');
+        setInitialTags([]);
+        tagListRef.current = [];
+        setPackageForm((prev) => {
+          cleanupImagePreviews(prev.images);
+          return createEmptyPackageForm();
+        });
+        setDescriptionTab('edit');
+        setExpandedVersionKeys(new Set());
+        return;
+      }
+      const form = entryToForm(item, catalogBaseUrl);
+      setSelectedPackageId(item.id || '');
+      // 既存パッケージ選択時にタグ初期値を同期（エディタ内部のローカルステートと共有するため）
+      const tags = commaListToArray(form.tagsText);
+      setInitialTags(tags);
+      tagListRef.current = tags;
+      setCurrentTags(tags);
+      setPackageForm((prev) => {
         cleanupImagePreviews(prev.images);
-        return createEmptyPackageForm();
+        return form;
       });
       setDescriptionTab('edit');
       setExpandedVersionKeys(new Set());
-      return;
-    }
-    const form = entryToForm(item, catalogBaseUrl);
-    setSelectedPackageId(item.id || '');
-    // 既存パッケージ選択時にタグ初期値を同期（エディタ内部のローカルステートと共有するため）
-    const tags = commaListToArray(form.tagsText);
-    setInitialTags(tags);
-    tagListRef.current = tags;
-    setCurrentTags(tags);
-    setPackageForm(prev => {
-      cleanupImagePreviews(prev.images);
-      return form;
-    });
-    setDescriptionTab('edit');
-    setExpandedVersionKeys(new Set());
-  }, [catalogBaseUrl]);
+    },
+    [catalogBaseUrl],
+  );
 
   const handleStartNewPackage = useCallback(() => {
     setSelectedPackageId('');
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       cleanupImagePreviews(prev.images);
       return createEmptyPackageForm();
     });
@@ -2249,7 +2484,7 @@ export default function Register() {
     setPackageSearch(value);
   }, []);
   const toggleVersionOpen = useCallback((key, open) => {
-    setExpandedVersionKeys(prev => {
+    setExpandedVersionKeys((prev) => {
       const next = new Set(prev);
       if (open) {
         if (next.has(key)) return prev;
@@ -2263,13 +2498,13 @@ export default function Register() {
   }, []);
 
   const updatePackageField = useCallback((field, value) => {
-    setPackageForm(prev => ({ ...prev, [field]: value }));
+    setPackageForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   const updateLicenseField = useCallback((key, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => {
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) => {
         if (license.key !== key) return license;
         const next = { ...license, [field]: value };
         if (field === 'type') {
@@ -2298,9 +2533,9 @@ export default function Register() {
   }, []);
 
   const toggleLicenseTemplate = useCallback((key, useTemplate) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => {
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) => {
         if (license.key !== key) return license;
         const forcedCustom = license.type === 'その他';
         const forcedUnknown = license.type === '不明';
@@ -2336,37 +2571,44 @@ export default function Register() {
   }, []);
 
   const updateCopyright = useCallback((licenseKey, copyrightKey, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map(license => (license.key === licenseKey
-        ? {
-          ...license,
-          copyrights: (license.copyrights.length ? license.copyrights : [createEmptyCopyright()]).map(c => (c.key === copyrightKey ? { ...c, [field]: value } : c)),
-        }
-        : license)),
+      licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) =>
+        license.key === licenseKey
+          ? {
+              ...license,
+              copyrights: (license.copyrights.length ? license.copyrights : [createEmptyCopyright()]).map((c) =>
+                c.key === copyrightKey ? { ...c, [field]: value } : c,
+              ),
+            }
+          : license,
+      ),
     }));
   }, []);
 
   const updateInstallerField = useCallback((field, value) => {
-    setPackageForm(prev => ({ ...prev, installer: { ...prev.installer, [field]: value } }));
+    setPackageForm((prev) => ({ ...prev, installer: { ...prev.installer, [field]: value } }));
   }, []);
 
   const addInstallStep = useCallback(() => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        installSteps: [...prev.installer.installSteps, { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '', elevate: false }],
+        installSteps: [
+          ...prev.installer.installSteps,
+          { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '', elevate: false },
+        ],
       },
     }));
   }, []);
 
   const updateInstallStep = useCallback((key, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        installSteps: prev.installer.installSteps.map(step => {
+        installSteps: prev.installer.installSteps.map((step) => {
           if (step.key !== key) return step;
           const next = { ...step, [field]: value };
           if (field === 'action' && value !== 'run') {
@@ -2379,27 +2621,30 @@ export default function Register() {
   }, []);
 
   const removeInstallStep = useCallback((key) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        installSteps: prev.installer.installSteps.filter(step => step.key !== key),
+        installSteps: prev.installer.installSteps.filter((step) => step.key !== key),
       },
     }));
   }, []);
 
   const addUninstallStep = useCallback(() => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        uninstallSteps: [...prev.installer.uninstallSteps, { key: generateKey(), action: 'delete', path: '', argsText: '', elevate: false }],
+        uninstallSteps: [
+          ...prev.installer.uninstallSteps,
+          { key: generateKey(), action: 'delete', path: '', argsText: '', elevate: false },
+        ],
       },
     }));
   }, []);
   const reorderSteps = useCallback((type, from, to) => {
     if (from === to || from < 0 || typeof to !== 'number' || to < 0) return;
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       const keyName = type === 'install' ? 'installSteps' : 'uninstallSteps';
       const list = prev.installer[keyName];
       if (from >= list.length) return prev;
@@ -2426,7 +2671,9 @@ export default function Register() {
     const { floating, placeholder, container, offsetX, offsetY } = drag;
     floating.style.top = `${event.clientY - offsetY}px`;
     floating.style.left = `${event.clientX - offsetX}px`;
-    const siblings = Array.from(container.querySelectorAll('.step-card')).filter(el => !el.classList.contains('step-card--placeholder'));
+    const siblings = Array.from(container.querySelectorAll('.step-card')).filter(
+      (el) => !el.classList.contains('step-card--placeholder'),
+    );
     let insertBefore = null;
     for (const sibling of siblings) {
       if (sibling === placeholder) continue;
@@ -2454,7 +2701,11 @@ export default function Register() {
     const { floating, placeholder, container, type, index, origin, handle, pointerId } = drag;
     floating?.remove();
     if (handle?.releasePointerCapture && pointerId != null) {
-      try { handle.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
+      try {
+        handle.releasePointerCapture(pointerId);
+      } catch (_) {
+        /* ignore */
+      }
     }
     if (container && placeholder && origin) {
       const finalIndex = Array.from(container.children).indexOf(placeholder);
@@ -2467,76 +2718,80 @@ export default function Register() {
     dragHandleRef.current = { active: false, type: '', index: -1 };
   }, [handlePointerMove, reorderSteps]);
 
-  const startHandleDrag = useCallback((type, index, event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (typeof window === 'undefined') return;
-    const container = type === 'install' ? installListRef.current : uninstallListRef.current;
-    if (!container) return;
-    const cards = Array.from(container.querySelectorAll('.step-card'));
-    const card = cards[index];
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const placeholder = document.createElement('div');
-    placeholder.className = 'step-card step-card--placeholder rounded-xl border-2 border-dashed border-blue-400/70 bg-blue-50/60 dark:border-blue-600 dark:bg-blue-900/20';
-    placeholder.style.height = `${rect.height}px`;
-    container.insertBefore(placeholder, card);
+  const startHandleDrag = useCallback(
+    (type, index, event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof window === 'undefined') return;
+      const container = type === 'install' ? installListRef.current : uninstallListRef.current;
+      if (!container) return;
+      const cards = Array.from(container.querySelectorAll('.step-card'));
+      const card = cards[index];
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      const placeholder = document.createElement('div');
+      placeholder.className =
+        'step-card step-card--placeholder rounded-xl border-2 border-dashed border-blue-400/70 bg-blue-50/60 dark:border-blue-600 dark:bg-blue-900/20';
+      placeholder.style.height = `${rect.height}px`;
+      container.insertBefore(placeholder, card);
 
-    const floating = card.cloneNode(true);
-    floating.classList.add('step-card--floating', 'shadow-xl', 'ring-2', 'ring-blue-500/20');
-    floating.style.width = `${rect.width}px`;
-    floating.style.height = `${rect.height}px`;
-    floating.style.position = 'fixed';
-    floating.style.top = `${rect.top}px`;
-    floating.style.left = `${rect.left}px`;
-    floating.style.pointerEvents = 'none';
-    floating.style.zIndex = '200';
-    document.body.appendChild(floating);
-    const sourceControls = card.querySelectorAll('input, select, textarea');
-    const floatingControls = floating.querySelectorAll('input, select, textarea');
-    floatingControls.forEach((ctrl, idx) => {
-      const originCtrl = sourceControls[idx];
-      if (!originCtrl) return;
-      if (ctrl.tagName === 'SELECT') {
-        ctrl.value = originCtrl.value;
-      } else if (ctrl.type === 'checkbox' || ctrl.type === 'radio') {
-        ctrl.checked = originCtrl.checked;
-      } else {
-        ctrl.value = originCtrl.value;
+      const floating = card.cloneNode(true);
+      floating.classList.add('step-card--floating', 'shadow-xl', 'ring-2', 'ring-blue-500/20');
+      floating.style.width = `${rect.width}px`;
+      floating.style.height = `${rect.height}px`;
+      floating.style.position = 'fixed';
+      floating.style.top = `${rect.top}px`;
+      floating.style.left = `${rect.left}px`;
+      floating.style.pointerEvents = 'none';
+      floating.style.zIndex = '200';
+      document.body.appendChild(floating);
+      const sourceControls = card.querySelectorAll('input, select, textarea');
+      const floatingControls = floating.querySelectorAll('input, select, textarea');
+      floatingControls.forEach((ctrl, idx) => {
+        const originCtrl = sourceControls[idx];
+        if (!originCtrl) return;
+        if (ctrl.tagName === 'SELECT') {
+          ctrl.value = originCtrl.value;
+        } else if (ctrl.type === 'checkbox' || ctrl.type === 'radio') {
+          ctrl.checked = originCtrl.checked;
+        } else {
+          ctrl.value = originCtrl.value;
+        }
+      });
+
+      card.classList.add('step-card--drag-origin');
+      card.style.display = 'none';
+
+      dragHandleRef.current = {
+        active: true,
+        type,
+        index,
+        origin: card,
+        floating,
+        placeholder,
+        container,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        handle: event.currentTarget,
+        pointerId: event.pointerId,
+      };
+
+      if (event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(event.pointerId);
       }
-    });
 
-    card.classList.add('step-card--drag-origin');
-    card.style.display = 'none';
-
-    dragHandleRef.current = {
-      active: true,
-      type,
-      index,
-      origin: card,
-      floating,
-      placeholder,
-      container,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
-      handle: event.currentTarget,
-      pointerId: event.pointerId,
-    };
-
-    if (event.currentTarget.setPointerCapture) {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-  }, [handlePointerMove, handlePointerUp]);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+    },
+    [handlePointerMove, handlePointerUp],
+  );
 
   const updateUninstallStep = useCallback((key, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        uninstallSteps: prev.installer.uninstallSteps.map(step => {
+        uninstallSteps: prev.installer.uninstallSteps.map((step) => {
           if (step.key !== key) return step;
           const next = { ...step, [field]: value };
           if (field === 'action' && value !== 'run') {
@@ -2549,28 +2804,28 @@ export default function Register() {
   }, []);
 
   const removeUninstallStep = useCallback((key) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       installer: {
         ...prev.installer,
-        uninstallSteps: prev.installer.uninstallSteps.filter(step => step.key !== key),
+        uninstallSteps: prev.installer.uninstallSteps.filter((step) => step.key !== key),
       },
     }));
   }, []);
 
   const addVersion = useCallback(() => {
     const version = createEmptyVersion();
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       const lastVer = prev.versions[prev.versions.length - 1];
       if (lastVer && Array.isArray(lastVer.files)) {
-        version.files = lastVer.files.map(f => ({
+        version.files = lastVer.files.map((f) => ({
           ...createEmptyVersionFile(),
           path: f.path || '',
         }));
       }
       return { ...prev, versions: [...prev.versions, version] };
     });
-    setExpandedVersionKeys(prev => {
+    setExpandedVersionKeys((prev) => {
       const next = new Set(prev);
       next.add(version.key);
       return next;
@@ -2578,69 +2833,77 @@ export default function Register() {
   }, []);
 
   const updateVersionField = useCallback((key, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      versions: prev.versions.map(ver => (ver.key === key ? { ...ver, [field]: value } : ver)),
+      versions: prev.versions.map((ver) => (ver.key === key ? { ...ver, [field]: value } : ver)),
     }));
   }, []);
 
   const removeVersion = useCallback((key) => {
-    setPackageForm(prev => ({ ...prev, versions: prev.versions.filter(ver => ver.key !== key) }));
+    setPackageForm((prev) => ({ ...prev, versions: prev.versions.filter((ver) => ver.key !== key) }));
   }, []);
 
   const addVersionFile = useCallback((versionKey) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      versions: prev.versions.map(ver => (ver.key === versionKey ? { ...ver, files: [...ver.files, createEmptyVersionFile()] } : ver)),
+      versions: prev.versions.map((ver) =>
+        ver.key === versionKey ? { ...ver, files: [...ver.files, createEmptyVersionFile()] } : ver,
+      ),
     }));
   }, []);
 
   const updateVersionFile = useCallback((versionKey, fileKey, field, value) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      versions: prev.versions.map(ver => (ver.key === versionKey
-        ? {
-          ...ver,
-          files: ver.files.map(file => (file.key === fileKey ? { ...file, [field]: value } : file)),
-        }
-        : ver)),
+      versions: prev.versions.map((ver) =>
+        ver.key === versionKey
+          ? {
+              ...ver,
+              files: ver.files.map((file) => (file.key === fileKey ? { ...file, [field]: value } : file)),
+            }
+          : ver,
+      ),
     }));
   }, []);
 
   const removeVersionFile = useCallback((versionKey, fileKey) => {
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      versions: prev.versions.map(ver => (ver.key === versionKey
-        ? { ...ver, files: ver.files.filter(file => file.key !== fileKey) }
-        : ver)),
+      versions: prev.versions.map((ver) =>
+        ver.key === versionKey ? { ...ver, files: ver.files.filter((file) => file.key !== fileKey) } : ver,
+      ),
     }));
   }, []);
 
-  const chooseFileForHash = useCallback(async (versionKey, fileKey) => {
-    try {
-      setError('');
-      const { open } = await import('@tauri-apps/plugin-dialog');
-      const selection = await open({
-        multiple: false,
-        title: 'XXH3_128 を計算するファイルを選択',
-      });
-      const selectedPath = Array.isArray(selection) ? selection[0] : selection;
-      if (!selectedPath || typeof selectedPath !== 'string') return;
-      const hash = await computeHashFromFile(selectedPath);
-      updateVersionFile(versionKey, fileKey, 'hash', hash);
-      updateVersionFile(versionKey, fileKey, 'fileName', basename(selectedPath));
-    } catch (err) {
-      console.error(err);
-      const rawMessage = err?.message || 'XXH3_128 の計算に失敗しました';
-      const friendly = typeof rawMessage === 'string' && /module/i.test(rawMessage)
-        ? 'ファイル選択機能を利用できません。Tauri 環境で実行してください。'
-        : rawMessage;
-      setError(friendly);
-    }
-  }, [updateVersionFile, setError]);
+  const chooseFileForHash = useCallback(
+    async (versionKey, fileKey) => {
+      try {
+        setError('');
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const selection = await open({
+          multiple: false,
+          title: 'XXH3_128 を計算するファイルを選択',
+        });
+        const selectedPath = Array.isArray(selection) ? selection[0] : selection;
+        if (!selectedPath || typeof selectedPath !== 'string') return;
+        const hash = await computeHashFromFile(selectedPath);
+        updateVersionFile(versionKey, fileKey, 'hash', hash);
+        updateVersionFile(versionKey, fileKey, 'fileName', basename(selectedPath));
+      } catch (err) {
+        console.error(err);
+        const rawMessage = err?.message || 'XXH3_128 の計算に失敗しました';
+        const friendly =
+          typeof rawMessage === 'string' && /module/i.test(rawMessage)
+            ? 'ファイル選択機能を利用できません。Tauri 環境で実行してください。'
+            : rawMessage;
+        setError(friendly);
+      }
+    },
+    [updateVersionFile, setError],
+  );
 
   const handleThumbnailChange = useCallback((file) => {
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       const nextImages = { ...prev.images };
       if (nextImages.thumbnail?.previewUrl) revokePreviewUrl(nextImages.thumbnail.previewUrl);
       nextImages.thumbnail = file
@@ -2651,7 +2914,7 @@ export default function Register() {
   }, []);
 
   const handleRemoveThumbnail = useCallback(() => {
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       const nextImages = { ...prev.images };
       if (nextImages.thumbnail?.previewUrl) revokePreviewUrl(nextImages.thumbnail.previewUrl);
       nextImages.thumbnail = null;
@@ -2661,13 +2924,13 @@ export default function Register() {
 
   const handleAddInfoImages = useCallback((files) => {
     if (!files || !files.length) return;
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
       images: {
         ...prev.images,
         info: [
           ...prev.images.info,
-          ...Array.from(files).map(file => ({
+          ...Array.from(files).map((file) => ({
             file,
             existingPath: '',
             previewUrl: URL.createObjectURL(file),
@@ -2679,11 +2942,11 @@ export default function Register() {
   }, []);
 
   const handleRemoveInfoImage = useCallback((key) => {
-    setPackageForm(prev => {
+    setPackageForm((prev) => {
       const nextImages = { ...prev.images };
-      const target = nextImages.info.find(entry => entry.key === key);
+      const target = nextImages.info.find((entry) => entry.key === key);
       if (target?.previewUrl) revokePreviewUrl(target.previewUrl);
-      nextImages.info = nextImages.info.filter(entry => entry.key !== key);
+      nextImages.info = nextImages.info.filter((entry) => entry.key !== key);
       return { ...prev, images: nextImages };
     });
   }, []);
@@ -2695,9 +2958,17 @@ export default function Register() {
     const input = versionDateRefs.current.get(key);
     if (!input) return;
     const previousScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
-    try { input.focus({ preventScroll: true }); } catch (_) { input.focus(); }
+    try {
+      input.focus({ preventScroll: true });
+    } catch (_) {
+      input.focus();
+    }
     if (input.showPicker) {
-      try { input.showPicker(); } catch (_) { input.click(); }
+      try {
+        input.showPicker();
+      } catch (_) {
+        input.click();
+      }
     } else {
       input.click();
     }
@@ -2779,125 +3050,134 @@ export default function Register() {
   }, [packageForm.id]);
 
   // パッケージ情報を payload にまとめて送信
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!submitEndpoint) {
-      setError('VITE_SUBMIT_ENDPOINT が設定されていません。');
-      return;
-    }
-    if (!/^https:\/\//i.test(submitEndpoint)) {
-      setError('VITE_SUBMIT_ENDPOINT には https:// で始まるURLを設定してください。');
-      return;
-    }
-    try {
-      const validation = validatePackageForm(packageForm);
-      if (validation) {
-        setError(validation);
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError('');
+      if (!submitEndpoint) {
+        setError('VITE_SUBMIT_ENDPOINT が設定されていません。');
         return;
       }
-      const entryId = packageForm.id.trim();
-      const existingIndex = catalogItems.findIndex(item => item.id === entryId);
-      const inherited = {};
-      if (existingIndex >= 0) {
-        const existingItem = catalogItems[existingIndex];
-        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'popularity')) {
-          inherited.popularity = existingItem.popularity;
-        }
-        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'trend')) {
-          inherited.trend = existingItem.trend;
-        }
-      }
-      const entry = buildPackageEntry(packageForm, tagListRef.current, inherited);
-      const useExternalDescription = packageForm.descriptionMode === 'external'
-        && isHttpsUrl(packageForm.descriptionUrl);
-      const nextCatalog = existingIndex >= 0
-        ? catalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
-        : [...catalogItems, entry];
-      const formData = new FormData();
-      let packageAttachmentCount = 0;
-      const appendAsset = (file, filename, countTowardsLimit = true) => {
-        formData.append('files[]', file, filename);
-        if (countTowardsLimit) packageAttachmentCount += 1;
-      };
-      if (!useExternalDescription) {
-        const mdBlob = new Blob([packageForm.descriptionText || ''], { type: 'text/markdown' });
-        appendAsset(mdBlob, packageMdFilename);
-      }
-      if (packageForm.images.thumbnail?.file) {
-        const ext = getFileExtension(packageForm.images.thumbnail.file.name) || 'png';
-        appendAsset(packageForm.images.thumbnail.file, `${entry.id}_thumbnail.${ext}`);
-      }
-      packageForm.images.info.forEach((entryInfo, idx) => {
-        if (entryInfo.file) {
-          const ext = getFileExtension(entryInfo.file.name) || 'png';
-          appendAsset(entryInfo.file, `${entry.id}_${idx + 1}.${ext}`);
-        }
-      });
-      if (packageAttachmentCount === 0 && !useExternalDescription) {
-        setError('Markdown と画像ファイルを添付してください');
+      if (!/^https:\/\//i.test(submitEndpoint)) {
+        setError('VITE_SUBMIT_ENDPOINT には https:// で始まるURLを設定してください。');
         return;
       }
-      const indexJsonBlob = new Blob([JSON.stringify(nextCatalog, null, 2)], { type: 'application/json' });
-      appendAsset(indexJsonBlob, 'index.json', false);
-      const actionLabel = existingIndex >= 0 ? 'パッケージ更新' : 'パッケージ追加';
-      const packageDialogInfo = {
-        actionLabel,
-        packageName: entry.name || entry.id,
-        packageId: entry.id,
-      };
-      const senderName = packageSender.trim();
-      const payload = {
-        action: SUBMIT_ACTIONS.package,
-        title: `${actionLabel}: ${entry.name}`,
-        packageId: entry.id,
-        packageName: entry.name,
-        packageAuthor: entry.author,
-        labels: ['package', 'from-client'],
-      };
-      if (senderName) {
-        payload.sender = senderName;
-      }
-      setCatalogItems(nextCatalog);
-      setSelectedPackageId(entry.id);
+      try {
+        const validation = validatePackageForm(packageForm);
+        if (validation) {
+          setError(validation);
+          return;
+        }
+        const entryId = packageForm.id.trim();
+        const existingIndex = catalogItems.findIndex((item) => item.id === entryId);
+        const inherited = {};
+        if (existingIndex >= 0) {
+          const existingItem = catalogItems[existingIndex];
+          if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'popularity')) {
+            inherited.popularity = existingItem.popularity;
+          }
+          if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'trend')) {
+            inherited.trend = existingItem.trend;
+          }
+        }
+        const entry = buildPackageEntry(packageForm, tagListRef.current, inherited);
+        const useExternalDescription =
+          packageForm.descriptionMode === 'external' && isHttpsUrl(packageForm.descriptionUrl);
+        const nextCatalog =
+          existingIndex >= 0
+            ? catalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
+            : [...catalogItems, entry];
+        const formData = new FormData();
+        let packageAttachmentCount = 0;
+        const appendAsset = (file, filename, countTowardsLimit = true) => {
+          formData.append('files[]', file, filename);
+          if (countTowardsLimit) packageAttachmentCount += 1;
+        };
+        if (!useExternalDescription) {
+          const mdBlob = new Blob([packageForm.descriptionText || ''], { type: 'text/markdown' });
+          appendAsset(mdBlob, packageMdFilename);
+        }
+        if (packageForm.images.thumbnail?.file) {
+          const ext = getFileExtension(packageForm.images.thumbnail.file.name) || 'png';
+          appendAsset(packageForm.images.thumbnail.file, `${entry.id}_thumbnail.${ext}`);
+        }
+        packageForm.images.info.forEach((entryInfo, idx) => {
+          if (entryInfo.file) {
+            const ext = getFileExtension(entryInfo.file.name) || 'png';
+            appendAsset(entryInfo.file, `${entry.id}_${idx + 1}.${ext}`);
+          }
+        });
+        if (packageAttachmentCount === 0 && !useExternalDescription) {
+          setError('Markdown と画像ファイルを添付してください');
+          return;
+        }
+        const indexJsonBlob = new Blob([JSON.stringify(nextCatalog, null, 2)], { type: 'application/json' });
+        appendAsset(indexJsonBlob, 'index.json', false);
+        const actionLabel = existingIndex >= 0 ? 'パッケージ更新' : 'パッケージ追加';
+        const packageDialogInfo = {
+          actionLabel,
+          packageName: entry.name || entry.id,
+          packageId: entry.id,
+        };
+        const senderName = packageSender.trim();
+        const payload = {
+          action: SUBMIT_ACTIONS.package,
+          title: `${actionLabel}: ${entry.name}`,
+          packageId: entry.id,
+          packageName: entry.name,
+          packageAuthor: entry.author,
+          labels: ['package', 'from-client'],
+        };
+        if (senderName) {
+          payload.sender = senderName;
+        }
+        setCatalogItems(nextCatalog);
+        setSelectedPackageId(entry.id);
 
-      formData.append('payload', JSON.stringify(payload));
-      setSubmitting(true);
-      const res = await fetch(submitEndpoint, { method: 'POST', body: formData });
-      const contentType = res.headers.get('content-type') || '';
-      let responseJson = null;
-      let responseText = '';
-      if (contentType.includes('application/json')) {
-        responseJson = await res.json().catch(() => null);
-      } else if (res.status !== 204) {
-        responseText = await res.text().catch(() => '');
+        formData.append('payload', JSON.stringify(payload));
+        setSubmitting(true);
+        const res = await fetch(submitEndpoint, { method: 'POST', body: formData });
+        const contentType = res.headers.get('content-type') || '';
+        let responseJson = null;
+        let responseText = '';
+        if (contentType.includes('application/json')) {
+          responseJson = await res.json().catch(() => null);
+        } else if (res.status !== 204) {
+          responseText = await res.text().catch(() => '');
+        }
+        if (!res.ok) {
+          const message =
+            responseJson?.error ||
+            responseJson?.message ||
+            responseJson?.detail ||
+            responseText ||
+            `HTTP ${res.status}`;
+          throw new Error(message);
+        }
+        const successUrl = responseJson?.pr_url || responseJson?.public_issue_url || responseJson?.url;
+        const defaultMessage = '送信が完了しました。';
+        const friendlyMessage = responseJson?.message || responseText || defaultMessage;
+        setSuccessDialog({
+          open: true,
+          message: friendlyMessage,
+          url: successUrl || '',
+          packageAction: packageDialogInfo.actionLabel || '',
+          packageName: packageDialogInfo.packageName || '',
+          packageId: packageDialogInfo.packageId || '',
+        });
+      } catch (err) {
+        console.error(err);
+        setError(err?.message || '送信に失敗しました。ネットワークや設定をご確認ください。');
+      } finally {
+        setSubmitting(false);
       }
-      if (!res.ok) {
-        const message = responseJson?.error || responseJson?.message || responseJson?.detail || responseText || `HTTP ${res.status}`;
-        throw new Error(message);
-      }
-      const successUrl = responseJson?.pr_url || responseJson?.public_issue_url || responseJson?.url;
-      const defaultMessage = '送信が完了しました。';
-      const friendlyMessage = responseJson?.message || responseText || defaultMessage;
-      setSuccessDialog({
-        open: true,
-        message: friendlyMessage,
-        url: successUrl || '',
-        packageAction: packageDialogInfo.actionLabel || '',
-        packageName: packageDialogInfo.packageName || '',
-        packageId: packageDialogInfo.packageId || '',
-      });
-    } catch (err) {
-      console.error(err);
-      setError(err?.message || '送信に失敗しました。ネットワークや設定をご確認ください。');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [packageForm, catalogItems, packageMdFilename, submitEndpoint, packageSender]);
+    },
+    [packageForm, catalogItems, packageMdFilename, submitEndpoint, packageSender],
+  );
 
   const successPrimaryText = successDialog.packageName
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
-    : (successDialog.message || '送信が完了しました。');
+    : successDialog.message || '送信が完了しました。';
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
   // 画面描画
   const computedTitle = 'パッケージ登録';
@@ -2905,20 +3185,32 @@ export default function Register() {
   return (
     <div className="mx-auto max-w-7xl px-0 pb-0">
       {successDialog.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submit-success-title">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="submit-success-title"
+        >
           <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={closeSuccessDialog} />
           <div className="relative w-full max-w-lg transform overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-              <h3 id="submit-success-title" className="text-lg font-bold text-slate-800 dark:text-slate-100">送信が完了しました</h3>
+              <h3 id="submit-success-title" className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                送信が完了しました
+              </h3>
             </div>
             <div className="px-6 py-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" aria-hidden>
+                <div
+                  className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  aria-hidden
+                >
                   <Check size={24} />
                 </div>
                 <div className="space-y-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{successPrimaryText}</p>
-                  {successSupportText && <p className="text-sm text-slate-500 dark:text-slate-400">{successSupportText}</p>}
+                  {successSupportText && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{successSupportText}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -2934,7 +3226,13 @@ export default function Register() {
                   公開ページを開く
                 </a>
               )}
-              <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-500" onClick={closeSuccessDialog}>閉じる</button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-500"
+                onClick={closeSuccessDialog}
+              >
+                閉じる
+              </button>
             </div>
           </div>
         </div>
@@ -2946,7 +3244,10 @@ export default function Register() {
         </header>
 
         {error && (
-          <div className="sticky top-4 z-30 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300" role="alert">
+          <div
+            className="sticky top-4 z-30 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
+            role="alert"
+          >
             <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
             <div className="text-sm font-medium">{error}</div>
           </div>
@@ -2964,15 +3265,13 @@ export default function Register() {
                       <input
                         type="search"
                         value={packageSearch}
-                        onChange={e => handlePackageSearchChange(e.target.value)}
+                        onChange={(e) => handlePackageSearchChange(e.target.value)}
                         placeholder="パッケージを検索..."
                         className="w-full pl-9"
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        パッケージ一覧
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400">パッケージ一覧</div>
                       <div className="max-h-[calc(100vh-300px)] min-h-[300px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                         {catalogLoading && !catalogLoaded ? (
                           <div className="flex items-center justify-center py-8 text-sm text-slate-500">
@@ -2980,22 +3279,27 @@ export default function Register() {
                             読み込み中...
                           </div>
                         ) : (
-                          filteredPackages.map(item => {
+                          filteredPackages.map((item) => {
                             const isSelected = selectedPackageId === item.id;
                             return (
                               <button
                                 key={item.id}
                                 type="button"
                                 onClick={() => handleSelectPackage(item)}
-                                className={`group flex w-full flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${isSelected
-                                  ? 'border-blue-500 bg-blue-50 shadow-sm dark:bg-blue-900/20 dark:border-blue-500/50'
-                                  : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
-                                  }`}
+                                className={`group flex w-full flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
+                                  isSelected
+                                    ? 'border-blue-500 bg-blue-50 shadow-sm dark:bg-blue-900/20 dark:border-blue-500/50'
+                                    : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
                               >
-                                <span className={`font-semibold ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                                <span
+                                  className={`font-semibold ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}
+                                >
                                   {item.name || item.id}
                                 </span>
-                                <span className={`text-xs ${isSelected ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                <span
+                                  className={`text-xs ${isSelected ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-slate-500 dark:text-slate-400'}`}
+                                >
                                   {item.author || '作者不明'}
                                 </span>
                               </button>
@@ -3028,7 +3332,8 @@ export default function Register() {
                 <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300">
                   <Info size={20} className="mt-0.5 flex-shrink-0 text-blue-500" />
                   <div>
-                    このフォームに入力するプラグイン情報はすべて公開されます。<br />
+                    このフォームに入力するプラグイン情報はすべて公開されます。
+                    <br />
                     パッケージ登録は作者本人でなくてもどなたでも行えます。
                   </div>
                 </div>
@@ -3043,7 +3348,7 @@ export default function Register() {
                       <input
                         name="id"
                         value={packageForm.id}
-                        onChange={e => updatePackageField('id', e.target.value)}
+                        onChange={(e) => updatePackageField('id', e.target.value)}
                         required
                         placeholder="Kenkun.AviUtlExEdit2"
                       />
@@ -3056,7 +3361,7 @@ export default function Register() {
                       <input
                         name="name"
                         value={packageForm.name}
-                        onChange={e => updatePackageField('name', e.target.value)}
+                        onChange={(e) => updatePackageField('name', e.target.value)}
                         required
                         placeholder="AviUtl2"
                       />
@@ -3072,17 +3377,19 @@ export default function Register() {
                       <input
                         name="author"
                         value={packageForm.author}
-                        onChange={e => updatePackageField('author', e.target.value)}
+                        onChange={(e) => updatePackageField('author', e.target.value)}
                         required
                         placeholder="KENくん"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">オリジナル作者名 (任意)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        オリジナル作者名 (任意)
+                      </label>
                       <input
                         name="originalAuthor"
                         value={packageForm.originalAuthor}
-                        onChange={e => updatePackageField('originalAuthor', e.target.value)}
+                        onChange={(e) => updatePackageField('originalAuthor', e.target.value)}
                         placeholder="オリジナル版がある場合に入力"
                       />
                     </div>
@@ -3093,7 +3400,7 @@ export default function Register() {
                       <input
                         name="type"
                         value={packageForm.type}
-                        onChange={e => updatePackageField('type', e.target.value)}
+                        onChange={(e) => updatePackageField('type', e.target.value)}
                         required
                         placeholder="入力/出力/汎用プラグイン, スクリプト, 言語ファイル"
                       />
@@ -3105,29 +3412,33 @@ export default function Register() {
                       <input
                         name="repoURL"
                         value={packageForm.repoURL}
-                        onChange={e => updatePackageField('repoURL', e.target.value)}
+                        onChange={(e) => updatePackageField('repoURL', e.target.value)}
                         placeholder="パッケージのことが分かるURL"
                         type="url"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">ニコニ・コモンズID (任意)</label>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        ニコニ・コモンズID (任意)
+                      </label>
                       <input
                         name="niconiCommonsId"
                         value={packageForm.niconiCommonsId}
-                        onChange={e => updatePackageField('niconiCommonsId', e.target.value)}
+                        onChange={(e) => updatePackageField('niconiCommonsId', e.target.value)}
                         placeholder=""
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">依存パッケージ (現在非対応)</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      依存パッケージ (現在非対応)
+                    </label>
                     <input
                       name="dependencies"
                       value={packageForm.dependenciesText}
-                      onChange={e => updatePackageField('dependenciesText', e.target.value)}
+                      onChange={(e) => updatePackageField('dependenciesText', e.target.value)}
                       placeholder="パッケージID (カンマ区切り)"
                     />
                   </div>
@@ -3142,12 +3453,14 @@ export default function Register() {
                       name="summary"
                       value={packageForm.summary}
                       maxLength={35}
-                      onChange={e => updatePackageField('summary', e.target.value)}
+                      onChange={(e) => updatePackageField('summary', e.target.value)}
                       required
                       placeholder="パッケージの概要 (35文字以内)"
                     />
                     <div className="flex justify-end">
-                      <span className={`text-xs ${packageForm.summary.length > 35 ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                      <span
+                        className={`text-xs ${packageForm.summary.length > 35 ? 'text-red-500 font-bold' : 'text-slate-400'}`}
+                      >
                         {packageForm.summary.length} / 35
                       </span>
                     </div>
@@ -3165,20 +3478,22 @@ export default function Register() {
                         <div className="inline-flex rounded-lg border border-slate-200 bg-white text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
                           <button
                             type="button"
-                            className={`rounded-l-lg px-3 py-1.5 transition-colors ${!isExternalDescription
-                              ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
-                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
-                              }`}
+                            className={`rounded-l-lg px-3 py-1.5 transition-colors ${
+                              !isExternalDescription
+                                ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
+                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
+                            }`}
                             onClick={() => updatePackageField('descriptionMode', 'inline')}
                           >
                             アプリ内入力
                           </button>
                           <button
                             type="button"
-                            className={`rounded-r-lg px-3 py-1.5 transition-colors ${isExternalDescription
-                              ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
-                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
-                              }`}
+                            className={`rounded-r-lg px-3 py-1.5 transition-colors ${
+                              isExternalDescription
+                                ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
+                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
+                            }`}
                             onClick={() => updatePackageField('descriptionMode', 'external')}
                           >
                             外部MDリンク
@@ -3188,15 +3503,19 @@ export default function Register() {
                       </div>
                     </div>
                     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                      <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-2 dark:border-slate-800 dark:bg-slate-900/50" role="tablist">
+                      <div
+                        className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-2 dark:border-slate-800 dark:bg-slate-900/50"
+                        role="tablist"
+                      >
                         <button
                           type="button"
                           role="tab"
                           aria-selected={descriptionTab === 'edit'}
-                          className={`flex-1 rounded-tl-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${descriptionTab === 'edit'
-                            ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
-                            : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
-                            }`}
+                          className={`flex-1 rounded-tl-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${
+                            descriptionTab === 'edit'
+                              ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
+                              : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
+                          }`}
                           onClick={() => setDescriptionTab('edit')}
                         >
                           {isExternalDescription ? '外部リンク指定' : '編集'}
@@ -3205,10 +3524,11 @@ export default function Register() {
                           type="button"
                           role="tab"
                           aria-selected={descriptionTab === 'preview'}
-                          className={`flex-1 rounded-tr-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${descriptionTab === 'preview'
-                            ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
-                            : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
-                            }`}
+                          className={`flex-1 rounded-tr-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${
+                            descriptionTab === 'preview'
+                              ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
+                              : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
+                          }`}
                           onClick={() => setDescriptionTab('preview')}
                         >
                           プレビュー
@@ -3223,7 +3543,7 @@ export default function Register() {
                                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800"
                                 type="url"
                                 value={packageForm.descriptionUrl}
-                                onChange={e => updatePackageField('descriptionUrl', e.target.value)}
+                                onChange={(e) => updatePackageField('descriptionUrl', e.target.value)}
                                 placeholder="https://example.com/description.md"
                               />
                               {!hasExternalDescriptionUrl && (
@@ -3243,19 +3563,21 @@ export default function Register() {
                                   Markdown読み込み済み
                                 </div>
                               )}
-                              {hasExternalDescriptionUrl && externalDescriptionStatus === 'error' && !descriptionLoading && (
-                                <div className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
-                                  <AlertCircle size={14} />
-                                  Markdownを読み込めませんでした
-                                </div>
-                              )}
+                              {hasExternalDescriptionUrl &&
+                                externalDescriptionStatus === 'error' &&
+                                !descriptionLoading && (
+                                  <div className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+                                    <AlertCircle size={14} />
+                                    Markdownを読み込めませんでした
+                                  </div>
+                                )}
                             </div>
                           ) : (
                             <textarea
                               id="description-textarea"
                               className="min-h-[400px] w-full resize-y border-0 bg-transparent p-4 font-mono text-sm leading-relaxed focus:ring-0"
                               value={packageForm.descriptionText}
-                              onChange={e => updatePackageField('descriptionText', e.target.value)}
+                              onChange={(e) => updatePackageField('descriptionText', e.target.value)}
                               required
                               placeholder="パッケージの詳細情報を入力してください。Markdown形式で記入できます。どこから呼び出せるか（メニュー位置など）や、UIの説明もあわせて記入していただけると助かります。外部サイトの画像も貼り付けることができます。"
                             />
@@ -3336,7 +3658,9 @@ export default function Register() {
                     <span>{previewDarkMode ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}</span>
                   </button>
                 </div>
-                <div className={`overflow-x-auto rounded-xl border border-slate-200 p-8 transition-colors ${previewDarkMode ? 'bg-slate-950 border-slate-800 dark' : 'bg-slate-50 light'}`}>
+                <div
+                  className={`overflow-x-auto rounded-xl border border-slate-200 p-8 transition-colors ${previewDarkMode ? 'bg-slate-950 border-slate-800 dark' : 'bg-slate-50 light'}`}
+                >
                   <div className="flex justify-center pointer-events-none opacity-90 grayscale-[10%]">
                     <div className="w-[500px]">
                       <PackageCard
@@ -3347,11 +3671,16 @@ export default function Register() {
                           type: packageForm.type || '種類',
                           tags: currentTags,
                           summary: packageForm.summary || '概要がここに表示されます',
-                          images: [{
-                            thumbnail: packageForm.images.thumbnail?.previewUrl || '',
-                            infoImg: packageForm.images.info.map(i => i.previewUrl).filter(Boolean)
-                          }],
-                          updatedAt: packageForm.versions.length > 0 ? packageForm.versions[packageForm.versions.length - 1].release_date : new Date().toISOString(),
+                          images: [
+                            {
+                              thumbnail: packageForm.images.thumbnail?.previewUrl || '',
+                              infoImg: packageForm.images.info.map((i) => i.previewUrl).filter(Boolean),
+                            },
+                          ],
+                          updatedAt:
+                            packageForm.versions.length > 0
+                              ? packageForm.versions[packageForm.versions.length - 1].release_date
+                              : new Date().toISOString(),
                           installed: false,
                           isLatest: true,
                         }}
@@ -3364,8 +3693,12 @@ export default function Register() {
               <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1">
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">インストーラー / 削除テスト</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">現在の設定でインストールと削除の動作を確認します。</p>
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                      インストーラー / 削除テスト
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      現在の設定でインストールと削除の動作を確認します。
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -3376,7 +3709,13 @@ export default function Register() {
                       title={installerTestValidation || ''}
                     >
                       {installerTestRunning ? (
-                        <ProgressCircle value={installerTestRatio} size={16} strokeWidth={3} className="text-white" ariaLabel="インストーラーテストの進行度" />
+                        <ProgressCircle
+                          value={installerTestRatio}
+                          size={16}
+                          strokeWidth={3}
+                          className="text-white"
+                          ariaLabel="インストーラーテストの進行度"
+                        />
                       ) : (
                         <Download size={14} />
                       )}
@@ -3398,7 +3737,14 @@ export default function Register() {
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">インストールテスト</div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <ProgressCircle value={installerTestRatio} size={32} strokeWidth={3} className={installerTestTone} ariaLabel="インストーラーテストの進行度" showComplete={installerTestPhase === 'done'} />
+                      <ProgressCircle
+                        value={installerTestRatio}
+                        size={32}
+                        strokeWidth={3}
+                        className={installerTestTone}
+                        ariaLabel="インストーラーテストの進行度"
+                        showComplete={installerTestPhase === 'done'}
+                      />
                       <div className="space-y-1">
                         {installerTestLabel && (
                           <div className={`text-sm font-semibold ${installerTestTone}`}>{installerTestLabel}</div>
@@ -3408,12 +3754,13 @@ export default function Register() {
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70">
                       <div
-                        className={`h-full rounded-full transition-all ${installerTestPhase === 'error'
-                          ? 'bg-red-500'
-                          : installerTestPhase === 'done'
-                            ? 'bg-emerald-500'
-                            : 'bg-blue-500'
-                          }`}
+                        className={`h-full rounded-full transition-all ${
+                          installerTestPhase === 'error'
+                            ? 'bg-red-500'
+                            : installerTestPhase === 'done'
+                              ? 'bg-emerald-500'
+                              : 'bg-blue-500'
+                        }`}
                         style={{ width: `${installerTestPercent}%` }}
                       />
                     </div>
@@ -3441,7 +3788,14 @@ export default function Register() {
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">削除テスト</div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <ProgressCircle value={uninstallerTestRatio} size={32} strokeWidth={3} className={uninstallerTestTone} ariaLabel="削除テストの進行度" showComplete={uninstallerTestPhase === 'done'} />
+                      <ProgressCircle
+                        value={uninstallerTestRatio}
+                        size={32}
+                        strokeWidth={3}
+                        className={uninstallerTestTone}
+                        ariaLabel="削除テストの進行度"
+                        showComplete={uninstallerTestPhase === 'done'}
+                      />
                       <div className="space-y-1">
                         {uninstallerTestLabel && (
                           <div className={`text-sm font-semibold ${uninstallerTestTone}`}>{uninstallerTestLabel}</div>
@@ -3451,12 +3805,13 @@ export default function Register() {
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-200/70 dark:bg-slate-700/70">
                       <div
-                        className={`h-full rounded-full transition-all ${uninstallerTestPhase === 'error'
-                          ? 'bg-red-500'
-                          : uninstallerTestPhase === 'done'
-                            ? 'bg-emerald-500'
-                            : 'bg-blue-500'
-                          }`}
+                        className={`h-full rounded-full transition-all ${
+                          uninstallerTestPhase === 'error'
+                            ? 'bg-red-500'
+                            : uninstallerTestPhase === 'done'
+                              ? 'bg-emerald-500'
+                              : 'bg-blue-500'
+                        }`}
                         style={{ width: `${uninstallerTestPercent}%` }}
                       />
                     </div>
@@ -3499,7 +3854,7 @@ export default function Register() {
                       <input
                         type="text"
                         value={packageSender}
-                        onChange={e => setPackageSender(e.target.value)}
+                        onChange={(e) => setPackageSender(e.target.value)}
                         placeholder="送信者のニックネーム"
                         className="min-w-[240px]"
                         aria-label="送信者のニックネーム"

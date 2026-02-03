@@ -6,18 +6,11 @@
   "permissions": [
     {
       "identifier": "http:default",
-      "allow": [
-        "https://*",
-        "http://*",
-        { "url": "https://*:*" },
-        { "url": "http://*:*" }
-      ]
+      "allow": ["https://*", "http://*", { "url": "https://*:*" }, { "url": "http://*:*" }]
     },
     {
       "identifier": "shell:allow-execute",
-      "allow": [
-        { "name": "powershell", "cmd": "powershell" }
-      ]
+      "allow": [{ "name": "powershell", "cmd": "powershell" }]
     },
     {
       "identifier": "fs:allow-read-file",
@@ -141,4 +134,3 @@
     }
   ]
 }
-

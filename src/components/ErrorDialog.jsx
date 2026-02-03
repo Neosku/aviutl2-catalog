@@ -3,7 +3,9 @@ import { AlertTriangle, Copy, Check } from 'lucide-react';
 
 export default function ErrorDialog({ open, title = 'エラーが発生しました', message = '', onClose }) {
   const [copied, setCopied] = useState(false);
-  useEffect(() => { if (open) setCopied(false); }, [open]);
+  useEffect(() => {
+    if (open) setCopied(false);
+  }, [open]);
   if (!open) return null;
 
   async function onCopy() {
@@ -11,7 +13,7 @@ export default function ErrorDialog({ open, title = 'エラーが発生しまし
       await navigator.clipboard.writeText(String(message || ''));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (_) { }
+    } catch (_) {}
   }
 
   return (
@@ -24,7 +26,9 @@ export default function ErrorDialog({ open, title = 'エラーが発生しまし
           </div>
           <div className="flex-1">
             <p className="text-xs uppercase tracking-widest text-red-500">Error</p>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="error-title">{title}</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="error-title">
+              {title}
+            </h3>
           </div>
           <button
             className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -37,12 +41,17 @@ export default function ErrorDialog({ open, title = 'エラーが発生しまし
           </button>
         </div>
         <div className="px-6 py-4">
-          <pre className="max-h-64 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200" aria-live="polite">
+          <pre
+            className="max-h-64 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200"
+            aria-live="polite"
+          >
             <code>{String(message || '')}</code>
           </pre>
         </div>
         <div className="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button className="btn btn--primary" onClick={onClose} type="button">閉じる</button>
+          <button className="btn btn--primary" onClick={onClose} type="button">
+            閉じる
+          </button>
         </div>
       </div>
     </div>

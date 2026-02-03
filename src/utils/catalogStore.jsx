@@ -14,7 +14,7 @@ const CatalogDispatchContext = createContext(null);
 // 更新日のタイムスタンプを算出
 // 仕様: version[].release_date の最大値を updatedAt として使用
 function toUpdatedAt(pkg) {
-  const arr = Array.isArray(pkg.versions) ? pkg.versions : (Array.isArray(pkg.version) ? pkg.version : []);
+  const arr = Array.isArray(pkg.versions) ? pkg.versions : Array.isArray(pkg.version) ? pkg.version : [];
   if (!arr.length) return null;
   const last = arr[arr.length - 1];
   const ts = new Date(last.release_date).getTime();
@@ -61,27 +61,27 @@ function catalogReducerInternal(state, action) {
       // カタログ本体の差し替え
       // - installer があるものは downloadURL を installer:// に置き換え（UI でインストーラ起動）
       // - detectedMap（検出済みバージョン）から installed/isLatest を付加
-      const items = (action.payload || []).map((item, index) => (
-        enrich({ ...item, catalogIndex: index })
-      )).map(it => {
-        const hasInst = (typeof it?.installer === 'string') || Array.isArray(it?.installer?.install);
-        const dl = hasInst ? `installer://${encodeURIComponent(it.id)}` : it.downloadURL;
-        const detectedVersion = state.detectedMap?.[it.id] || '';
-        const latest = latestVersionOf(it) || '';
-        const isLatest = !!detectedVersion && !!latest && detectedVersion === latest;
-        return {
-          ...it,
-          downloadURL: dl,
-          installed: detectedVersion !== '',
-          installedVersion: detectedVersion,
-          isLatest,
-        };
-      });
+      const items = (action.payload || [])
+        .map((item, index) => enrich({ ...item, catalogIndex: index }))
+        .map((it) => {
+          const hasInst = typeof it?.installer === 'string' || Array.isArray(it?.installer?.install);
+          const dl = hasInst ? `installer://${encodeURIComponent(it.id)}` : it.downloadURL;
+          const detectedVersion = state.detectedMap?.[it.id] || '';
+          const latest = latestVersionOf(it) || '';
+          const isLatest = !!detectedVersion && !!latest && detectedVersion === latest;
+          return {
+            ...it,
+            downloadURL: dl,
+            installed: detectedVersion !== '',
+            installedVersion: detectedVersion,
+            isLatest,
+          };
+        });
       // タグ・種類の候補一覧を集計（重複排除）
       const tagSet = new Set();
       const typeSet = new Set();
-      items.forEach(it => {
-        (it.tags || []).forEach(t => tagSet.add(t));
+      items.forEach((it) => {
+        (it.tags || []).forEach((t) => tagSet.add(t));
         if (it.type) typeSet.add(it.type);
       });
       return { ...state, items, allTags: Array.from(tagSet), allTypes: Array.from(typeSet) };
@@ -95,7 +95,7 @@ function catalogReducerInternal(state, action) {
     case 'SET_INSTALLED_IDS': {
       // 手動管理の installedIds（将来拡張用の保持。現在の表示計算には未使用）
       const installedIds = Array.from(new Set(action.payload || []));
-      const items = state.items.map(it => it);
+      const items = state.items.map((it) => it);
       return { ...state, installedIds, items };
     }
     case 'SET_INSTALLED_MAP': {
@@ -106,7 +106,7 @@ function catalogReducerInternal(state, action) {
     case 'SET_DETECTED_MAP': {
       // まとめて検出されたインストールバージョンを反映
       const detectedMap = action.payload || {};
-      const items = state.items.map(it => {
+      const items = state.items.map((it) => {
         const v = detectedMap[it.id] || '';
         const latest = latestVersionOf(it) || '';
         const isLatest = !!v && !!latest && v === latest;
@@ -119,8 +119,8 @@ function catalogReducerInternal(state, action) {
       const { id, version } = action.payload || {};
       const detectedMap = { ...(state.detectedMap || {}) };
       if (id) detectedMap[id] = version || '';
-      const items = state.items.map(it => {
-        const v = (it.id === id) ? (version || '') : (state.detectedMap?.[it.id] || '');
+      const items = state.items.map((it) => {
+        const v = it.id === id ? version || '' : state.detectedMap?.[it.id] || '';
         const latest = latestVersionOf(it) || '';
         const isLatest = !!v && !!latest && v === latest;
         return { ...it, installed: v !== '', installedVersion: v, isLatest };
@@ -139,9 +139,7 @@ export function CatalogProvider({ children, init }) {
   const memoState = useMemo(() => state, [state]);
   return (
     <CatalogDispatchContext.Provider value={dispatch}>
-      <CatalogStateContext.Provider value={memoState}>
-        {children}
-      </CatalogStateContext.Provider>
+      <CatalogStateContext.Provider value={memoState}>{children}</CatalogStateContext.Provider>
     </CatalogDispatchContext.Provider>
   );
 }

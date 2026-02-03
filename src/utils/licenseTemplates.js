@@ -255,7 +255,7 @@ function prependCopyright(text, copyrightLines) {
 
 export function formatCopyrightLines(copyrights = []) {
   const lines = [];
-  (Array.isArray(copyrights) ? copyrights : []).forEach(entry => {
+  (Array.isArray(copyrights) ? copyrights : []).forEach((entry) => {
     const years = String(entry?.years || '').trim();
     const holder = String(entry?.holder || '').trim();
     if (!years && !holder) return;
@@ -265,7 +265,7 @@ export function formatCopyrightLines(copyrights = []) {
 }
 
 export const LICENSE_TEMPLATES = {
-  'MIT': ({ copyrightLines }) => prependCopyright(MITText, copyrightLines),
+  MIT: ({ copyrightLines }) => prependCopyright(MITText, copyrightLines),
   'Apache-2.0': ({ copyrightLines }) => prependCopyright(Apache20Text, copyrightLines),
   'BSD-2-Clause': ({ copyrightLines }) => prependCopyright(BSD2ClauseText, copyrightLines),
   'BSD-3-Clause': ({ copyrightLines }) => prependCopyright(BSD3ClauseText, copyrightLines),
@@ -287,7 +287,7 @@ export function buildLicenseBody(license) {
   const customBody = typeof license.licenseBody === 'string' ? license.licenseBody.trim() : '';
   const template = LICENSE_TEMPLATES[license.type];
   const copyrights = Array.isArray(license?.copyrights) ? license.copyrights : [];
-  const primary = copyrights.find(c => (c?.years || c?.holder)) || copyrights[0] || {};
+  const primary = copyrights.find((c) => c?.years || c?.holder) || copyrights[0] || {};
   const yearsValue = String(primary?.years || '').trim();
   const holderValue = String(primary?.holder || '').trim();
   const fillPlaceholders = (text) =>

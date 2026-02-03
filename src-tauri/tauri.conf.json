@@ -13,41 +13,29 @@
   "bundle": {
     "active": true,
     "externalBin": [],
-    "targets": [
-      "nsis"
-    ],
-    "icon": [
-      "icons/icon.svg"
-    ],
+    "targets": ["nsis"],
+    "icon": ["icons/icon.svg"],
     "createUpdaterArtifacts": true,
     "licenseFile": "./eula.txt",
     "windows": {
       "certificateThumbprint": null,
       "timestampUrl": null,
       "nsis": {
-        "languages": [
-          "Japanese"
-        ],
+        "languages": ["Japanese"],
         "displayLanguageSelector": true,
         "installerIcon": "icons/icon.ico"
       }
     },
-    "resources": [
-      "resources/UpdateChecker.aui2"
-    ]
+    "resources": ["resources/UpdateChecker.aui2"]
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/aviutl2_catalog_update.json"
-      ],
+      "endpoints": ["https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/aviutl2_catalog_update.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDODNBNTVDRjYyNEFDNDcKUldSSHJDVDJYS1dEM09tc09VWjlzVHJaeGo1MFlJMTVOZnBGSTAvOUQ3MUZHTDM1cjZ6akVqWjEK"
     },
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "aviutl2-catalog"
-        ]
+        "schemes": ["aviutl2-catalog"]
       }
     }
   },

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "tailwindcss-animate";
 @plugin "@tailwindcss/typography";
 @source "../../../index.html";
@@ -7,7 +7,7 @@
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.light, .light *)));
 
 @theme {
-  --font-sans: "Noto Sans JP", sans-serif;
+  --font-sans: 'Noto Sans JP', sans-serif;
   --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 

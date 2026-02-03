@@ -4,11 +4,20 @@ import AppRouter from './Router.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './utils/catalogStore.jsx';
-import { loadInstalledMap, detectInstalledVersionsMap, saveInstalledSnapshot, getSettings, logError, loadCatalogData, flushPackageStateQueue, maybeSendPackageStateSnapshot } from './utils/index.js';
+import {
+  loadInstalledMap,
+  detectInstalledVersionsMap,
+  saveInstalledSnapshot,
+  getSettings,
+  logError,
+  loadCatalogData,
+  flushPackageStateQueue,
+  maybeSendPackageStateSnapshot,
+} from './utils/index.js';
 import { useUpdatePrompt } from './utils/useUpdatePrompt.js';
 import InitSetupApp from './pages/InitSetupApp.jsx';
 import './styles/index.css';
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const bootRoot = document?.documentElement;
 if (bootRoot) {
@@ -17,23 +26,34 @@ if (bootRoot) {
 }
 
 async function showMain() {
-  const win = getCurrentWindow()
-  await win.show()
-  await win.setFocus()
+  const win = getCurrentWindow();
+  await win.show();
+  await win.setFocus();
 }
 
 // DOM 準備済みなら即、まだなら once で
 if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', () => { showMain() }, { once: true })
+  window.addEventListener(
+    'DOMContentLoaded',
+    () => {
+      showMain();
+    },
+    { once: true },
+  );
 } else {
-  showMain()
+  showMain();
 }
 
 async function detectWindowLabel() {
   try {
     const mod = await import('@tauri-apps/api/window');
-    const getCurrent = typeof mod.getCurrent === 'function' ? mod.getCurrent : (typeof mod.getCurrentWindow === 'function' ? mod.getCurrentWindow : null);
-    const win = getCurrent ? getCurrent() : (mod.appWindow || null);
+    const getCurrent =
+      typeof mod.getCurrent === 'function'
+        ? mod.getCurrent
+        : typeof mod.getCurrentWindow === 'function'
+          ? mod.getCurrentWindow
+          : null;
+    const win = getCurrent ? getCurrent() : mod.appWindow || null;
     if (!win) return 'main';
     if (typeof win.label === 'string') return win.label;
     if (typeof win.label === 'function') {
@@ -44,7 +64,9 @@ async function detectWindowLabel() {
       }
     }
   } catch (e) {
-    try { await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`); } catch (_) { }
+    try {
+      await logError(`[bootstrap] detectWindowLabel failed: ${e?.message || e}`);
+    } catch (_) {}
   }
   return 'main';
 }
@@ -53,13 +75,7 @@ async function detectWindowLabel() {
 // カタログの読み込み・検出・状態反映を行う起動用コンポーネント
 function Bootstrapper() {
   const dispatch = useCatalogDispatch();
-  const {
-    updateInfo,
-    updateBusy,
-    updateError,
-    confirmUpdate,
-    dismissUpdate
-  } = useUpdatePrompt();
+  const { updateInfo, updateBusy, updateError, confirmUpdate, dismissUpdate } = useUpdatePrompt();
 
   // Webアプリの右クリックコンテキストメニューを無効化
   useEffect(() => {
@@ -74,18 +90,37 @@ function Bootstrapper() {
 
   // グローバルエラーがをapp.logに記録
   useEffect(() => {
-    const onError = async (e) => { try { await logError(`[window.error] ${e?.message || e}`); } catch (_) { } };
+    const onError = async (e) => {
+      try {
+        await logError(`[window.error] ${e?.message || e}`);
+      } catch (_) {}
+    };
     const onRejection = async (e) => {
       const reason = e?.reason;
-      const msg = (reason && (reason.message || (reason.toString && reason.toString()))) || String(reason || 'unhandled rejection');
-      try { await logError(`[window.unhandledrejection] ${msg}`); } catch (_) { }
+      const msg =
+        (reason && (reason.message || (reason.toString && reason.toString()))) ||
+        String(reason || 'unhandled rejection');
+      try {
+        await logError(`[window.unhandledrejection] ${msg}`);
+      } catch (_) {}
     };
     const origError = console.error;
-    console.error = (...args) => { try { origError?.(...args); } catch (_) { } try { logError(`[console.error] ${args.map(a => (a && a.stack) ? a.stack : (a && a.message) ? a.message : String(a)).join(' ')}`); } catch (_) { } };
+    console.error = (...args) => {
+      try {
+        origError?.(...args);
+      } catch (_) {}
+      try {
+        logError(
+          `[console.error] ${args.map((a) => (a && a.stack ? a.stack : a && a.message ? a.message : String(a))).join(' ')}`,
+        );
+      } catch (_) {}
+    };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     return () => {
-      try { console.error = origError; } catch (_) { }
+      try {
+        console.error = origError;
+      } catch (_) {}
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
     };
@@ -115,17 +150,23 @@ function Bootstrapper() {
       const root = document?.documentElement;
       try {
         const s = await getSettings();
-        let theme = (s && s.theme) ? String(s.theme) : '';
+        let theme = s && s.theme ? String(s.theme) : '';
         if (theme === 'noir') theme = 'darkmode';
         const isDark = theme !== 'lightmode';
         root?.classList.toggle('dark', isDark);
-      } catch (e) { try { await logError(`[bootstrap] theme apply failed: ${e?.message || e}`); } catch (_) { } }
+      } catch (e) {
+        try {
+          await logError(`[bootstrap] theme apply failed: ${e?.message || e}`);
+        } catch (_) {}
+      }
       root?.classList.remove('theme-init');
       // パッケージ状態キューをフラッシュ
       try {
         await flushPackageStateQueue();
       } catch (e) {
-        try { await logError(`[package-state] flush failed: ${e?.message || e}`); } catch (_) { }
+        try {
+          await logError(`[package-state] flush failed: ${e?.message || e}`);
+        } catch (_) {}
       }
 
       try {
@@ -139,7 +180,9 @@ function Bootstrapper() {
           catalogItems = items;
         } catch (e) {
           console.warn('Catalog load failed:', e);
-          try { await logError(`[bootstrap] loadCatalogData failed: ${e?.message || e}`); } catch (_) { }
+          try {
+            await logError(`[bootstrap] loadCatalogData failed: ${e?.message || e}`);
+          } catch (_) {}
         }
 
         if (Array.isArray(catalogItems) && catalogItems.length > 0) {
@@ -149,7 +192,11 @@ function Bootstrapper() {
           try {
             const { invoke } = await import('@tauri-apps/api/core');
             await invoke('set_catalog_index', { items });
-          } catch (e) { try { await logError(`[bootstrap] set_catalog_index failed: ${e?.message || e}`); } catch (_) { } }
+          } catch (e) {
+            try {
+              await logError(`[bootstrap] set_catalog_index failed: ${e?.message || e}`);
+            } catch (_) {}
+          }
           // ファイルのハッシュでインストール済みバージョンを検出
           try {
             const detected = await detectInstalledVersionsMap(items);
@@ -159,17 +206,31 @@ function Bootstrapper() {
               try {
                 const snap = await saveInstalledSnapshot(detected);
                 dispatch({ type: 'SET_INSTALLED_MAP', payload: snap });
-              } catch (e) { try { await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`); } catch (_) { } }
+              } catch (e) {
+                try {
+                  await logError(`[bootstrap] saveInstalledSnapshot failed: ${e?.message || e}`);
+                } catch (_) {}
+              }
               // パッケージ状態スナップショットを送信
               try {
                 await maybeSendPackageStateSnapshot(detected);
               } catch (e) {
-                try { await logError(`[package-state] snapshot failed: ${e?.message || e}`); } catch (_) { }
+                try {
+                  await logError(`[package-state] snapshot failed: ${e?.message || e}`);
+                } catch (_) {}
               }
             }
-          } catch (e) { try { await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`); } catch (_) { } }
+          } catch (e) {
+            try {
+              await logError(`[bootstrap] detectInstalledVersionsMap failed: ${e?.message || e}`);
+            } catch (_) {}
+          }
         } else {
-          if (!cancelled) dispatch({ type: 'SET_ERROR', payload: 'カタログの読み込みに失敗しました（ネットワーク/キャッシュなし）。' });
+          if (!cancelled)
+            dispatch({
+              type: 'SET_ERROR',
+              payload: 'カタログの読み込みに失敗しました（ネットワーク/キャッシュなし）。',
+            });
         }
       } catch (e) {
         console.error('Failed to load catalog:', e);
@@ -178,7 +239,9 @@ function Bootstrapper() {
         if (!cancelled) dispatch({ type: 'SET_LOADING', payload: false });
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch]);
 
   // アップデート確認（起動時1回）
@@ -223,7 +286,9 @@ function RootApp() {
       const label = await detectWindowLabel();
       if (!cancelled) setMode(label === 'init-setup' ? 'init' : 'main');
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (mode === 'loading') {

@@ -20,7 +20,7 @@ export default function Updates() {
   const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
   const bulkLabel = bulkProgress?.label ?? '更新処理中…';
   const bulkCurrent = bulkProgress?.current ?? 0;
-  const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? (updatableItems.length || 0) : 0);
+  const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? updatableItems.length || 0 : 0);
 
   async function handleBulkUpdate() {
     if (bulkUpdating || !updatableItems.length) return;
@@ -68,7 +68,9 @@ export default function Updates() {
       } catch (err) {
         const msg = err?.message || String(err) || '不明なエラー';
         failed.push({ item, msg });
-        try { await logError(`[BulkUpdate] ${item.id}: ${msg}`); } catch (_) { }
+        try {
+          await logError(`[BulkUpdate] ${item.id}: ${msg}`);
+        } catch (_) {}
         setBulkProgress({
           ratio: 1,
           percent: 100,
@@ -91,13 +93,13 @@ export default function Updates() {
   async function handleUpdate(item) {
     if (itemProgress[item.id]) return;
     setError('');
-    setItemProgress(prev => ({ ...prev, [item.id]: { ratio: 0, label: '準備中…' } }));
+    setItemProgress((prev) => ({ ...prev, [item.id]: { ratio: 0, label: '準備中…' } }));
     try {
       await runInstallerForItem(item, dispatch, (progress) => {
         if (progress) {
-          setItemProgress(prev => ({
+          setItemProgress((prev) => ({
             ...prev,
-            [item.id]: { ratio: progress.ratio, label: progress.label || '処理中…' }
+            [item.id]: { ratio: progress.ratio, label: progress.label || '処理中…' },
           }));
         }
       });
@@ -105,7 +107,7 @@ export default function Updates() {
       const msg = err?.message || String(err) || '不明なエラー';
       setError(`更新に失敗しました\n\n${msg}`);
     } finally {
-      setItemProgress(prev => {
+      setItemProgress((prev) => {
         const next = { ...prev };
         delete next[item.id];
         return next;
@@ -185,19 +187,28 @@ export default function Updates() {
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {updatableItems.map((item) => (
-                    <div key={item.id} className="px-4 py-4 grid grid-cols-[minmax(0,2.5fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_7.5rem] gap-2 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div
+                      key={item.id}
+                      className="px-4 py-4 grid grid-cols-[minmax(0,2.5fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_7.5rem] gap-2 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
                       <div className="min-w-0">
-                        <div className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">{item.name}</div>
+                        <div className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
+                          {item.name}
+                        </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{item.id}</div>
                       </div>
                       <div className="text-sm text-slate-600 dark:text-slate-300 truncate">{item.author || '?'}</div>
                       <div className="text-sm text-slate-600 dark:text-slate-300 truncate">{item.type || '?'}</div>
                       <div className="text-sm text-slate-600 dark:text-slate-300">{item.installedVersion || '?'}</div>
-                      <div className="text-sm font-semibold text-green-600 dark:text-green-400">{latestVersionOf(item) || ''}</div>
+                      <div className="text-sm font-semibold text-green-600 dark:text-green-400">
+                        {latestVersionOf(item) || ''}
+                      </div>
                       <div className="text-right">
                         {itemProgress[item.id] ? (
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{itemProgress[item.id].label}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {itemProgress[item.id].label}
+                            </span>
                             <ProgressCircle value={itemProgress[item.id].ratio} size={24} strokeWidth={3} />
                           </div>
                         ) : (

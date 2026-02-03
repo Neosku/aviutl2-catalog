@@ -18,7 +18,9 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">アップデート</span>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="update-title">新しいバージョンが利用可能です</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="update-title">
+              新しいバージョンが利用可能です
+            </h3>
             {publishedOn && (
               <p className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <Calendar size={14} />
@@ -37,13 +39,18 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
             </div>
           )}
           {markdownHtml ? (
-            <div className="prose prose-slate max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: markdownHtml }} />
+            <div
+              className="prose prose-slate max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: markdownHtml }}
+            />
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-400">更新内容の詳細は取得できませんでした。</p>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button className="btn" onClick={onCancel} disabled={busy} type="button">後で</button>
+          <button className="btn" onClick={onCancel} disabled={busy} type="button">
+            後で
+          </button>
           <button className="btn btn--primary" onClick={onConfirm} disabled={busy} type="button">
             {busy ? '更新中…' : '今すぐ更新'}
           </button>
