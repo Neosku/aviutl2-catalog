@@ -1474,11 +1474,10 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     } catch {}
     await logInfo(`[installer ${item.id}] completed version=${version || ''}`);
     emitProgress(totalSteps, null, null, 'done');
-    // 後始末: 一時作業フォルダを削除（成功時のみ）
+    // 後始末: パッケージ用の一時作業フォルダ削除（成功時のみ）
     if (!import.meta.env?.DEV) {
       try {
-        const fs = await import('@tauri-apps/plugin-fs');
-        await fs.remove('installer-tmp', { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+        await deletePath(ctx.tmpDir);
       } catch {}
     }
   } catch (e) {
