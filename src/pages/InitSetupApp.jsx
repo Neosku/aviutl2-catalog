@@ -22,7 +22,7 @@ if (document.readyState === 'loading') {
 }
 
 const CORE_PACKAGE_ID = 'Kenkun.AviUtlExEdit2';
-const REQUIRED_PLUGIN_IDS = ['hebiiro.al2_jd', 'rigaya.x264guiEx', 'Mr-Ojii.L-SMASH-Works'];
+const REQUIRED_PLUGIN_IDS = ['rigaya.x264guiEx', 'Mr-Ojii.L-SMASH-Works'];
 
 // 共通の安全ログ関数
 async function safeLog(prefix, error) {
