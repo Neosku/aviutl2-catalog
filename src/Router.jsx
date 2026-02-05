@@ -8,7 +8,7 @@ import Home from './pages/Home.jsx';
 const Package = lazy(() => import('./pages/Package.jsx'));
 const Updates = lazy(() => import('./pages/Updates.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
-const Register = lazy(() => import('./pages/Register.jsx'));
+const Register = lazy(() => import('./features/register/ui/RegisterPage.tsx'));
 const Feedback = lazy(() => import('./pages/Feedback.jsx'));
 const NiconiCommons = lazy(() => import('./pages/NiconiCommons.jsx'));
 
