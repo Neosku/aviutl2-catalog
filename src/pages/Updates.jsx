@@ -20,6 +20,7 @@ export default function Updates() {
   const bulkPercent = bulkProgress?.percent ?? Math.round(bulkRatio * 100);
   const bulkCurrent = bulkProgress?.current ?? 0;
   const bulkTotal = bulkProgress?.total ?? (bulkUpdating ? updatableItems.length || 0 : 0);
+  const bulkProgressStyle = useMemo(() => ({ width: `${bulkPercent}%` }), [bulkPercent]);
 
   async function handleBulkUpdate() {
     if (bulkUpdating || !updatableItems.length) return;
@@ -162,7 +163,7 @@ export default function Updates() {
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
                 className={`h-full bg-blue-600 dark:bg-blue-500 ${bulkPercent > 0 ? 'transition-all duration-300 ease-out' : ''}`}
-                style={{ width: `${bulkPercent}%` }}
+                style={bulkProgressStyle}
               />
             </div>
           </div>

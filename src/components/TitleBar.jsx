@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { logError } from '../utils/index.js';
 
+const dragRegionStyle = { WebkitAppRegion: 'drag' };
+const noDragStyle = { WebkitAppRegion: 'no-drag' };
+
 export default function TitleBar() {
   const [max, setMax] = useState(false);
 
@@ -138,26 +141,21 @@ export default function TitleBar() {
     <div
       className="flex h-8 w-full flex-none items-stretch justify-between bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 pl-2 pr-0 select-none"
       data-tauri-drag-region
-      style={{ WebkitAppRegion: 'drag' }}
+      style={dragRegionStyle}
       onPointerDown={startDragIfAllowed}
       onDoubleClick={handleDoubleClick}
     >
       <div className="text-xs font-semibold tracking-wide flex items-center" data-tauri-drag-region>
         AviUtl2 Catalog
       </div>
-      <div
-        className="flex items-stretch"
-        data-tauri-drag-region="false"
-        data-no-drag="true"
-        style={{ WebkitAppRegion: 'no-drag' }}
-      >
+      <div className="flex items-stretch" data-tauri-drag-region="false" data-no-drag="true" style={noDragStyle}>
         <button
           className={`${baseBtn} ${controlBtn}`}
           onClick={minimize}
           title="最小化"
           aria-label="最小化"
           type="button"
-          style={{ WebkitAppRegion: 'no-drag' }}
+          style={noDragStyle}
         >
           <Minus size={14} />
         </button>
@@ -168,7 +166,7 @@ export default function TitleBar() {
           title={max ? '元に戻す' : '最大化'}
           aria-label="最大化"
           type="button"
-          style={{ WebkitAppRegion: 'no-drag' }}
+          style={noDragStyle}
         >
           {max ? <Copy size={13} /> : <Square size={13} />}
         </button>
@@ -178,7 +176,7 @@ export default function TitleBar() {
           title="閉じる"
           aria-label="閉じる"
           type="button"
-          style={{ WebkitAppRegion: 'no-drag' }}
+          style={noDragStyle}
         >
           <X size={14} />
         </button>

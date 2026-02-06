@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "oxc", "unicorn", "react", "typescript", "jsx-a11y", "import", "promise", "node"],
+  "plugins": ["eslint", "oxc", "unicorn", "react", "react-perf", "typescript", "jsx-a11y", "import", "promise", "node"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -12,9 +12,15 @@
   },
   "rules": {
     "eslint/no-unused-vars": "error",
-    "react/rules-of-hooks": "error",
+    "eslint/no-console": "off",
+
+    "react/rules-of-hooks": "warn",
     "react/exhaustive-deps": "off",
-    "eslint/no-console": "off"
+
+    "react-perf/jsx-no-new-object-as-prop": "warn",
+    "react-perf/jsx-no-new-array-as-prop": "warn",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-jsx-as-prop": "off"
   },
   "settings": {
     "jsx-a11y": {

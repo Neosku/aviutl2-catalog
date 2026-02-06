@@ -13,6 +13,11 @@ import { useCatalogDispatch } from '../utils/catalogStore.jsx';
 import ErrorDialog from './ErrorDialog.jsx';
 import ProgressCircle from './ProgressCircle.jsx';
 
+const placeholderPatternStyle = {
+  backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
+  backgroundSize: '16px 16px',
+};
+
 function pickThumbnail(item) {
   const groups = Array.isArray(item?.images) ? item.images : [];
   for (const group of groups) {
@@ -253,10 +258,7 @@ export default function PackageCard({ item, listSearch = '' }) {
                 {/* Decorative Background Pattern */}
                 <div
                   className="absolute inset-0 opacity-[0.05] dark:opacity-[0.1]"
-                  style={{
-                    backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
-                    backgroundSize: '16px 16px',
-                  }}
+                  style={placeholderPatternStyle}
                 ></div>
 
                 {/* Stylized Icon Tile */}

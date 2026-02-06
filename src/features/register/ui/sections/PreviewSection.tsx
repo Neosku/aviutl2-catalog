@@ -1,7 +1,7 @@
 /**
  * プレビューセクションのコンポーネント
  */
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import PackageCard from '../../../../components/PackageCard.jsx';
 import type { RegisterPreviewSectionProps } from '../types';
@@ -12,6 +12,48 @@ export default function RegisterPreviewSection({
   previewDarkMode,
   onTogglePreviewDarkMode,
 }: RegisterPreviewSectionProps) {
+  const fallbackUpdatedAtRef = useRef(new Date().toISOString());
+  const thumbnailPreview = packageForm.images.thumbnail?.previewUrl || '';
+  const infoImages = useMemo(
+    () => packageForm.images.info.map((entry) => entry.previewUrl).filter(Boolean),
+    [packageForm.images.info],
+  );
+  const updatedAt = useMemo(() => {
+    if (packageForm.versions.length > 0) {
+      return packageForm.versions[packageForm.versions.length - 1].release_date;
+    }
+    return fallbackUpdatedAtRef.current;
+  }, [packageForm.versions]);
+  const previewItem = useMemo(
+    () => ({
+      id: packageForm.id || 'preview-id',
+      name: packageForm.name || 'パッケージ名',
+      author: packageForm.author || '作者名',
+      type: packageForm.type || '種類',
+      tags: currentTags,
+      summary: packageForm.summary || '概要がここに表示されます',
+      images: [
+        {
+          thumbnail: thumbnailPreview,
+          infoImg: infoImages,
+        },
+      ],
+      updatedAt,
+      installed: false,
+      isLatest: true,
+    }),
+    [
+      packageForm.id,
+      packageForm.name,
+      packageForm.author,
+      packageForm.type,
+      packageForm.summary,
+      currentTags,
+      thumbnailPreview,
+      infoImages,
+      updatedAt,
+    ],
+  );
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between gap-2">
@@ -32,28 +74,7 @@ export default function RegisterPreviewSection({
       >
         <div className="flex justify-center pointer-events-none opacity-90 grayscale-[10%]">
           <div className="w-[500px]">
-            <PackageCard
-              item={{
-                id: packageForm.id || 'preview-id',
-                name: packageForm.name || 'パッケージ名',
-                author: packageForm.author || '作者名',
-                type: packageForm.type || '種類',
-                tags: currentTags,
-                summary: packageForm.summary || '概要がここに表示されます',
-                images: [
-                  {
-                    thumbnail: packageForm.images.thumbnail?.previewUrl || '',
-                    infoImg: packageForm.images.info.map((i) => i.previewUrl).filter(Boolean),
-                  },
-                ],
-                updatedAt:
-                  packageForm.versions.length > 0
-                    ? packageForm.versions[packageForm.versions.length - 1].release_date
-                    : new Date().toISOString(),
-                installed: false,
-                isLatest: true,
-              }}
-            />
+            <PackageCard item={previewItem} />
           </div>
         </div>
       </div>

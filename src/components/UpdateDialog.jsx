@@ -4,6 +4,7 @@ import { renderMarkdown } from '../utils/markdown.js';
 
 export default function UpdateDialog({ open, version, notes, busy, error, onConfirm, onCancel, publishedOn }) {
   const markdownHtml = useMemo(() => (notes ? renderMarkdown(notes) : ''), [notes]);
+  const markdownMarkup = useMemo(() => ({ __html: markdownHtml }), [markdownHtml]);
   if (!open) return null;
 
   const handleBackdrop = () => {
@@ -39,10 +40,7 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
             </div>
           )}
           {markdownHtml ? (
-            <div
-              className="prose prose-slate max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: markdownHtml }}
-            />
+            <div className="prose prose-slate max-w-none dark:prose-invert" dangerouslySetInnerHTML={markdownMarkup} />
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-400">更新内容の詳細は取得できませんでした。</p>
           )}

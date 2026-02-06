@@ -96,20 +96,21 @@ export default function Package() {
   const { items, loading } = useCatalog();
   const dispatch = useCatalogDispatch();
   const fromSearch = typeof location.state?.fromSearch === 'string' ? location.state.fromSearch : '';
-  const listLink = fromSearch ? { pathname: '/', search: fromSearch } : '/';
+  const listLink = useMemo(() => (fromSearch ? { pathname: '/', search: fromSearch } : '/'), [fromSearch]);
 
   // URLパラメータのIDに基づいてアイテムを検索
   const item = useMemo(() => items.find((i) => i.id === id), [items, id]);
-  const imageGroups = Array.isArray(item?.images) ? item.images : [];
-  const heroImage = (() => {
+  const imageGroups = useMemo(() => (Array.isArray(item?.images) ? item.images : []), [item]);
+  const heroImage = useMemo(() => {
     for (const group of imageGroups) {
       if (!Array.isArray(group?.infoImg)) continue;
       const candidate = group.infoImg.find((src) => typeof src === 'string' && src.trim());
       if (candidate) return candidate.trim();
     }
     return '';
-  })();
-  const carouselImages = (() => {
+  }, [imageGroups]);
+  const heroImageStyle = useMemo(() => ({ backgroundImage: `url(${heroImage})` }), [heroImage]);
+  const carouselImages = useMemo(() => {
     const result = [];
     imageGroups.forEach((group) => {
       if (!Array.isArray(group?.infoImg)) return;
@@ -120,7 +121,7 @@ export default function Package() {
       });
     });
     return result;
-  })();
+  }, [imageGroups]);
   const descriptionSource = item?.description || '';
 
   // UI状態管理（エラー/処理中フラグ）
@@ -133,6 +134,7 @@ export default function Package() {
   const [descriptionHtml, setDescriptionHtml] = useState(() =>
     isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource),
   );
+  const descriptionMarkup = useMemo(() => ({ __html: descriptionHtml }), [descriptionHtml]);
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
   const [openLicense, setOpenLicense] = useState(null);
@@ -328,11 +330,7 @@ export default function Package() {
         className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${heroImage ? 'min-h-[160px]' : ''}`}
       >
         {heroImage && (
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-25"
-            style={{ backgroundImage: `url(${heroImage})` }}
-            aria-hidden
-          />
+          <div className="absolute inset-0 bg-cover bg-center opacity-25" style={heroImageStyle} aria-hidden />
         )}
         <div className="relative p-6 space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -383,7 +381,7 @@ export default function Package() {
               ) : (
                 <div
                   className="prose prose-slate max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                  dangerouslySetInnerHTML={descriptionMarkup}
                   onClick={async (e) => {
                     const link = e.target.closest('a');
                     if (link && link.href) {

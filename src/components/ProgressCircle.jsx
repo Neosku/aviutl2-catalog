@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 // 円形の進捗リングを表示するシンプルなコンポーネント
 export default function ProgressCircle({
@@ -18,6 +18,7 @@ export default function ProgressCircle({
   const label = ariaLabel || `進行度 ${percent}%`;
   const isComplete = showComplete && clamped >= 1;
   const iconSize = Math.max(12, Math.round(size * 0.5));
+  const sizeStyle = useMemo(() => ({ width: `${size}px`, height: `${size}px` }), [size]);
 
   return (
     <span
@@ -27,7 +28,7 @@ export default function ProgressCircle({
       aria-valuemax={100}
       aria-valuenow={percent}
       aria-label={label}
-      style={{ width: `${size}px`, height: `${size}px` }}
+      style={sizeStyle}
     >
       <svg
         className="-rotate-90"

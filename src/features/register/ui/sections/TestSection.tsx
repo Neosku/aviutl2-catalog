@@ -1,7 +1,7 @@
 /**
  * インストーラーテストセクションのコンポーネント
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, Download, Trash2 } from 'lucide-react';
 import ProgressCircle from '../../../../components/ProgressCircle.jsx';
 import type { RegisterTestSectionProps } from '../types';
@@ -27,6 +27,9 @@ export default function RegisterTestSection({
   onInstallerTest,
   onUninstallerTest,
 }: RegisterTestSectionProps) {
+  const installerProgressStyle = useMemo(() => ({ width: `${installerTestPercent}%` }), [installerTestPercent]);
+  const uninstallerProgressStyle = useMemo(() => ({ width: `${uninstallerTestPercent}%` }), [uninstallerTestPercent]);
+
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -97,7 +100,7 @@ export default function RegisterTestSection({
                     ? 'bg-emerald-500'
                     : 'bg-blue-500'
               }`}
-              style={{ width: `${installerTestPercent}%` }}
+              style={installerProgressStyle}
             />
           </div>
           {installerTestPhase === 'done' && (
@@ -148,7 +151,7 @@ export default function RegisterTestSection({
                     ? 'bg-emerald-500'
                     : 'bg-blue-500'
               }`}
-              style={{ width: `${uninstallerTestPercent}%` }}
+              style={uninstallerProgressStyle}
             />
           </div>
           {uninstallerTestValidation && (

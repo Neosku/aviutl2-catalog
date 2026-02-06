@@ -1,7 +1,7 @@
 /**
  * 詳細説明エリアの表示コンポーネント
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
 import type { RegisterDescriptionSectionProps } from '../types';
@@ -18,6 +18,8 @@ export default function RegisterDescriptionSection({
   onUpdatePackageField,
   onSetDescriptionTab,
 }: RegisterDescriptionSectionProps) {
+  const previewMarkup = useMemo(() => ({ __html: descriptionPreviewHtml }), [descriptionPreviewHtml]);
+
   return (
     <section className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -134,7 +136,7 @@ export default function RegisterDescriptionSection({
           ) : (
             <div
               className="prose prose-slate max-h-[400px] w-full max-w-none overflow-y-auto p-6 dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }}
+              dangerouslySetInnerHTML={previewMarkup}
               onClick={async (e) => {
                 // プレビュー内リンクはアプリ外ブラウザで開き、SPA 遷移を汚染しない。
                 const target = e.target as HTMLElement | null;

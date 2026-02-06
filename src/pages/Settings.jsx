@@ -14,6 +14,8 @@ import {
   resetPackageStateLocalState,
 } from '../utils/index.js';
 
+const iconBlockStyle = { display: 'block' };
+
 function applyTheme(theme) {
   const root = document?.documentElement;
   if (!root) return;
@@ -402,9 +404,9 @@ export default function Settings() {
                   className={`flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.theme === 'lightmode' ? 'translate-x-1' : 'translate-x-8'}`}
                 >
                   {form.theme === 'lightmode' ? (
-                    <Sun size={12} className="text-slate-400" style={{ display: 'block' }} />
+                    <Sun size={12} className="text-slate-400" style={iconBlockStyle} />
                   ) : (
-                    <Moon size={12} className="text-blue-600" style={{ display: 'block' }} />
+                    <Moon size={12} className="text-blue-600" style={iconBlockStyle} />
                   )}
                 </span>
               </button>

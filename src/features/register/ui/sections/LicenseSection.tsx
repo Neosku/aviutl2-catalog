@@ -7,6 +7,9 @@ import { LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../../../../utils/licens
 import { createEmptyLicense } from '../../model/form';
 import type { PackageLicenseSectionProps } from '../types';
 import ActionDropdown from '../components/ActionDropdown';
+
+const LICENSE_TYPE_SELECT_OPTIONS = [{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS];
+
 const PackageLicenseSection = memo(
   function PackageLicenseSection({
     license,
@@ -60,7 +63,7 @@ const PackageLicenseSection = memo(
                 <ActionDropdown
                   value={activeLicense.type}
                   onChange={(val) => onUpdateLicenseField(activeLicense.key, 'type', val)}
-                  options={[{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS]}
+                  options={LICENSE_TYPE_SELECT_OPTIONS}
                   ariaLabel="ライセンスの種類を選択"
                   buttonId={`license-type-${activeLicense.key}`}
                 />

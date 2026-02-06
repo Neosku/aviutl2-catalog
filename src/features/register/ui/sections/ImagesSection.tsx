@@ -1,7 +1,7 @@
 /**
  * サムネイル／説明画像のコンポーネント
  */
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { Download, Image, ImagePlus, Images, Trash2 } from 'lucide-react';
@@ -9,6 +9,50 @@ import { getFileExtension } from '../../model/form';
 import { basename, isInsideRect } from '../../model/helpers';
 import type { PackageImagesSectionProps } from '../types';
 import DeleteButton from '../components/DeleteButton';
+
+type InfoImageCardProps = {
+  entryKey: string;
+  filename: string;
+  preview: string;
+  onRemove: (key: string) => void;
+};
+
+const InfoImageCard = memo(function InfoImageCard({ entryKey, filename, preview, onRemove }: InfoImageCardProps) {
+  const previewStyle = useMemo(() => (preview ? { backgroundImage: `url(${preview})` } : undefined), [preview]);
+  const handleRemove = useCallback(() => {
+    onRemove(entryKey);
+  }, [onRemove, entryKey]);
+
+  return (
+    <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+      <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-900">
+        <div
+          className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${preview ? '' : 'text-slate-400'}`}
+          style={previewStyle}
+        >
+          {!preview && <span>No Preview</span>}
+        </div>
+        <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+        <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm backdrop-blur-sm transition hover:bg-red-50 hover:text-red-700 dark:bg-slate-900/90 dark:text-red-400 dark:hover:bg-red-900/40"
+            onClick={handleRemove}
+            aria-label="削除"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+      <div className="border-t border-slate-100 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
+        <p className="truncate text-[10px] font-medium text-slate-700 dark:text-slate-300" title={filename}>
+          {filename}
+        </p>
+      </div>
+    </div>
+  );
+});
+
 const PackageImagesSection = memo(
   function PackageImagesSection({
     images,
@@ -32,6 +76,12 @@ const PackageImagesSection = memo(
       const setupDragDrop = async () => {
         try {
           const appWindow = getCurrentWindow();
+          let scaleFactor = 1;
+          try {
+            scaleFactor = await appWindow.scaleFactor();
+          } catch {
+            scaleFactor = 1;
+          }
           const processDroppedFiles = async (paths: string[]) => {
             const files: File[] = [];
             for (const p of paths) {
@@ -56,8 +106,10 @@ const PackageImagesSection = memo(
             const thumbRect = thumbnailRef.current?.getBoundingClientRect() ?? null;
             const infoRect = infoRef.current?.getBoundingClientRect() ?? null;
 
-            const overThumbnail = isInsideRect(thumbRect, position.x, position.y);
-            const overInfo = isInsideRect(infoRect, position.x, position.y);
+            const clientX = position.x / scaleFactor;
+            const clientY = position.y / scaleFactor;
+            const overThumbnail = isInsideRect(thumbRect, clientX, clientY);
+            const overInfo = isInsideRect(infoRect, clientX, clientY);
 
             if (type === 'drop') {
               const { paths } = event.payload;
@@ -107,6 +159,10 @@ const PackageImagesSection = memo(
     }, [onThumbnailChange, onAddInfoImages]);
 
     const thumbnailPreview = images.thumbnail?.previewUrl || images.thumbnail?.existingPath || '';
+    const thumbnailPreviewStyle = useMemo(
+      () => (thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined),
+      [thumbnailPreview],
+    );
     return (
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -158,7 +214,7 @@ const PackageImagesSection = memo(
                 <div className="relative aspect-square w-full bg-slate-100 dark:bg-slate-900">
                   <div
                     className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${thumbnailPreview ? '' : 'text-slate-400'}`}
-                    style={thumbnailPreview ? { backgroundImage: `url(${thumbnailPreview})` } : undefined}
+                    style={thumbnailPreviewStyle}
                   >
                     {!thumbnailPreview && <span>プレビューなし</span>}
                   </div>
@@ -228,38 +284,13 @@ const PackageImagesSection = memo(
                   const preview = entry.previewUrl || entry.existingPath || '';
                   const filename = entry.file?.name || entry.existingPath || `./image/${packageId}_${idx + 1}.(拡張子)`;
                   return (
-                    <div
+                    <InfoImageCard
                       key={entry.key}
-                      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50"
-                    >
-                      <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-900">
-                        <div
-                          className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${preview ? '' : 'text-slate-400'}`}
-                          style={preview ? { backgroundImage: `url(${preview})` } : undefined}
-                        >
-                          {!preview && <span>No Preview</span>}
-                        </div>
-                        <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
-                        <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button
-                            type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm backdrop-blur-sm transition hover:bg-red-50 hover:text-red-700 dark:bg-slate-900/90 dark:text-red-400 dark:hover:bg-red-900/40"
-                            onClick={() => onRemoveInfoImage(entry.key)}
-                            aria-label="削除"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="border-t border-slate-100 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
-                        <p
-                          className="truncate text-[10px] font-medium text-slate-700 dark:text-slate-300"
-                          title={filename}
-                        >
-                          {filename}
-                        </p>
-                      </div>
-                    </div>
+                      entryKey={entry.key}
+                      filename={filename}
+                      preview={preview}
+                      onRemove={onRemoveInfoImage}
+                    />
                   );
                 })}
               </div>

@@ -76,19 +76,22 @@ const coolTooltip = () => {
 };
 
 function PortalTooltip({ text, rect }) {
+  const top = rect ? rect.top + rect.height / 2 : 0;
+  const left = rect ? rect.right + 12 : 0;
+  const tooltipStyle = useMemo(
+    () => ({
+      top: `${top}px`,
+      left: `${left}px`,
+      transform: 'translateY(-50%)',
+    }),
+    [top, left],
+  );
   if (!rect || !text) return null;
-
-  const top = rect.top + rect.height / 2;
-  const left = rect.right + 12;
 
   return createPortal(
     <div
       className="fixed z-[9999] px-2.5 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs rounded-md shadow-xl font-sans border border-slate-700 dark:border-slate-600 pointer-events-none whitespace-nowrap"
-      style={{
-        top: `${top}px`,
-        left: `${left}px`,
-        transform: 'translateY(-50%)',
-      }}
+      style={tooltipStyle}
     >
       {text}
     </div>,
@@ -183,9 +186,10 @@ function SidebarButton({
   );
 }
 
-const AviUtlIcon = ({ size, className }) => (
-  <img src={aviutl2Icon} alt="AviUtl2" style={{ width: size, height: size }} className={className} />
-);
+const AviUtlIcon = ({ size, className }) => {
+  const iconStyle = useMemo(() => ({ width: size, height: size }), [size]);
+  return <img src={aviutl2Icon} alt="AviUtl2" style={iconStyle} className={className} />;
+};
 
 function SidebarSectionLabel({ label, isCollapsed, hideDivider = false, className = '' }) {
   return (
@@ -449,6 +453,42 @@ export default function AppShell() {
     </svg>
   );
 
+  const outletContext = useMemo(
+    () => ({
+      filteredPackages,
+      searchQuery,
+      selectedCategory,
+      clearFilters,
+      isFilterActive,
+      updateAvailableCount,
+      sortOrder,
+      setSortOrder,
+      // Exposed for Home.jsx filter bar
+      categories,
+      allTags,
+      selectedTags,
+      filterInstalled,
+      toggleTag,
+      updateUrl, // Expose updateUrl to allow direct parameter updates
+    }),
+    [
+      filteredPackages,
+      searchQuery,
+      selectedCategory,
+      clearFilters,
+      isFilterActive,
+      updateAvailableCount,
+      sortOrder,
+      setSortOrder,
+      categories,
+      allTags,
+      selectedTags,
+      filterInstalled,
+      toggleTag,
+      updateUrl,
+    ],
+  );
+
   return (
     <div className="flex h-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 overflow-hidden">
       <aside
@@ -599,25 +639,7 @@ export default function AppShell() {
           ref={scrollContainerRef}
           className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}
         >
-          <Outlet
-            context={{
-              filteredPackages,
-              searchQuery,
-              selectedCategory,
-              clearFilters,
-              isFilterActive,
-              updateAvailableCount,
-              sortOrder,
-              setSortOrder,
-              // Exposed for Home.jsx filter bar
-              categories,
-              allTags,
-              selectedTags,
-              filterInstalled,
-              toggleTag,
-              updateUrl, // Expose updateUrl to allow direct parameter updates
-            }}
-          />
+          <Outlet context={outletContext} />
         </div>
       </main>
       <ErrorDialog open={!!error} message={error} onClose={() => setError('')} />

@@ -1,7 +1,7 @@
 /**
  * パッケージ登録画面のメインコンポーネント
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSettings } from '../../../utils/index.js';
 import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm } from '../model/form';
 import type { RegisterPackageForm } from '../model/types';
@@ -145,6 +145,222 @@ export default function Register() {
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
     : successDialog.message || '送信が完了しました。';
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
+  const sidebarProps = useMemo(
+    () => ({
+      packageSearch: catalog.packageSearch,
+      catalogLoading: catalog.catalogLoading,
+      catalogLoaded: catalog.catalogLoaded,
+      filteredPackages: catalog.filteredPackages,
+      selectedPackageId: catalog.selectedPackageId,
+      onPackageSearchChange: catalog.handlePackageSearchChange,
+      onSelectPackage: catalog.handleSelectPackage,
+      onStartNewPackage: catalog.handleStartNewPackage,
+    }),
+    [
+      catalog.packageSearch,
+      catalog.catalogLoading,
+      catalog.catalogLoaded,
+      catalog.filteredPackages,
+      catalog.selectedPackageId,
+      catalog.handlePackageSearchChange,
+      catalog.handleSelectPackage,
+      catalog.handleStartNewPackage,
+    ],
+  );
+  const metaProps = useMemo(
+    () => ({
+      packageForm,
+      initialTags: catalog.initialTags,
+      tagCandidates: catalog.tagCandidates,
+      onUpdatePackageField: formHandlers.updatePackageField,
+      onTagsChange: catalog.handleTagsChange,
+    }),
+    [
+      packageForm,
+      catalog.initialTags,
+      catalog.tagCandidates,
+      formHandlers.updatePackageField,
+      catalog.handleTagsChange,
+    ],
+  );
+  const descriptionProps = useMemo(
+    () => ({
+      packageForm,
+      descriptionTab,
+      descriptionLoading: description.descriptionLoading,
+      descriptionPreviewHtml: description.descriptionPreviewHtml,
+      isExternalDescription: description.isExternalDescription,
+      hasExternalDescriptionUrl: description.hasExternalDescriptionUrl,
+      isExternalDescriptionLoaded: description.isExternalDescriptionLoaded,
+      externalDescriptionStatus: description.externalDescriptionStatus,
+      onUpdatePackageField: formHandlers.updatePackageField,
+      onSetDescriptionTab: setDescriptionTab,
+    }),
+    [
+      packageForm,
+      descriptionTab,
+      description.descriptionLoading,
+      description.descriptionPreviewHtml,
+      description.isExternalDescription,
+      description.hasExternalDescriptionUrl,
+      description.isExternalDescriptionLoaded,
+      description.externalDescriptionStatus,
+      formHandlers.updatePackageField,
+      setDescriptionTab,
+    ],
+  );
+  const licenseProps = useMemo(
+    () => ({
+      license: packageForm.licenses[0],
+      onUpdateLicenseField: formHandlers.updateLicenseField,
+      onToggleTemplate: formHandlers.toggleLicenseTemplate,
+      onUpdateCopyright: formHandlers.updateCopyright,
+    }),
+    [
+      packageForm.licenses,
+      formHandlers.updateLicenseField,
+      formHandlers.toggleLicenseTemplate,
+      formHandlers.updateCopyright,
+    ],
+  );
+  const imagesProps = useMemo(
+    () => ({
+      images: packageForm.images,
+      packageId: packageForm.id,
+      onThumbnailChange: versionImageHandlers.handleThumbnailChange,
+      onRemoveThumbnail: versionImageHandlers.handleRemoveThumbnail,
+      onAddInfoImages: versionImageHandlers.handleAddInfoImages,
+      onRemoveInfoImage: versionImageHandlers.handleRemoveInfoImage,
+    }),
+    [
+      packageForm.images,
+      packageForm.id,
+      versionImageHandlers.handleThumbnailChange,
+      versionImageHandlers.handleRemoveThumbnail,
+      versionImageHandlers.handleAddInfoImages,
+      versionImageHandlers.handleRemoveInfoImage,
+    ],
+  );
+  const installerProps = useMemo(
+    () => ({
+      installer: packageForm.installer,
+      installListRef,
+      uninstallListRef,
+      addInstallStep: formHandlers.addInstallStep,
+      addUninstallStep: formHandlers.addUninstallStep,
+      removeInstallStep: formHandlers.removeInstallStep,
+      removeUninstallStep: formHandlers.removeUninstallStep,
+      startHandleDrag: dragHandlers.startHandleDrag,
+      updateInstallStep: formHandlers.updateInstallStep,
+      updateInstallerField: formHandlers.updateInstallerField,
+      updateUninstallStep: formHandlers.updateUninstallStep,
+    }),
+    [
+      packageForm.installer,
+      installListRef,
+      uninstallListRef,
+      formHandlers.addInstallStep,
+      formHandlers.addUninstallStep,
+      formHandlers.removeInstallStep,
+      formHandlers.removeUninstallStep,
+      dragHandlers.startHandleDrag,
+      formHandlers.updateInstallStep,
+      formHandlers.updateInstallerField,
+      formHandlers.updateUninstallStep,
+    ],
+  );
+  const versionsProps = useMemo(
+    () => ({
+      versions: packageForm.versions,
+      expandedVersionKeys,
+      toggleVersionOpen: versionImageHandlers.toggleVersionOpen,
+      removeVersion: versionImageHandlers.removeVersion,
+      updateVersionField: versionImageHandlers.updateVersionField,
+      addVersion: versionImageHandlers.addVersion,
+      addVersionFile: versionImageHandlers.addVersionFile,
+      removeVersionFile: versionImageHandlers.removeVersionFile,
+      updateVersionFile: versionImageHandlers.updateVersionFile,
+      chooseFileForHash: versionImageHandlers.chooseFileForHash,
+      openDatePicker: versionImageHandlers.openDatePicker,
+      versionDateRefs,
+    }),
+    [
+      packageForm.versions,
+      expandedVersionKeys,
+      versionImageHandlers.toggleVersionOpen,
+      versionImageHandlers.removeVersion,
+      versionImageHandlers.updateVersionField,
+      versionImageHandlers.addVersion,
+      versionImageHandlers.addVersionFile,
+      versionImageHandlers.removeVersionFile,
+      versionImageHandlers.updateVersionFile,
+      versionImageHandlers.chooseFileForHash,
+      versionImageHandlers.openDatePicker,
+      versionDateRefs,
+    ],
+  );
+  const previewProps = useMemo(
+    () => ({
+      packageForm,
+      currentTags: catalog.currentTags,
+      previewDarkMode,
+      onTogglePreviewDarkMode: togglePreviewDarkMode,
+    }),
+    [packageForm, catalog.currentTags, previewDarkMode, togglePreviewDarkMode],
+  );
+  const testsProps = useMemo(
+    () => ({
+      installerTestRunning: testState.installerTestRunning,
+      installerTestValidation: testState.installerTestValidation,
+      installerTestRatio: testState.installerTestRatio,
+      installerTestPhase: testState.installerTestPhase,
+      installerTestTone: testState.installerTestTone,
+      installerTestLabel: testState.installerTestLabel,
+      installerTestPercent: testState.installerTestPercent,
+      installerTestDetectedVersion: testState.installerTestDetectedVersion,
+      installerTestError: testState.installerTestError,
+      uninstallerTestRunning: testState.uninstallerTestRunning,
+      uninstallerTestValidation: testState.uninstallerTestValidation,
+      uninstallerTestRatio: testState.uninstallerTestRatio,
+      uninstallerTestPhase: testState.uninstallerTestPhase,
+      uninstallerTestTone: testState.uninstallerTestTone,
+      uninstallerTestLabel: testState.uninstallerTestLabel,
+      uninstallerTestPercent: testState.uninstallerTestPercent,
+      uninstallerTestError: testState.uninstallerTestError,
+      onInstallerTest: testState.handleInstallerTest,
+      onUninstallerTest: testState.handleUninstallerTest,
+    }),
+    [
+      testState.installerTestRunning,
+      testState.installerTestValidation,
+      testState.installerTestRatio,
+      testState.installerTestPhase,
+      testState.installerTestTone,
+      testState.installerTestLabel,
+      testState.installerTestPercent,
+      testState.installerTestDetectedVersion,
+      testState.installerTestError,
+      testState.uninstallerTestRunning,
+      testState.uninstallerTestValidation,
+      testState.uninstallerTestRatio,
+      testState.uninstallerTestPhase,
+      testState.uninstallerTestTone,
+      testState.uninstallerTestLabel,
+      testState.uninstallerTestPercent,
+      testState.uninstallerTestError,
+      testState.handleInstallerTest,
+      testState.handleUninstallerTest,
+    ],
+  );
+  const submitBarProps = useMemo(
+    () => ({
+      packageGuideUrl,
+      packageSender,
+      submitting,
+      onPackageSenderChange: setPackageSender,
+    }),
+    [packageGuideUrl, packageSender, submitting, setPackageSender],
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-0 pb-0">
@@ -158,109 +374,16 @@ export default function Register() {
         title="パッケージ登録"
         error={error}
         onSubmit={submitHandlers.handleSubmit}
-        sidebar={{
-          packageSearch: catalog.packageSearch,
-          catalogLoading: catalog.catalogLoading,
-          catalogLoaded: catalog.catalogLoaded,
-          filteredPackages: catalog.filteredPackages,
-          selectedPackageId: catalog.selectedPackageId,
-          onPackageSearchChange: catalog.handlePackageSearchChange,
-          onSelectPackage: catalog.handleSelectPackage,
-          onStartNewPackage: catalog.handleStartNewPackage,
-        }}
-        meta={{
-          packageForm,
-          initialTags: catalog.initialTags,
-          tagCandidates: catalog.tagCandidates,
-          onUpdatePackageField: formHandlers.updatePackageField,
-          onTagsChange: catalog.handleTagsChange,
-        }}
-        description={{
-          packageForm,
-          descriptionTab,
-          descriptionLoading: description.descriptionLoading,
-          descriptionPreviewHtml: description.descriptionPreviewHtml,
-          isExternalDescription: description.isExternalDescription,
-          hasExternalDescriptionUrl: description.hasExternalDescriptionUrl,
-          isExternalDescriptionLoaded: description.isExternalDescriptionLoaded,
-          externalDescriptionStatus: description.externalDescriptionStatus,
-          onUpdatePackageField: formHandlers.updatePackageField,
-          onSetDescriptionTab: setDescriptionTab,
-        }}
-        license={{
-          license: packageForm.licenses[0],
-          onUpdateLicenseField: formHandlers.updateLicenseField,
-          onToggleTemplate: formHandlers.toggleLicenseTemplate,
-          onUpdateCopyright: formHandlers.updateCopyright,
-        }}
-        images={{
-          images: packageForm.images,
-          packageId: packageForm.id,
-          onThumbnailChange: versionImageHandlers.handleThumbnailChange,
-          onRemoveThumbnail: versionImageHandlers.handleRemoveThumbnail,
-          onAddInfoImages: versionImageHandlers.handleAddInfoImages,
-          onRemoveInfoImage: versionImageHandlers.handleRemoveInfoImage,
-        }}
-        installer={{
-          installer: packageForm.installer,
-          installListRef,
-          uninstallListRef,
-          addInstallStep: formHandlers.addInstallStep,
-          addUninstallStep: formHandlers.addUninstallStep,
-          removeInstallStep: formHandlers.removeInstallStep,
-          removeUninstallStep: formHandlers.removeUninstallStep,
-          startHandleDrag: dragHandlers.startHandleDrag,
-          updateInstallStep: formHandlers.updateInstallStep,
-          updateInstallerField: formHandlers.updateInstallerField,
-          updateUninstallStep: formHandlers.updateUninstallStep,
-        }}
-        versions={{
-          versions: packageForm.versions,
-          expandedVersionKeys,
-          toggleVersionOpen: versionImageHandlers.toggleVersionOpen,
-          removeVersion: versionImageHandlers.removeVersion,
-          updateVersionField: versionImageHandlers.updateVersionField,
-          addVersion: versionImageHandlers.addVersion,
-          addVersionFile: versionImageHandlers.addVersionFile,
-          removeVersionFile: versionImageHandlers.removeVersionFile,
-          updateVersionFile: versionImageHandlers.updateVersionFile,
-          chooseFileForHash: versionImageHandlers.chooseFileForHash,
-          openDatePicker: versionImageHandlers.openDatePicker,
-          versionDateRefs,
-        }}
-        preview={{
-          packageForm,
-          currentTags: catalog.currentTags,
-          previewDarkMode,
-          onTogglePreviewDarkMode: togglePreviewDarkMode,
-        }}
-        tests={{
-          installerTestRunning: testState.installerTestRunning,
-          installerTestValidation: testState.installerTestValidation,
-          installerTestRatio: testState.installerTestRatio,
-          installerTestPhase: testState.installerTestPhase,
-          installerTestTone: testState.installerTestTone,
-          installerTestLabel: testState.installerTestLabel,
-          installerTestPercent: testState.installerTestPercent,
-          installerTestDetectedVersion: testState.installerTestDetectedVersion,
-          installerTestError: testState.installerTestError,
-          uninstallerTestRunning: testState.uninstallerTestRunning,
-          uninstallerTestValidation: testState.uninstallerTestValidation,
-          uninstallerTestRatio: testState.uninstallerTestRatio,
-          uninstallerTestPhase: testState.uninstallerTestPhase,
-          uninstallerTestTone: testState.uninstallerTestTone,
-          uninstallerTestLabel: testState.uninstallerTestLabel,
-          uninstallerTestPercent: testState.uninstallerTestPercent,
-          uninstallerTestError: testState.uninstallerTestError,
-          onInstallerTest: testState.handleInstallerTest,
-          onUninstallerTest: testState.handleUninstallerTest,
-        }}
-        submitBar={{
-          packageGuideUrl,
-          packageSender,
-          submitting,
-          onPackageSenderChange: setPackageSender,
-        }}
+        sidebar={sidebarProps}
+        meta={metaProps}
+        description={descriptionProps}
+        license={licenseProps}
+        images={imagesProps}
+        installer={installerProps}
+        versions={versionsProps}
+        preview={previewProps}
+        tests={testsProps}
+        submitBar={submitBarProps}
       />
     </div>
   );

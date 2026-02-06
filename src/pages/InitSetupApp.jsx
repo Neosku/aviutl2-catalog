@@ -8,6 +8,8 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import AppIcon from '../../src-tauri/icons/icon.svg';
 import { AlertCircle, Check, CheckCircle2, Download, FolderOpen } from 'lucide-react';
 
+const pulseStyle = { animationDuration: '3s' };
+
 async function showMain() {
   const win = getCurrentWindow();
   await win.show();
@@ -75,6 +77,10 @@ function StepIndicator({ step, installed }) {
   );
 
   const currentIndex = steps.findIndex((s) => s.id === step);
+  const progressStyle = useMemo(
+    () => ({ width: `${(currentIndex / (steps.length - 1)) * 100}%` }),
+    [currentIndex, steps.length],
+  );
 
   return (
     <div className="w-full px-10 pt-8 pb-10 shrink-0 z-10 relative">
@@ -84,7 +90,7 @@ function StepIndicator({ step, installed }) {
           <div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 rounded-full" />
           <div
             className="absolute left-0 top-0 h-full bg-blue-600 transition-all duration-500 ease-out rounded-full"
-            style={{ width: `${(currentIndex / (steps.length - 1)) * 100}%` }}
+            style={progressStyle}
           />
         </div>
 
@@ -1044,7 +1050,7 @@ ${detail}`
                 <div className="relative mb-10">
                   <div
                     className="absolute inset-0 bg-emerald-500 rounded-full opacity-30 blur-2xl animate-pulse"
-                    style={{ animationDuration: '3s' }}
+                    style={pulseStyle}
                   />
                   <div className="relative w-24 h-24 rounded-full bg-white dark:bg-slate-900 border-4 border-emerald-500/20 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shadow-2xl backdrop-blur-md">
                     <Check size={48} strokeWidth={4} />
