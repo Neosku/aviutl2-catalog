@@ -185,8 +185,7 @@ export default function Register() {
   const sidebarProps = useMemo(
     () => ({
       packageSearch: catalog.packageSearch,
-      catalogLoading: catalog.catalogLoading,
-      catalogLoaded: catalog.catalogLoaded,
+      catalogLoadState: catalog.catalogLoadState,
       filteredPackages: catalog.filteredPackages,
       draftPackages: draftState.pendingDraftPackages,
       selectedPackageId: catalog.selectedPackageId,
@@ -198,8 +197,7 @@ export default function Register() {
     }),
     [
       catalog.packageSearch,
-      catalog.catalogLoading,
-      catalog.catalogLoaded,
+      catalog.catalogLoadState,
       catalog.filteredPackages,
       draftState.pendingDraftPackages,
       catalog.selectedPackageId,
