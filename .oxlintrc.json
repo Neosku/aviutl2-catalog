@@ -1,6 +1,17 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "oxc", "unicorn", "react", "react-perf", "typescript", "jsx-a11y", "import", "promise", "node"],
+  "plugins": [
+    "eslint",
+    "oxc",
+    "unicorn",
+    "react",
+    "react-perf",
+    "typescript",
+    "jsx-a11y",
+    "import",
+    "promise",
+    "node"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -16,6 +27,8 @@
 
     "react/rules-of-hooks": "warn",
     "react/exhaustive-deps": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-uses-react": "off",
 
     "react-perf/jsx-no-new-object-as-prop": "warn",
     "react-perf/jsx-no-new-array-as-prop": "warn",
@@ -40,5 +53,12 @@
     "browser": true
   },
   "globals": {},
-  "ignorePatterns": ["archive/**", "dist/**", "node_modules/**", "target/**", "test/**", "src-tauri/**"]
+  "ignorePatterns": [
+    "archive/**",
+    "dist/**",
+    "node_modules/**",
+    "target/**",
+    "test/**",
+    "src-tauri/**"
+  ]
 }

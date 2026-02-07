@@ -1,52 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, ExternalLink, Search } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
-import { useCatalog } from '../utils/catalogStore.jsx';
+import { CatalogEntryState, useCatalog } from '../utils/catalogStore.jsx';
 import { normalize } from '../utils/index.js';
+import Checkbox from '../components/ui/Checkbox.js';
+import z from 'zod';
 
-function toNiconiId(value) {
-  return String(value || '').trim();
-}
-
-// 一覧用のカスタムチェックボックス
-function Checkbox({ checked, onChange, ariaLabel }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={checked}
-      aria-label={ariaLabel}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange?.();
-      }}
-      className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${
-        checked
-          ? 'border-blue-500 bg-blue-600 shadow-sm shadow-blue-500/30'
-          : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900/60 dark:hover:border-slate-500'
-      }`}
-    >
-      <Check size={14} className={`transition-opacity ${checked ? 'opacity-100' : 'opacity-0'}`} />
-    </button>
-  );
-}
+type EligibleItem = CatalogEntryState & {
+  niconiCommonsId: string;
+};
 
 export default function NiconiCommons() {
   const { items } = useCatalog();
-  const deselectedIdsRef = useRef([]);
+  const deselectedIdsRef = useRef<string[]>([]);
   const skipPersistRef = useRef(true);
   const [query, setQuery] = useState('');
-  const [selectedMap, setSelectedMap] = useState({});
+  const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>({});
   const [copyState, setCopyState] = useState({ ok: false, message: '', count: 0 });
 
   // 対象となるアイテムを抽出
-  const eligibleItems = useMemo(() => {
+  const eligibleItems = useMemo((): EligibleItem[] => {
     return (items || [])
       .filter((item) => item && item.installed)
-      .map((item) => ({ ...item, niconiCommonsId: toNiconiId(item.niconiCommonsId) }))
-      .filter((item) => item.niconiCommonsId);
+      .filter((item): item is EligibleItem => Boolean(item.niconiCommonsId));
   }, [items]);
 
-  const sortedEligible = useMemo(() => {
+  const sortedEligible = useMemo((): EligibleItem[] => {
     return eligibleItems.toSorted((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
   }, [eligibleItems]);
 
@@ -71,18 +50,21 @@ export default function NiconiCommons() {
   // 保存済みの未選択IDを復元して初期選択に反映
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const schema = z.array(z.string());
+
     try {
       const raw = window.localStorage.getItem('niconiCommonsDeselectedIds');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
+        const result = schema.safeParse(parsed);
+        if (result.success) {
           deselectedIdsRef.current = parsed.map(String).filter(Boolean);
         }
       }
     } catch {}
     const deselectedSet = new Set(deselectedIdsRef.current);
     setSelectedMap(() => {
-      const next = {};
+      const next: Record<string, true> = {};
       eligibleItems.forEach((item) => {
         if (!deselectedSet.has(item.id)) next[item.id] = true;
       });
@@ -109,7 +91,7 @@ export default function NiconiCommons() {
   }, [eligibleItems, selectedMap]);
 
   const selectedIds = useMemo(() => {
-    return selectedItems.map((item) => item.niconiCommonsId).filter(Boolean);
+    return selectedItems.map((item) => item.niconiCommonsId).filter((item): item is string => Boolean(item));
   }, [selectedItems]);
 
   const selectedCount = selectedIds.length;
@@ -117,19 +99,21 @@ export default function NiconiCommons() {
   const visibleCount = filteredItems.length;
   const allVisibleSelected = visibleCount > 0 && filteredItems.every((item) => selectedMap[item.id]);
 
-  function toggleItem(id) {
-    setSelectedMap((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  }
-
-  function toggleAllVisible() {
+  const toggleItem = useCallback(
+    (id: string) => {
+      setSelectedMap((prev) => ({
+        ...prev,
+        [id]: !prev[id],
+      }));
+    },
+    [setSelectedMap],
+  );
+  const toggleAllVisible = useCallback(() => {
     setSelectedMap((prev) => {
       const next = { ...prev };
       if (allVisibleSelected) {
         filteredItems.forEach((item) => {
-          delete next[item.id];
+          next[item.id] = false;
         });
       } else {
         filteredItems.forEach((item) => {
@@ -138,10 +122,10 @@ export default function NiconiCommons() {
       }
       return next;
     });
-  }
+  }, [allVisibleSelected, filteredItems]);
 
   // IDをコピー
-  async function copyIds(list) {
+  const copyIds = useCallback(async (list: string[]) => {
     if (!list.length) return;
     try {
       await navigator.clipboard.writeText(list.join(' '));
@@ -149,7 +133,7 @@ export default function NiconiCommons() {
     } catch {
       setCopyState({ ok: false, message: 'コピーに失敗しました', count: 0 });
     }
-  }
+  }, []);
 
   useEffect(() => {
     if (!copyState.message) return;
