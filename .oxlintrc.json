@@ -16,6 +16,8 @@
 
     "react/rules-of-hooks": "warn",
     "react/exhaustive-deps": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-uses-react": "off",
 
     "react-perf/jsx-no-new-object-as-prop": "warn",
     "react-perf/jsx-no-new-array-as-prop": "warn",
