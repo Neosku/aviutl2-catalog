@@ -24,8 +24,7 @@ export default function useRegisterCatalogState({
   onUserEdit,
 }: UseRegisterCatalogStateArgs) {
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
-  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [catalogLoadState, setCatalogLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [catalogBaseUrl, setCatalogBaseUrl] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
   const deferredPackageSearch = useDeferredValue(packageSearch);
@@ -63,8 +62,8 @@ export default function useRegisterCatalogState({
   }, [initialTags]);
 
   const loadCatalog = useCallback(async () => {
-    if (catalogLoaded || catalogLoading) return;
-    setCatalogLoading(true);
+    if (catalogLoadState !== 'idle') return;
+    setCatalogLoadState('loading');
     try {
       const endpoint = import.meta.env.VITE_REMOTE || './index.json';
       const res = await fetch(endpoint);
@@ -75,7 +74,6 @@ export default function useRegisterCatalogState({
       setCatalogItems(list);
       const base = resolveBaseUrl(res.url || endpoint) || '';
       setCatalogBaseUrl(base);
-      setCatalogLoaded(true);
       if (list.length) {
         // 初回ロード時は先頭パッケージを選択し、編集開始までの操作を最短化する。
         const first = list[0];
@@ -93,12 +91,12 @@ export default function useRegisterCatalogState({
         setSelectedPackageId('');
         setPackageForm(createEmptyPackageForm());
       }
+      setCatalogLoadState('loaded');
     } catch (e: any) {
       setError(`index.json の取得に失敗しました: ${e?.message || e}`);
-    } finally {
-      setCatalogLoading(false);
+      setCatalogLoadState('error');
     }
-  }, [catalogLoaded, catalogLoading, setError, setPackageForm]);
+  }, [catalogLoadState, setError, setPackageForm]);
 
   useEffect(() => {
     loadCatalog();
@@ -166,8 +164,7 @@ export default function useRegisterCatalogState({
   return {
     catalogItems,
     setCatalogItems,
-    catalogLoading,
-    catalogLoaded,
+    catalogLoadState,
     catalogBaseUrl,
     packageSearch,
     selectedPackageId,

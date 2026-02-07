@@ -22,8 +22,7 @@ function formatSavedAt(savedAt: number) {
 
 export default function RegisterSidebar({
   packageSearch,
-  catalogLoading,
-  catalogLoaded,
+  catalogLoadState,
   filteredPackages,
   draftPackages,
   selectedPackageId,
@@ -106,7 +105,7 @@ export default function RegisterSidebar({
               />
             </div>
             <div className="max-h-72 overflow-y-auto space-y-1 pr-1 custom-scrollbar lg:max-h-none lg:min-h-0 lg:flex-1">
-              {catalogLoading && !catalogLoaded ? (
+              {catalogLoadState === 'loading' || catalogLoadState === 'idle' ? (
                 <div className="flex items-center justify-center py-8 text-sm text-slate-500">
                   <span className="spinner mr-2" />
                   読み込み中...
@@ -143,7 +142,7 @@ export default function RegisterSidebar({
                   );
                 })
               )}
-              {!catalogLoading && filteredPackages.length === 0 && (
+              {catalogLoadState === 'loaded' && filteredPackages.length === 0 && (
                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
                   該当なし
                 </div>

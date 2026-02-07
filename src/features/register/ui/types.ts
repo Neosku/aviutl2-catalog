@@ -175,8 +175,7 @@ export interface RegisterSuccessDialogProps {
 
 export interface RegisterSidebarProps {
   packageSearch: string;
-  catalogLoading: boolean;
-  catalogLoaded: boolean;
+  catalogLoadState: 'idle' | 'loading' | 'loaded' | 'error';
   filteredPackages: CatalogItem[];
   draftPackages: RegisterDraftListItemView[];
   selectedPackageId: string;
