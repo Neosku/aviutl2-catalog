@@ -1,4 +1,4 @@
-name: Publish to WinGet
+name: Run Linters
 
 on:
   push:
@@ -11,9 +11,12 @@ defaults:
     shell: bash
 
 jobs:
-  publish:
+  lint:
     runs-on: windows-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
