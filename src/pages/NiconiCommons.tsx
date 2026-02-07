@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { CatalogEntryState, useCatalog } from '../utils/catalogStore.jsx';
 import { normalize } from '../utils/index.js';
 import Checkbox from '../components/ui/Checkbox.js';
-import z from 'zod';
+import * as z from 'zod';
 
 type EligibleItem = CatalogEntryState & {
   niconiCommonsId: string;
