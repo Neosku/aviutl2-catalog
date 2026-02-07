@@ -1,17 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "eslint",
-    "oxc",
-    "unicorn",
-    "react",
-    "react-perf",
-    "typescript",
-    "jsx-a11y",
-    "import",
-    "promise",
-    "node"
-  ],
+  "plugins": ["eslint", "oxc", "unicorn", "react", "react-perf", "typescript", "jsx-a11y", "import", "promise", "node"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -53,12 +42,5 @@
     "browser": true
   },
   "globals": {},
-  "ignorePatterns": [
-    "archive/**",
-    "dist/**",
-    "node_modules/**",
-    "target/**",
-    "test/**",
-    "src-tauri/**"
-  ]
+  "ignorePatterns": ["archive/**", "dist/**", "node_modules/**", "target/**", "test/**", "src-tauri/**"]
 }

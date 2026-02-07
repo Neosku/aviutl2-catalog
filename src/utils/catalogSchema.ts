@@ -1,10 +1,8 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /* ---------- primitives ---------- */
 
-const dateYYYYMMDDSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/);
+const dateYYYYMMDDSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const copyrightSchema = z.object({
   years: z.string(),
@@ -29,19 +27,19 @@ export const githubSourceSchema = z.object({
 });
 export type GithubSource = z.infer<typeof githubSourceSchema>;
 
-export const installerActionSchema = z.discriminatedUnion("action", [
+export const installerActionSchema = z.discriminatedUnion('action', [
   z.object({
-    action: z.literal("download"),
+    action: z.literal('download'),
   }),
 
   z.object({
-    action: z.literal("copy"),
+    action: z.literal('copy'),
     from: z.string(),
     to: z.string(),
   }),
 
   z.object({
-    action: z.literal("delete"),
+    action: z.literal('delete'),
     path: z.string(),
   }),
 ]);
@@ -81,7 +79,7 @@ export const catalogEntrySchema = z.object({
   description: z.string(),
   author: z.string(),
   repoURL: z.string(),
-  "latest-version": z.string(),
+  'latest-version': z.string(),
   popularity: z.number(),
   trend: z.number(),
 
