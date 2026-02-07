@@ -105,6 +105,7 @@ export function parseImages(rawImages: any, baseUrl = ''): RegisterImageState {
   const thumbnail = thumbnailPath
     ? {
         existingPath: thumbnailPath,
+        sourcePath: '',
         file: null,
         previewUrl: buildPreviewUrl(thumbnailPath, baseUrl),
         key: generateKey(),
@@ -113,6 +114,7 @@ export function parseImages(rawImages: any, baseUrl = ''): RegisterImageState {
   const infoImg = Array.isArray(first.infoImg) ? first.infoImg : [];
   const info: RegisterImageEntry[] = infoImg.map((src: unknown) => ({
     existingPath: String(src || ''),
+    sourcePath: '',
     file: null,
     previewUrl: buildPreviewUrl(String(src || ''), baseUrl),
     key: generateKey(),

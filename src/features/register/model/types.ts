@@ -54,6 +54,7 @@ export interface RegisterLicense {
 export interface RegisterImageEntry {
   key: string;
   existingPath: string;
+  sourcePath: string;
   file: File | null;
   previewUrl: string;
 }

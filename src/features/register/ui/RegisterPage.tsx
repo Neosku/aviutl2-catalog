@@ -6,13 +6,16 @@ import { getSettings } from '../../../utils/index.js';
 import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm } from '../model/form';
 import type { RegisterPackageForm } from '../model/types';
 import type { DragHandleState, RegisterSuccessDialogState } from './types';
+import useRegisterBatchSubmit from './hooks/useRegisterBatchSubmit';
 import useRegisterCatalogState from './hooks/useRegisterCatalogState';
 import useRegisterDescriptionState from './hooks/useRegisterDescriptionState';
+import useRegisterDraftState from './hooks/useRegisterDraftState';
+import useRegisterImageHandlers from './hooks/useRegisterImageHandlers';
 import useRegisterInstallerLicenseHandlers from './hooks/useRegisterInstallerLicenseHandlers';
 import useRegisterStepDragHandlers from './hooks/useRegisterStepDragHandlers';
 import useRegisterSubmitHandler from './hooks/useRegisterSubmitHandler';
 import useRegisterTestState from './hooks/useRegisterTestState';
-import useRegisterVersionImageHandlers from './hooks/useRegisterVersionImageHandlers';
+import useRegisterVersionHandlers from './hooks/useRegisterVersionHandlers';
 import RegisterFormLayout from './layouts/RegisterFormLayout';
 import { RegisterSuccessDialog } from './sections';
 
@@ -25,6 +28,7 @@ export default function Register() {
   const [previewDarkMode, setPreviewDarkMode] = useState(false);
   const [packageForm, setPackageForm] = useState<RegisterPackageForm>(createEmptyPackageForm());
   const [packageSender, setPackageSender] = useState('');
+  const [userEditToken, setUserEditToken] = useState(0);
   const [descriptionTab, setDescriptionTab] = useState('edit');
   const [expandedVersionKeys, setExpandedVersionKeys] = useState<Set<string>>(() => new Set());
   const [successDialog, setSuccessDialog] = useState<RegisterSuccessDialogState>({
@@ -41,11 +45,16 @@ export default function Register() {
   const uninstallListRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<DragHandleState>({ active: false, type: '', index: -1 });
 
+  const markUserEdit = useCallback(() => {
+    setUserEditToken((prev) => prev + 1);
+  }, []);
+
   const catalog = useRegisterCatalogState({
     setPackageForm,
     setDescriptionTab,
     setExpandedVersionKeys,
     setError,
+    onUserEdit: markUserEdit,
   });
 
   const description = useRegisterDescriptionState({
@@ -57,14 +66,19 @@ export default function Register() {
 
   const formHandlers = useRegisterInstallerLicenseHandlers({
     setPackageForm,
-    setExpandedVersionKeys,
+    onUserEdit: markUserEdit,
   });
 
-  const versionImageHandlers = useRegisterVersionImageHandlers({
+  const versionHandlers = useRegisterVersionHandlers({
     setPackageForm,
     setExpandedVersionKeys,
     versionDateRefs,
     setError,
+    onUserEdit: markUserEdit,
+  });
+  const imageHandlers = useRegisterImageHandlers({
+    setPackageForm,
+    onUserEdit: markUserEdit,
   });
 
   const dragHandlers = useRegisterStepDragHandlers({
@@ -80,15 +94,37 @@ export default function Register() {
   });
 
   const submitHandlers = useRegisterSubmitHandler({
-    packageForm,
-    catalogItems: catalog.catalogItems,
-    tagListRef: catalog.tagListRef,
-    packageSender,
     submitEndpoint,
-    setError,
-    setSubmitting,
     setCatalogItems: catalog.setCatalogItems,
     setSelectedPackageId: catalog.setSelectedPackageId,
+    setSuccessDialog,
+  });
+
+  const draftState = useRegisterDraftState({
+    packageForm,
+    packageSender,
+    currentTags: catalog.currentTags,
+    userEditToken,
+    selectedPackageId: catalog.selectedPackageId,
+    setSelectedPackageId: catalog.setSelectedPackageId,
+    onSelectCatalogPackage: catalog.handleSelectPackage,
+    onStartCatalogNewPackage: catalog.handleStartNewPackage,
+    applyTagList: catalog.applyTagList,
+    setPackageForm,
+    setPackageSender,
+    setDescriptionTab,
+    setExpandedVersionKeys,
+    setError,
+  });
+
+  const batchSubmit = useRegisterBatchSubmit({
+    catalogItems: catalog.catalogItems,
+    setCatalogItems: catalog.setCatalogItems,
+    submitPackage: submitHandlers.submitPackage,
+    flushAutoSaveNow: draftState.flushAutoSaveNow,
+    reloadDraftPackages: draftState.reloadDraftPackages,
+    setError,
+    setSubmitting,
     setSuccessDialog,
   });
 
@@ -145,26 +181,33 @@ export default function Register() {
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
     : successDialog.message || '送信が完了しました。';
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
+
   const sidebarProps = useMemo(
     () => ({
       packageSearch: catalog.packageSearch,
       catalogLoading: catalog.catalogLoading,
       catalogLoaded: catalog.catalogLoaded,
       filteredPackages: catalog.filteredPackages,
+      draftPackages: draftState.pendingDraftPackages,
       selectedPackageId: catalog.selectedPackageId,
       onPackageSearchChange: catalog.handlePackageSearchChange,
-      onSelectPackage: catalog.handleSelectPackage,
-      onStartNewPackage: catalog.handleStartNewPackage,
+      onSelectPackage: draftState.handleSelectPackage,
+      onStartNewPackage: draftState.handleStartNewPackage,
+      onOpenDraftPackage: draftState.handleOpenDraftPackage,
+      onDeleteDraftPackage: draftState.handleDeleteDraftPackage,
     }),
     [
       catalog.packageSearch,
       catalog.catalogLoading,
       catalog.catalogLoaded,
       catalog.filteredPackages,
+      draftState.pendingDraftPackages,
       catalog.selectedPackageId,
       catalog.handlePackageSearchChange,
-      catalog.handleSelectPackage,
-      catalog.handleStartNewPackage,
+      draftState.handleSelectPackage,
+      draftState.handleStartNewPackage,
+      draftState.handleOpenDraftPackage,
+      draftState.handleDeleteDraftPackage,
     ],
   );
   const metaProps = useMemo(
@@ -227,18 +270,18 @@ export default function Register() {
     () => ({
       images: packageForm.images,
       packageId: packageForm.id,
-      onThumbnailChange: versionImageHandlers.handleThumbnailChange,
-      onRemoveThumbnail: versionImageHandlers.handleRemoveThumbnail,
-      onAddInfoImages: versionImageHandlers.handleAddInfoImages,
-      onRemoveInfoImage: versionImageHandlers.handleRemoveInfoImage,
+      onThumbnailChange: imageHandlers.handleThumbnailChange,
+      onRemoveThumbnail: imageHandlers.handleRemoveThumbnail,
+      onAddInfoImages: imageHandlers.handleAddInfoImages,
+      onRemoveInfoImage: imageHandlers.handleRemoveInfoImage,
     }),
     [
       packageForm.images,
       packageForm.id,
-      versionImageHandlers.handleThumbnailChange,
-      versionImageHandlers.handleRemoveThumbnail,
-      versionImageHandlers.handleAddInfoImages,
-      versionImageHandlers.handleRemoveInfoImage,
+      imageHandlers.handleThumbnailChange,
+      imageHandlers.handleRemoveThumbnail,
+      imageHandlers.handleAddInfoImages,
+      imageHandlers.handleRemoveInfoImage,
     ],
   );
   const installerProps = useMemo(
@@ -273,29 +316,29 @@ export default function Register() {
     () => ({
       versions: packageForm.versions,
       expandedVersionKeys,
-      toggleVersionOpen: versionImageHandlers.toggleVersionOpen,
-      removeVersion: versionImageHandlers.removeVersion,
-      updateVersionField: versionImageHandlers.updateVersionField,
-      addVersion: versionImageHandlers.addVersion,
-      addVersionFile: versionImageHandlers.addVersionFile,
-      removeVersionFile: versionImageHandlers.removeVersionFile,
-      updateVersionFile: versionImageHandlers.updateVersionFile,
-      chooseFileForHash: versionImageHandlers.chooseFileForHash,
-      openDatePicker: versionImageHandlers.openDatePicker,
+      toggleVersionOpen: versionHandlers.toggleVersionOpen,
+      removeVersion: versionHandlers.removeVersion,
+      updateVersionField: versionHandlers.updateVersionField,
+      addVersion: versionHandlers.addVersion,
+      addVersionFile: versionHandlers.addVersionFile,
+      removeVersionFile: versionHandlers.removeVersionFile,
+      updateVersionFile: versionHandlers.updateVersionFile,
+      chooseFileForHash: versionHandlers.chooseFileForHash,
+      openDatePicker: versionHandlers.openDatePicker,
       versionDateRefs,
     }),
     [
       packageForm.versions,
       expandedVersionKeys,
-      versionImageHandlers.toggleVersionOpen,
-      versionImageHandlers.removeVersion,
-      versionImageHandlers.updateVersionField,
-      versionImageHandlers.addVersion,
-      versionImageHandlers.addVersionFile,
-      versionImageHandlers.removeVersionFile,
-      versionImageHandlers.updateVersionFile,
-      versionImageHandlers.chooseFileForHash,
-      versionImageHandlers.openDatePicker,
+      versionHandlers.toggleVersionOpen,
+      versionHandlers.removeVersion,
+      versionHandlers.updateVersionField,
+      versionHandlers.addVersion,
+      versionHandlers.addVersionFile,
+      versionHandlers.removeVersionFile,
+      versionHandlers.updateVersionFile,
+      versionHandlers.chooseFileForHash,
+      versionHandlers.openDatePicker,
       versionDateRefs,
     ],
   );
@@ -357,13 +400,26 @@ export default function Register() {
       packageGuideUrl,
       packageSender,
       submitting,
-      onPackageSenderChange: setPackageSender,
+      pendingSubmitCount: draftState.pendingSubmitCount,
+      submittingLabel: batchSubmit.submitProgressText ? `送信中… (${batchSubmit.submitProgressText})` : '送信中…',
+      onPackageSenderChange: (value: string) => {
+        markUserEdit();
+        setPackageSender(value);
+      },
     }),
-    [packageGuideUrl, packageSender, submitting, setPackageSender],
+    [
+      packageGuideUrl,
+      packageSender,
+      submitting,
+      draftState.pendingSubmitCount,
+      batchSubmit.submitProgressText,
+      markUserEdit,
+      setPackageSender,
+    ],
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-0 pb-0">
+    <div className="mx-auto max-w-7xl px-0 py-6">
       <RegisterSuccessDialog
         dialog={successDialog}
         primaryText={successPrimaryText}
@@ -371,9 +427,8 @@ export default function Register() {
         onClose={closeSuccessDialog}
       />
       <RegisterFormLayout
-        title="パッケージ登録"
         error={error}
-        onSubmit={submitHandlers.handleSubmit}
+        onSubmit={batchSubmit.handleSubmitAllDrafts}
         sidebar={sidebarProps}
         meta={metaProps}
         description={descriptionProps}
