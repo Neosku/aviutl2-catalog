@@ -24,14 +24,7 @@ export {
   createEmptyVersionFile,
 } from './factories';
 
-export {
-  entryToForm,
-  getFileExtension,
-  parseImages,
-  parseInstallerSource,
-  parseLicenses,
-  parseVersions,
-} from './parse';
+export { entryToForm, getFileExtension } from './parse';
 
 export {
   buildInstallerPayload,

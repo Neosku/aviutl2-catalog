@@ -2,29 +2,35 @@
  * ライセンスとインストーラー編集の更新ハンドラ群を提供する hook
  */
 import { useCallback } from 'react';
-import { createEmptyCopyright, createEmptyLicense, createEmptyVersionFile, createEmptyVersion } from '../../model/form';
+import { createEmptyCopyright, createEmptyLicense } from '../../model/form';
 import { generateKey } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RegisterStepType } from '../types';
 
 interface UseRegisterInstallerLicenseHandlersArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
-  setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onUserEdit?: () => void;
 }
 
 export default function useRegisterInstallerLicenseHandlers({
   setPackageForm,
-  setExpandedVersionKeys,
+  onUserEdit,
 }: UseRegisterInstallerLicenseHandlersArgs) {
+  const notifyUserEdit = useCallback(() => {
+    onUserEdit?.();
+  }, [onUserEdit]);
+
   const updatePackageField = useCallback(
     (field: keyof RegisterPackageForm, value: any) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({ ...prev, [field]: value }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const updateLicenseField = useCallback(
     (key: string, field: string, value: string | boolean) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) => {
@@ -55,11 +61,12 @@ export default function useRegisterInstallerLicenseHandlers({
         }),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const toggleLicenseTemplate = useCallback(
     (key: string, useTemplate: boolean) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) => {
@@ -96,11 +103,12 @@ export default function useRegisterInstallerLicenseHandlers({
         }),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const updateCopyright = useCallback(
     (licenseKey: string, copyrightKey: string, field: string, value: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         licenses: (prev.licenses.length ? prev.licenses : [createEmptyLicense()]).map((license) =>
@@ -115,17 +123,19 @@ export default function useRegisterInstallerLicenseHandlers({
         ),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const updateInstallerField = useCallback(
     (field: string, value: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({ ...prev, installer: { ...prev.installer, [field]: value } }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const addInstallStep = useCallback(() => {
+    notifyUserEdit();
     setPackageForm((prev) => ({
       ...prev,
       installer: {
@@ -136,10 +146,11 @@ export default function useRegisterInstallerLicenseHandlers({
         ],
       },
     }));
-  }, [setPackageForm]);
+  }, [notifyUserEdit, setPackageForm]);
 
   const updateInstallStep = useCallback(
     (key: string, field: string, value: string | boolean) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         installer: {
@@ -155,11 +166,12 @@ export default function useRegisterInstallerLicenseHandlers({
         },
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const removeInstallStep = useCallback(
     (key: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         installer: {
@@ -168,10 +180,11 @@ export default function useRegisterInstallerLicenseHandlers({
         },
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const addUninstallStep = useCallback(() => {
+    notifyUserEdit();
     setPackageForm((prev) => ({
       ...prev,
       installer: {
@@ -182,10 +195,11 @@ export default function useRegisterInstallerLicenseHandlers({
         ],
       },
     }));
-  }, [setPackageForm]);
+  }, [notifyUserEdit, setPackageForm]);
 
   const updateUninstallStep = useCallback(
     (key: string, field: string, value: string | boolean) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         installer: {
@@ -201,11 +215,12 @@ export default function useRegisterInstallerLicenseHandlers({
         },
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const removeUninstallStep = useCallback(
     (key: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         installer: {
@@ -214,12 +229,13 @@ export default function useRegisterInstallerLicenseHandlers({
         },
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const reorderSteps = useCallback(
     (type: RegisterStepType, from: number, to: number) => {
       if (from === to || from < 0 || typeof to !== 'number' || to < 0) return;
+      notifyUserEdit();
       setPackageForm((prev) => {
         const keyName = type === 'install' ? 'installSteps' : 'uninstallSteps';
         const list = prev.installer[keyName];
@@ -240,27 +256,8 @@ export default function useRegisterInstallerLicenseHandlers({
         };
       });
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
-
-  const addVersion = useCallback(() => {
-    const version = createEmptyVersion();
-    setPackageForm((prev) => {
-      const lastVer = prev.versions[prev.versions.length - 1];
-      if (lastVer && Array.isArray(lastVer.files)) {
-        version.files = lastVer.files.map((f) => ({
-          ...createEmptyVersionFile(),
-          path: f.path || '',
-        }));
-      }
-      return { ...prev, versions: [...prev.versions, version] };
-    });
-    setExpandedVersionKeys((prev) => {
-      const next = new Set(prev);
-      next.add(version.key);
-      return next;
-    });
-  }, [setExpandedVersionKeys, setPackageForm]);
 
   return {
     updatePackageField,
@@ -275,6 +272,5 @@ export default function useRegisterInstallerLicenseHandlers({
     updateUninstallStep,
     removeUninstallStep,
     reorderSteps,
-    addVersion,
   };
 }

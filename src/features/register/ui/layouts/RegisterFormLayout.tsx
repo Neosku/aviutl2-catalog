@@ -18,7 +18,6 @@ import {
 import type { RegisterFormLayoutProps } from '../types';
 
 export default function RegisterFormLayout({
-  title,
   error,
   onSubmit,
   sidebar,
@@ -34,10 +33,6 @@ export default function RegisterFormLayout({
 }: RegisterFormLayoutProps) {
   return (
     <main className="space-y-8">
-      <header className="pb-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h1>
-      </header>
-
       {error && (
         <div
           className="sticky top-4 z-30 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
@@ -49,7 +44,7 @@ export default function RegisterFormLayout({
       )}
 
       <form className="space-y-8" onSubmit={onSubmit}>
-        <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
           <RegisterSidebar {...sidebar} />
 
           <div className="space-y-8">

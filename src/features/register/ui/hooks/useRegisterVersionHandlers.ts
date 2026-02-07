@@ -1,25 +1,31 @@
 /**
- * バージョン編集と画像更新のハンドラー群を提供する hook
+ * バージョン編集関連のハンドラー群を提供する hook
  */
 import { useCallback } from 'react';
 import { computeHashFromFile, createEmptyVersion, createEmptyVersionFile } from '../../model/form';
-import { basename, generateKey, revokePreviewUrl } from '../../model/helpers';
+import { basename } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RefCell } from '../types';
 
-interface UseRegisterVersionImageHandlersArgs {
+interface UseRegisterVersionHandlersArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
   setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   versionDateRefs: RefCell<Map<string, HTMLInputElement>>;
   setError: React.Dispatch<React.SetStateAction<string>>;
+  onUserEdit?: () => void;
 }
 
-export default function useRegisterVersionImageHandlers({
+export default function useRegisterVersionHandlers({
   setPackageForm,
   setExpandedVersionKeys,
   versionDateRefs,
   setError,
-}: UseRegisterVersionImageHandlersArgs) {
+  onUserEdit,
+}: UseRegisterVersionHandlersArgs) {
+  const notifyUserEdit = useCallback(() => {
+    onUserEdit?.();
+  }, [onUserEdit]);
+
   const toggleVersionOpen = useCallback(
     (key: string, open: boolean) => {
       setExpandedVersionKeys((prev) => {
@@ -38,6 +44,7 @@ export default function useRegisterVersionImageHandlers({
   );
 
   const addVersion = useCallback(() => {
+    notifyUserEdit();
     const version = createEmptyVersion();
     setPackageForm((prev) => {
       const lastVer = prev.versions[prev.versions.length - 1];
@@ -55,27 +62,30 @@ export default function useRegisterVersionImageHandlers({
       next.add(version.key);
       return next;
     });
-  }, [setExpandedVersionKeys, setPackageForm]);
+  }, [notifyUserEdit, setExpandedVersionKeys, setPackageForm]);
 
   const updateVersionField = useCallback(
     (key: string, field: string, value: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         versions: prev.versions.map((ver) => (ver.key === key ? { ...ver, [field]: value } : ver)),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const removeVersion = useCallback(
     (key: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({ ...prev, versions: prev.versions.filter((ver) => ver.key !== key) }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const addVersionFile = useCallback(
     (versionKey: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         versions: prev.versions.map((ver) =>
@@ -83,11 +93,12 @@ export default function useRegisterVersionImageHandlers({
         ),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const updateVersionFile = useCallback(
     (versionKey: string, fileKey: string, field: string, value: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         versions: prev.versions.map((ver) =>
@@ -100,11 +111,12 @@ export default function useRegisterVersionImageHandlers({
         ),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const removeVersionFile = useCallback(
     (versionKey: string, fileKey: string) => {
+      notifyUserEdit();
       setPackageForm((prev) => ({
         ...prev,
         versions: prev.versions.map((ver) =>
@@ -112,7 +124,7 @@ export default function useRegisterVersionImageHandlers({
         ),
       }));
     },
-    [setPackageForm],
+    [notifyUserEdit, setPackageForm],
   );
 
   const chooseFileForHash = useCallback(
@@ -141,64 +153,6 @@ export default function useRegisterVersionImageHandlers({
       }
     },
     [setError, updateVersionFile],
-  );
-
-  const handleThumbnailChange = useCallback(
-    (file: File) => {
-      setPackageForm((prev) => {
-        const nextImages = { ...prev.images };
-        if (nextImages.thumbnail?.previewUrl) revokePreviewUrl(nextImages.thumbnail.previewUrl);
-        nextImages.thumbnail = file
-          ? { file, existingPath: '', previewUrl: URL.createObjectURL(file), key: generateKey() }
-          : null;
-        return { ...prev, images: nextImages };
-      });
-    },
-    [setPackageForm],
-  );
-
-  const handleRemoveThumbnail = useCallback(() => {
-    setPackageForm((prev) => {
-      const nextImages = { ...prev.images };
-      if (nextImages.thumbnail?.previewUrl) revokePreviewUrl(nextImages.thumbnail.previewUrl);
-      nextImages.thumbnail = null;
-      return { ...prev, images: nextImages };
-    });
-  }, [setPackageForm]);
-
-  const handleAddInfoImages = useCallback(
-    (files: FileList | File[]) => {
-      if (!files || !files.length) return;
-      setPackageForm((prev) => ({
-        ...prev,
-        images: {
-          ...prev.images,
-          info: [
-            ...prev.images.info,
-            ...Array.from(files).map((file) => ({
-              file,
-              existingPath: '',
-              previewUrl: URL.createObjectURL(file),
-              key: generateKey(),
-            })),
-          ],
-        },
-      }));
-    },
-    [setPackageForm],
-  );
-
-  const handleRemoveInfoImage = useCallback(
-    (key: string) => {
-      setPackageForm((prev) => {
-        const nextImages = { ...prev.images };
-        const target = nextImages.info.find((entry) => entry.key === key);
-        if (target?.previewUrl) revokePreviewUrl(target.previewUrl);
-        nextImages.info = nextImages.info.filter((entry) => entry.key !== key);
-        return { ...prev, images: nextImages };
-      });
-    },
-    [setPackageForm],
   );
 
   const openDatePicker = useCallback(
@@ -237,10 +191,6 @@ export default function useRegisterVersionImageHandlers({
     updateVersionFile,
     removeVersionFile,
     chooseFileForHash,
-    handleThumbnailChange,
-    handleRemoveThumbnail,
-    handleAddInfoImages,
-    handleRemoveInfoImage,
     openDatePicker,
   };
 }

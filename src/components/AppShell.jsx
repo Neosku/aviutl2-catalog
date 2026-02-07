@@ -637,7 +637,9 @@ export default function AppShell() {
 
         <div
           ref={scrollContainerRef}
-          className={`flex-1 overflow-y-auto scroll-smooth px-6 pb-6 [scrollbar-gutter:stable] ${activePage === 'home' ? 'pt-0' : 'pt-6'}`}
+          className={`flex-1 overflow-y-auto scroll-smooth px-6 [scrollbar-gutter:stable] ${
+            activePage === 'home' ? 'pt-0 pb-6' : activePage === 'register' ? 'pt-0 pb-0' : 'pt-6 pb-6'
+          }`}
         >
           <Outlet context={outletContext} />
         </div>

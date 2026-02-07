@@ -13,6 +13,7 @@ interface UseRegisterCatalogStateArgs {
   setDescriptionTab: React.Dispatch<React.SetStateAction<string>>;
   setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   setError: React.Dispatch<React.SetStateAction<string>>;
+  onUserEdit?: () => void;
 }
 
 export default function useRegisterCatalogState({
@@ -20,6 +21,7 @@ export default function useRegisterCatalogState({
   setDescriptionTab,
   setExpandedVersionKeys,
   setError,
+  onUserEdit,
 }: UseRegisterCatalogStateArgs) {
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [catalogLoadState, setCatalogLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
@@ -38,10 +40,21 @@ export default function useRegisterCatalogState({
     return Array.from(set).toSorted((a, b) => a.localeCompare(b, 'ja'));
   }, [allTags]);
 
-  const handleTagsChange = useCallback((list: string[]) => {
+  const handleTagsChange = useCallback(
+    (list: string[]) => {
+      onUserEdit?.();
+      const normalized = normalizeArrayText(list);
+      tagListRef.current = normalized;
+      setCurrentTags(normalized);
+    },
+    [onUserEdit],
+  );
+
+  const applyTagList = useCallback((list: string[]) => {
     const normalized = normalizeArrayText(list);
-    tagListRef.current = normalized;
+    setInitialTags(normalized);
     setCurrentTags(normalized);
+    tagListRef.current = normalized;
   }, []);
 
   useEffect(() => {
@@ -161,6 +174,7 @@ export default function useRegisterCatalogState({
     tagCandidates,
     tagListRef,
     filteredPackages,
+    applyTagList,
     handleTagsChange,
     handleSelectPackage,
     handleStartNewPackage,

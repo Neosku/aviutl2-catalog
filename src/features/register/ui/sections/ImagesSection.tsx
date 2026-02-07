@@ -7,7 +7,7 @@ import { readFile } from '@tauri-apps/plugin-fs';
 import { Download, Image, ImagePlus, Images, Trash2 } from 'lucide-react';
 import { getFileExtension } from '../../model/form';
 import { basename, isInsideRect } from '../../model/helpers';
-import type { PackageImagesSectionProps } from '../types';
+import type { PackageImagesSectionProps, RegisterSelectedImageInput } from '../types';
 import DeleteButton from '../components/DeleteButton';
 
 type InfoImageCardProps = {
@@ -67,6 +67,49 @@ const PackageImagesSection = memo(
     const [isDraggingOverThumbnail, setIsDraggingOverThumbnail] = useState(false);
     const [isDraggingOverInfo, setIsDraggingOverInfo] = useState(false);
 
+    const loadFilesFromPaths = useCallback(async (paths: string[]): Promise<RegisterSelectedImageInput[]> => {
+      const files: RegisterSelectedImageInput[] = [];
+      for (const p of paths) {
+        try {
+          const bytes = await readFile(p);
+          const name = basename(p);
+          const ext = getFileExtension(name) || 'bin';
+          let type = 'application/octet-stream';
+          if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
+            type = ext === 'jpg' ? 'image/jpeg' : ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+          }
+          const file = new File([bytes], name, { type });
+          files.push({ file, sourcePath: p });
+        } catch (err) {
+          console.error(`Failed to read dropped file: ${p}`, err);
+        }
+      }
+      return files;
+    }, []);
+
+    const openImageDialog = useCallback(
+      async (multiple: boolean): Promise<RegisterSelectedImageInput[]> => {
+        try {
+          const { open } = await import('@tauri-apps/plugin-dialog');
+          const selection = await open({
+            title: multiple ? '説明画像を選択' : 'サムネイル画像を選択',
+            multiple,
+            filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'] }],
+          });
+          const rawPaths = Array.isArray(selection) ? selection : selection ? [selection] : [];
+          const paths = rawPaths.filter(
+            (value): value is string => typeof value === 'string' && value.trim().length > 0,
+          );
+          if (paths.length === 0) return [];
+          return loadFilesFromPaths(paths);
+        } catch (err) {
+          console.error('Failed to open image picker', err);
+          return [];
+        }
+      },
+      [loadFilesFromPaths],
+    );
+
     useEffect(() => {
       let unlistenDragDrop: (() => void) | null = null;
       let unlistenDragEnter: (() => void) | null = null;
@@ -82,25 +125,6 @@ const PackageImagesSection = memo(
           } catch {
             scaleFactor = 1;
           }
-          const processDroppedFiles = async (paths: string[]) => {
-            const files: File[] = [];
-            for (const p of paths) {
-              try {
-                const bytes = await readFile(p);
-                const name = basename(p);
-                const ext = getFileExtension(name) || 'bin';
-                let type = 'application/octet-stream';
-                if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) type = `image/${ext}`;
-
-                const file = new File([bytes], name, { type });
-                files.push(file);
-              } catch (err) {
-                console.error(`Failed to read dropped file: ${p}`, err);
-              }
-            }
-            return files;
-          };
-
           const handleDragEvent = async (event: any, type: 'drop' | 'enter' | 'over' | 'leave') => {
             const { position } = event.payload;
             const thumbRect = thumbnailRef.current?.getBoundingClientRect() ?? null;
@@ -114,10 +138,10 @@ const PackageImagesSection = memo(
             if (type === 'drop') {
               const { paths } = event.payload;
               if (overThumbnail && paths.length > 0) {
-                const files = await processDroppedFiles([paths[0]]);
+                const files = await loadFilesFromPaths([paths[0]]);
                 if (files.length > 0) onThumbnailChange(files[0]);
               } else if (overInfo && paths.length > 0) {
-                const files = await processDroppedFiles(paths);
+                const files = await loadFilesFromPaths(paths);
                 if (files.length > 0) onAddInfoImages(files);
               }
               setIsDraggingOverThumbnail(false);
@@ -156,7 +180,7 @@ const PackageImagesSection = memo(
         if (unlistenDragOver) unlistenDragOver();
         if (unlistenDragLeave) unlistenDragLeave();
       };
-    }, [onThumbnailChange, onAddInfoImages]);
+    }, [loadFilesFromPaths, onThumbnailChange, onAddInfoImages]);
 
     const thumbnailPreview = images.thumbnail?.previewUrl || images.thumbnail?.existingPath || '';
     const thumbnailPreviewStyle = useMemo(
@@ -187,20 +211,17 @@ const PackageImagesSection = memo(
                   一覧を見やすくするため、可能であればご登録ください
                 </p>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+              <button
+                type="button"
+                className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                onClick={async () => {
+                  const files = await openImageDialog(false);
+                  if (files[0]) onThumbnailChange(files[0]);
+                }}
+              >
                 <ImagePlus size={16} />
                 <span>画像を選択</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) onThumbnailChange(file);
-                    e.target.value = '';
-                  }}
-                  className="sr-only"
-                />
-              </label>
+              </button>
             </div>
             {isDraggingOverThumbnail ? (
               <div className="flex h-52 items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -223,9 +244,12 @@ const PackageImagesSection = memo(
                 <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                   <span
                     className="truncate text-xs font-medium text-slate-700 dark:text-slate-300"
-                    title={images.thumbnail.file?.name || images.thumbnail.existingPath}
+                    title={images.thumbnail.file?.name || images.thumbnail.sourcePath || images.thumbnail.existingPath}
                   >
-                    {images.thumbnail.file?.name || images.thumbnail.existingPath || '未設定'}
+                    {images.thumbnail.file?.name ||
+                      images.thumbnail.sourcePath ||
+                      images.thumbnail.existingPath ||
+                      '未設定'}
                   </span>
                   <DeleteButton onClick={onRemoveThumbnail} ariaLabel="サムネイルを削除" />
                 </div>
@@ -255,21 +279,17 @@ const PackageImagesSection = memo(
                 </p>
                 <p className="text-[10px] text-blue-500 dark:text-blue-400">※縦横比は16:9を推奨します</p>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+              <button
+                type="button"
+                className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                onClick={async () => {
+                  const files = await openImageDialog(true);
+                  if (files.length > 0) onAddInfoImages(files);
+                }}
+              >
                 <Images size={16} />
                 <span>画像を追加</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files?.length) onAddInfoImages(files);
-                    e.target.value = '';
-                  }}
-                  className="sr-only"
-                />
-              </label>
+              </button>
             </div>
             {isDraggingOverInfo ? (
               <div className="flex flex-1 min-h-[13rem] items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -282,7 +302,11 @@ const PackageImagesSection = memo(
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
                 {images.info.map((entry, idx) => {
                   const preview = entry.previewUrl || entry.existingPath || '';
-                  const filename = entry.file?.name || entry.existingPath || `./image/${packageId}_${idx + 1}.(拡張子)`;
+                  const filename =
+                    entry.file?.name ||
+                    entry.sourcePath ||
+                    entry.existingPath ||
+                    `./image/${packageId}_${idx + 1}.(拡張子)`;
                   return (
                     <InfoImageCard
                       key={entry.key}

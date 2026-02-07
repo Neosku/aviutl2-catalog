@@ -80,10 +80,15 @@ export interface PackageLicenseSectionProps {
 export interface PackageImagesSectionProps {
   images: RegisterImageState;
   packageId: string;
-  onThumbnailChange: (file: File) => void;
+  onThumbnailChange: (file: RegisterSelectedImageInput) => void;
   onRemoveThumbnail: () => void;
-  onAddInfoImages: (files: FileList | File[]) => void;
+  onAddInfoImages: (files: RegisterSelectedImageInput[]) => void;
   onRemoveInfoImage: (key: string) => void;
+}
+
+export interface RegisterSelectedImageInput {
+  file: File;
+  sourcePath?: string;
 }
 
 export interface PackageInstallerSectionProps {
@@ -172,10 +177,21 @@ export interface RegisterSidebarProps {
   packageSearch: string;
   catalogLoadState: 'idle' | 'loading' | 'loaded' | 'error';
   filteredPackages: CatalogItem[];
+  draftPackages: RegisterDraftListItemView[];
   selectedPackageId: string;
   onPackageSearchChange: (value: string) => void;
   onSelectPackage: (item: CatalogItem | null) => void;
   onStartNewPackage: () => void;
+  onOpenDraftPackage: (packageId: string) => void;
+  onDeleteDraftPackage: (packageId: string) => void;
+}
+
+export interface RegisterDraftListItemView {
+  packageId: string;
+  packageName: string;
+  savedAt: number;
+  pending: boolean;
+  lastSubmitError: string;
 }
 
 export interface RegisterMetaSectionProps {
@@ -232,11 +248,12 @@ export interface RegisterSubmitBarProps {
   packageGuideUrl: string;
   packageSender: string;
   submitting: boolean;
+  pendingSubmitCount: number;
+  submittingLabel?: string;
   onPackageSenderChange: (value: string) => void;
 }
 
 export interface RegisterFormLayoutProps {
-  title: string;
   error: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   sidebar: RegisterSidebarProps;
