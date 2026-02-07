@@ -1,0 +1,36 @@
+name: Publish to WinGet
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".node-version"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Check Formatting
+        run: |
+          npm run fmt:check
+
+      - name: Lint Code
+        run: |
+          npm run lint
+
+      - name: Check Types
+        run: |
+          npm run typecheck
