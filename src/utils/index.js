@@ -1010,6 +1010,14 @@ function isAbsPath(p) {
   return /^(?:[a-zA-Z]:[\\/]|\\\\|\/)/.test(String(p || ''));
 }
 
+function ensureAbsolutePath(p, label) {
+  const s = String(p || '');
+  if (!isAbsPath(s)) {
+    throw new Error(`${label} must be an absolute path: ${s}`);
+  }
+  return s;
+}
+
 async function deletePath(absPath) {
   const fs = await import('@tauri-apps/plugin-fs');
   let ok = false;
@@ -1414,20 +1422,24 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
           case 'extract': {
             const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
             const toRel = await expandMacros(step.to || `{tmp}`, ctx);
-            logInfo(`[installer ${item.id}] extracting from ${fromRel} to ${toRel}`);
-            await extractZip(fromRel, toRel);
+            const from = ensureAbsolutePath(fromRel, `install.extract.from`);
+            const to = ensureAbsolutePath(toRel, `install.extract.to`);
+            logInfo(`[installer ${item.id}] extracting from ${from} to ${to}`);
+            await extractZip(from, to);
             break;
           }
           case 'extract_sfx': {
             const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
             const toRel = await expandMacros(step.to || `{tmp}`, ctx);
-            logInfo(`[installer ${item.id}] extracting SFX from ${fromRel} to ${toRel}`);
-            await extractSevenZipSfx(fromRel, toRel);
+            const from = ensureAbsolutePath(fromRel, `install.extract_sfx.from`);
+            const to = ensureAbsolutePath(toRel, `install.extract_sfx.to`);
+            logInfo(`[installer ${item.id}] extracting SFX from ${from} to ${to}`);
+            await extractSevenZipSfx(from, to);
             break;
           }
           case 'copy': {
-            const from = await expandMacros(step.from, ctx);
-            const to = await expandMacros(step.to, ctx);
+            const from = ensureAbsolutePath(await expandMacros(step.from, ctx), `install.copy.from`);
+            const to = ensureAbsolutePath(await expandMacros(step.to, ctx), `install.copy.to`);
             const count = await copyPattern(from, to);
             logInfo(`[installer ${item.id}] copy matched ${count} files (from=${from} to=${to})`);
             if (count === 0) {
@@ -1437,13 +1449,13 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
           }
           // aviutl2本体のインストールを対象
           case 'run': {
-            const pRaw = await expandMacros(step.path, ctx);
+            const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.run.path`);
             const args = await Promise.all((step.args || []).map((a) => expandMacros(String(a), ctx)));
             await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
             break;
           }
           case 'run_auo_setup': {
-            const pRaw = await expandMacros(step.path, ctx);
+            const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.run_auo_setup.path`);
             await runAuoSetup(pRaw);
             break;
           }
@@ -1512,7 +1524,7 @@ export async function runUninstallerForItem(item, dispatch) {
           case 'delete': {
             const p = await expandMacros(step.path, ctx);
             try {
-              const abs = isAbsPath(p) ? p : p; // アンインストールのパスは原則絶対パス。相対ならそのまま扱う
+              const abs = ensureAbsolutePath(p, `uninstall.delete.path`);
               const ok = await deletePath(abs);
               if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
               else await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
@@ -1522,7 +1534,7 @@ export async function runUninstallerForItem(item, dispatch) {
             break;
           }
           case 'run': {
-            const pRaw = await expandMacros(step.path, ctx);
+            const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `uninstall.run.path`);
             const args = await Promise.all((step.args || []).map((a) => expandMacros(String(a), ctx)));
             await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
             break;
