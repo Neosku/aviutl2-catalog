@@ -904,22 +904,31 @@ function psEscape(s) {
   return String(s).replace(/'/g, "''");
 }
 
+function toPowerShellEncodedCommand(script) {
+  const s = String(script || '');
+  let binary = '';
+  for (let i = 0; i < s.length; i++) {
+    const codeUnit = s.charCodeAt(i);
+    binary += String.fromCharCode(codeUnit & 0xff, codeUnit >> 8);
+  }
+  if (typeof btoa === 'function') return btoa(binary);
+  if (typeof Buffer !== 'undefined') return Buffer.from(binary, 'binary').toString('base64');
+  throw new Error('Failed to encode PowerShell command to Base64');
+}
+
 // 実行ファイルをウィンドウ非表示で実行する関数
-async function runInstaller(exeAbsPath, args = [], elevate = false, tmpPath) {
+async function runInstaller(exeAbsPath, args = [], elevate = false, _tmpPath) {
   const shell = await import('@tauri-apps/plugin-shell');
-  const fs = await import('@tauri-apps/plugin-fs');
   const argList = (args || []).map((a) => `'${psEscape(a)}'`).join(', ');
   const argClause = args && args.length > 0 ? ` -ArgumentList @(${argList})` : '';
   const body = [
     "$ErrorActionPreference='Stop'",
     '[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new()',
-    `$p = Start-Process -FilePath '${exeAbsPath}'${argClause}${elevate ? ' -Verb RunAs' : ''} -WindowStyle Hidden -Wait -PassThru`,
+    `$p = Start-Process -FilePath '${psEscape(exeAbsPath)}'${argClause}${elevate ? ' -Verb RunAs' : ''} -WindowStyle Hidden -Wait -PassThru`,
     'exit ($p.ExitCode)',
-  ].join('; ');
-  const scriptName = `run-${Date.now()}.ps1`;
-  const scriptRel = `${tmpPath.replace(/\\/g, '/')}/${scriptName}`;
-  await fs.writeTextFile(scriptRel, body);
-  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-File', scriptRel];
+  ].join('\n');
+  const encodedCommand = toPowerShellEncodedCommand(body);
+  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand];
   const cmd = shell.Command.create('powershell', argsPs, { encoding: 'utf-8' });
   const res = await cmd.execute();
   if (res.code !== 0) {
