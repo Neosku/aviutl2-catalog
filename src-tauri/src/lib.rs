@@ -9,7 +9,6 @@ use tauri::{webview::PageLoadEvent, Emitter, Manager, WebviewUrl, WebviewWindowB
 use url::Url;
 use walkdir::WalkDir;
 
-mod api_key;
 mod paths;
 
 // -----------------------
@@ -66,39 +65,48 @@ fn sanitize_filename(name: &str) -> String {
     }
 }
 
-async fn drive_fetch_response(file_id: &str, api_key: &str) -> Result<reqwest::Response, DriveError> {
-    let url = format!("https://www.googleapis.com/drive/v3/files/{}?alt=media", file_id);
+fn drive_filename_from_headers(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    let raw = headers.get(reqwest::header::CONTENT_DISPOSITION)?;
+    let value = String::from_utf8_lossy(raw.as_bytes());
+
+    for part in value.split(';') {
+        let part = part.trim();
+        if let Some(name) = part.strip_prefix("filename*=") {
+            let encoded = name.trim().trim_matches('"');
+            let payload = encoded.split_once("''").map(|(_, v)| v).unwrap_or(encoded);
+            let decoded = percent_decode_str(payload).decode_utf8_lossy();
+            let cleaned = sanitize_filename(&decoded);
+            return Some(cleaned);
+        }
+    }
+
+    for part in value.split(';') {
+        let part = part.trim();
+        if let Some(name) = part.strip_prefix("filename=") {
+            let cleaned = sanitize_filename(name.trim().trim_matches('"'));
+            return Some(cleaned);
+        }
+    }
+
+    None
+}
+
+async fn drive_fetch_response(file_id: &str) -> Result<reqwest::Response, DriveError> {
+    let url = format!("https://drive.google.com/uc?export=download&id={}", file_id);
     let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
-    let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
+
+    let res = client.get(&url).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
     if res.status().is_success() {
         return Ok(res);
     }
     let status = res.status();
     let text = res.text().await.unwrap_or_default();
-    let msg = serde_json::from_str::<serde_json::Value>(&text)
-        .ok()
-        .and_then(|v| v.get("error")?.get("message")?.as_str().map(|s| s.to_string()))
-        .unwrap_or_else(|| text.chars().take(500).collect());
-    Err(DriveError::Http(format!("{} {}", status, msg)))
-}
-
-async fn drive_fetch_name_reqwest(file_id: &str, api_key: &str) -> Result<String, DriveError> {
-    let url = format!("https://www.googleapis.com/drive/v3/files/{}?fields=name", file_id);
-    let client = reqwest::Client::builder().user_agent("AviUtl2Catalog").build().map_err(|e| DriveError::Net(format!("client build failed: {}", e)))?;
-    let res = client.get(url).header("x-goog-api-key", api_key).send().await.map_err(|e| DriveError::Net(e.to_string()))?;
-    let status = res.status();
-    let text = res.text().await.map_err(|e| DriveError::Net(e.to_string()))?;
-    if !status.is_success() {
-        let msg: String = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-            v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|s| s.to_string()).unwrap_or_else(|| text.clone())
-        } else {
-            text.clone()
-        };
-        return Err(DriveError::Http(format!("{} {}", status, msg)));
+    let snippet: String = text.chars().take(500).collect();
+    if snippet.trim().is_empty() {
+        Err(DriveError::Http(format!("{} {}", status, "failed to download file from Google Drive")))
+    } else {
+        Err(DriveError::Http(format!("{} {}", status, snippet)))
     }
-    let v: serde_json::Value = serde_json::from_str(&text).map_err(|e| DriveError::Net(e.to_string()))?;
-    let name = v.get("name").and_then(|x| x.as_str()).ok_or_else(|| DriveError::Http(String::from("missing name field")))?;
-    Ok(sanitize_filename(name))
 }
 
 #[tauri::command]
@@ -107,25 +115,25 @@ async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_pat
     use std::io::Write;
 
     let app = window.app_handle();
-    let api_key: &str = api_key::GOOGLE_DRIVE_API_KEY;
-    let dest_abs = resolve_rel_to_app_config(&app, &dest_path);
-    let looks_dir = dest_path.ends_with('/') || dest_path.ends_with('\\') || dest_abs.is_dir();
-    let is_placeholder = dest_abs.file_name().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("download.bin") || s == file_id).unwrap_or(true);
-    let drive_name = match drive_fetch_name_reqwest(&file_id, api_key).await {
-        Ok(n) => n,
+    let mut res = match drive_fetch_response(&file_id).await {
+        Ok(v) => v,
         Err(e) => {
-            // ログに出力
-            log_error(&app, &format!("failed to fetch drive file name (id={}): {}", file_id, e));
-            // そのままエラーを返して終了
+            log_error(&app, &format!("failed to fetch drive file (id={}): {}", file_id, e));
             return Err(e);
         }
     };
 
+    let dest_abs = resolve_rel_to_app_config(&app, &dest_path);
+    let looks_dir = dest_path.ends_with('/') || dest_path.ends_with('\\') || dest_abs.is_dir();
+    let is_placeholder = dest_abs.file_name().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("download.bin") || s == file_id).unwrap_or(true);
+    let drive_name = drive_filename_from_headers(res.headers());
+
     let final_dest = if looks_dir || is_placeholder {
+        let drive_name = drive_name.ok_or_else(|| DriveError::Http("missing filename in Google Drive response".to_string()))?;
         if looks_dir {
-            dest_abs.join(&drive_name)
+            dest_abs.join(drive_name)
         } else {
-            dest_abs.parent().map(|p| p.join(&drive_name)).unwrap_or(dest_abs.clone())
+            dest_abs.parent().map(|p| p.join(drive_name)).unwrap_or(dest_abs.clone())
         }
     } else {
         dest_abs.clone()
@@ -134,24 +142,18 @@ async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_pat
         let _ = create_dir_all(parent);
     }
 
-    // Try reqwest (async)
-    match drive_fetch_response(&file_id, api_key).await {
-        Ok(mut res) => {
-            let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(&final_dest).map_err(|e| DriveError::Io(e.to_string()))?;
+    let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(&final_dest).map_err(|e| DriveError::Io(e.to_string()))?;
 
-            let total_opt = res.headers().get(reqwest::header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<u64>().ok());
+    let total_opt = res.headers().get(reqwest::header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<u64>().ok());
 
-            let mut read: u64 = 0;
-            while let Some(chunk) = res.chunk().await.map_err(|e| DriveError::Net(e.to_string()))? {
-                f.write_all(&chunk).map_err(|e| DriveError::Io(e.to_string()))?;
-                read += chunk.len() as u64;
-                let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
-            }
-            let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
-            Ok(())
-        }
-        Err(e) => Err(e),
+    let mut read: u64 = 0;
+    while let Some(chunk) = res.chunk().await.map_err(|e| DriveError::Net(e.to_string()))? {
+        f.write_all(&chunk).map_err(|e| DriveError::Io(e.to_string()))?;
+        read += chunk.len() as u64;
+        let _ = window.emit("drive:progress", serde_json::json!({ "fileId": file_id, "read": read, "total": total_opt }));
     }
+    let _ = window.emit("drive:done", serde_json::json!({ "fileId": file_id, "path": final_dest.to_string_lossy() }));
+    Ok(())
 }
 
 #[tauri::command]
@@ -1063,7 +1065,7 @@ fn expand_macros(raw_path: &str) -> String {
 }
 
 // index.jsonの各アイテムから、パッケージのパスの集合を作成
-fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> std::collections::HashSet<String> {
+fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> Result<std::collections::HashSet<String>, String> {
     log_info(app, "Collecting unique paths for version check...");
     let mut unique_paths = std::collections::HashSet::new();
     for it in list.iter() {
@@ -1075,6 +1077,9 @@ fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> s
                         let raw = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                         // パスの区切りは一旦 Windows 風に合わせるが lowercasing はしない
                         let expanded = expand_macros(raw).replace('/', "\\");
+                        if !is_abs(&expanded) {
+                            return Err(format!("version.file.path must be an absolute path after macro expansion: {}", raw));
+                        }
                         unique_paths.insert(expanded);
                     }
                 }
@@ -1082,7 +1087,7 @@ fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> s
         }
     }
     log_info(app, &format!("Collected {} unique paths for version check.", unique_paths.len()));
-    unique_paths
+    Ok(unique_paths)
 }
 
 // パス群に対してXXH3-128ハッシュを計算する。hash-cache.jsonを利用して、mtimeMsとsizeが一致する場合はキャッシュを利用し、そうでない場合は再計算する。
@@ -1198,7 +1203,7 @@ fn determine_versions(
 fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<std::collections::HashMap<String, String>, String> {
     let list = items;
     log_info(&app, &format!("detect map start count={}", list.len()));
-    let unique_paths = collect_unique_paths(&app, &list);
+    let unique_paths = collect_unique_paths(&app, &list)?;
     let file_hash_cache = build_file_hash_cache(&app, &unique_paths);
     let out = determine_versions(&app, &list, &file_hash_cache);
     Ok(out)
