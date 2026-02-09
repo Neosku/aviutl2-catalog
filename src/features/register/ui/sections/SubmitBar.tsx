@@ -12,6 +12,7 @@ export default function RegisterSubmitBar({
   pendingSubmitCount,
   submittingLabel,
   onPackageSenderChange,
+  onOpenJsonImport,
 }: RegisterSubmitBarProps) {
   const submitButtonLabel = submitting
     ? submittingLabel || '送信中…'
@@ -34,6 +35,13 @@ export default function RegisterSubmitBar({
               説明サイト
             </a>
           )}
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            onClick={onOpenJsonImport}
+          >
+            JSON入力
+          </button>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-3">

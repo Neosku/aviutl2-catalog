@@ -251,6 +251,7 @@ export interface RegisterSubmitBarProps {
   pendingSubmitCount: number;
   submittingLabel?: string;
   onPackageSenderChange: (value: string) => void;
+  onOpenJsonImport: () => void;
 }
 
 export interface RegisterFormLayoutProps {

@@ -6,6 +6,7 @@ export { default as PackageInstallerSection } from './InstallerSection';
 export { default as PackageLicenseSection } from './LicenseSection';
 export { default as PackageVersionSection } from './VersionSection';
 export { default as RegisterDescriptionSection } from './DescriptionSection';
+export { default as RegisterJsonImportDialog } from './JsonImportDialog';
 export { default as RegisterMetaSection } from './MetaSection';
 export { default as RegisterPreviewSection } from './PreviewSection';
 export { default as RegisterSidebar } from './Sidebar';

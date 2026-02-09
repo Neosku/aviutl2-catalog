@@ -22,6 +22,7 @@ interface UseRegisterDraftStateArgs {
   userEditToken: number;
   selectedPackageId: string;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
+  getCatalogPackageById: (packageId: string) => CatalogItem | null;
   onSelectCatalogPackage: (item: CatalogItem | null) => void;
   onStartCatalogNewPackage: () => void;
   applyTagList: (list: string[]) => void;
@@ -39,6 +40,7 @@ export default function useRegisterDraftState({
   userEditToken,
   selectedPackageId,
   setSelectedPackageId,
+  getCatalogPackageById,
   onSelectCatalogPackage,
   onStartCatalogNewPackage,
   applyTagList,
@@ -215,10 +217,41 @@ export default function useRegisterDraftState({
     onStartCatalogNewPackage();
   }, [flushBeforeNavigation, onStartCatalogNewPackage, suspendNextAutoSave]);
 
-  const handleDeleteDraftPackage = useCallback((packageId: string) => {
-    deleteRegisterDraft(packageId);
-    setDraftPackages((prev) => prev.filter((item) => item.packageId !== packageId));
-  }, []);
+  const handleDeleteDraftPackage = useCallback(
+    (packageId: string) => {
+      const targetId = packageId.trim();
+      if (!targetId) return;
+      deleteRegisterDraft(targetId);
+      setDraftPackages((prev) => prev.filter((item) => item.packageId !== targetId));
+
+      const activeId = selectedPackageId.trim();
+      if (activeId !== targetId) return;
+
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      markUserEditsAsHandled();
+      suspendNextAutoSave();
+
+      const catalogItem = getCatalogPackageById(targetId);
+      if (catalogItem) {
+        onSelectCatalogPackage(catalogItem);
+      } else {
+        onStartCatalogNewPackage();
+      }
+      setError('');
+    },
+    [
+      getCatalogPackageById,
+      markUserEditsAsHandled,
+      onSelectCatalogPackage,
+      onStartCatalogNewPackage,
+      selectedPackageId,
+      setError,
+      suspendNextAutoSave,
+    ],
+  );
 
   const handleOpenDraftPackage = useCallback(
     async (packageId: string) => {

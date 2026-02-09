@@ -4,9 +4,108 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useCatalog } from '../../../../utils/catalogStore.jsx';
 import { createEmptyPackageForm, entryToForm } from '../../model/form';
-import { cleanupImagePreviews, commaListToArray, normalizeArrayText, resolveBaseUrl } from '../../model/helpers';
+import {
+  cleanupImagePreviews,
+  commaListToArray,
+  getErrorMessage,
+  normalizeArrayText,
+  resolveBaseUrl,
+} from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { CatalogItem } from '../types';
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<infer U> ? Array<DeepPartial<U>> : T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+
+type CatalogPatch = DeepPartial<CatalogItem> & { id: string };
+
+function extractCatalogArray(json: unknown): unknown[] | null {
+  if (Array.isArray(json)) return json;
+  if (!isPlainObject(json)) return null;
+  return Array.isArray(json.packages) ? json.packages : null;
+}
+
+function mergeDefinedFields<T>(base: T, patch: DeepPartial<T>): T {
+  if (!isPlainObject(base) || !isPlainObject(patch)) return patch as T;
+  const next: Record<string, unknown> = { ...base };
+  Object.entries(patch).forEach(([key, value]) => {
+    if (typeof value === 'undefined') return;
+    const baseValue = next[key];
+    if (isPlainObject(baseValue) && isPlainObject(value)) {
+      next[key] = mergeDefinedFields(baseValue, value);
+      return;
+    }
+    next[key] = value;
+  });
+  return next as T;
+}
+
+function isDeepEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      if (!isDeepEqual(left[i], right[i])) return false;
+    }
+    return true;
+  }
+  if (isPlainObject(left) || isPlainObject(right)) {
+    if (!isPlainObject(left) || !isPlainObject(right)) return false;
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    if (leftKeys.length !== rightKeys.length) return false;
+    for (const key of leftKeys) {
+      if (!Object.prototype.hasOwnProperty.call(right, key)) return false;
+      if (!isDeepEqual(left[key], right[key])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function extractCatalogPatchList(json: unknown): CatalogPatch[] {
+  const rawList = extractCatalogArray(json);
+  if (!Array.isArray(rawList)) {
+    throw new Error('入力形式が不正です。');
+  }
+  const list = rawList
+    .filter((item): item is Record<string, unknown> => isPlainObject(item))
+    .map((item) => {
+      const id = typeof item.id === 'string' ? item.id.trim() : '';
+      if (!id) return null;
+      return { ...(item as DeepPartial<CatalogItem>), id } as CatalogPatch;
+    })
+    .filter((item): item is CatalogPatch => item !== null);
+  if (list.length === 0) {
+    throw new Error('上書き対象の要素がありません。');
+  }
+  return list;
+}
+
+function isCatalogItem(value: unknown): value is CatalogItem {
+  if (!isPlainObject(value)) return false;
+  if (typeof value.id !== 'string') return false;
+  if (typeof value.name !== 'string') return false;
+  if (typeof value.type !== 'string') return false;
+  if (typeof value.summary !== 'string') return false;
+  if (typeof value.description !== 'string') return false;
+  if (typeof value.author !== 'string') return false;
+  if (typeof value.repoURL !== 'string') return false;
+  if (typeof value['latest-version'] !== 'string') return false;
+  if (!Array.isArray(value.licenses)) return false;
+  if (!Array.isArray(value.tags)) return false;
+  if (!Array.isArray(value.dependencies)) return false;
+  if (!Array.isArray(value.images)) return false;
+  if (!isPlainObject(value.installer)) return false;
+  if (!Array.isArray(value.version)) return false;
+  return true;
+}
 
 interface UseRegisterCatalogStateArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -69,8 +168,8 @@ export default function useRegisterCatalogState({
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const rawList = Array.isArray(json) ? json : Array.isArray((json as any)?.packages) ? (json as any).packages : [];
-      const list = (Array.isArray(rawList) ? rawList : []) as CatalogItem[];
+      const rawList = extractCatalogArray(json);
+      const list = Array.isArray(rawList) ? rawList.filter((item): item is CatalogItem => isCatalogItem(item)) : [];
       setCatalogItems(list);
       const base = resolveBaseUrl(res.url || endpoint) || '';
       setCatalogBaseUrl(base);
@@ -92,8 +191,8 @@ export default function useRegisterCatalogState({
         setPackageForm(createEmptyPackageForm());
       }
       setCatalogLoadState('loaded');
-    } catch (e: any) {
-      setError(`index.json の取得に失敗しました: ${e?.message || e}`);
+    } catch (e: unknown) {
+      setError(`index.json の取得に失敗しました: ${getErrorMessage(e)}`);
       setCatalogLoadState('error');
     }
   }, [catalogLoadState, setError, setPackageForm]);
@@ -161,6 +260,63 @@ export default function useRegisterCatalogState({
     setPackageSearch(value);
   }, []);
 
+  const applyCatalogJsonPatch = useCallback(
+    (jsonText: string) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (e: unknown) {
+        throw new Error(`JSON の解析に失敗しました: ${getErrorMessage(e)}`, { cause: e });
+      }
+      const patchList = extractCatalogPatchList(parsed);
+      const patchMap = new Map<string, CatalogPatch>();
+      patchList.forEach((patch) => {
+        patchMap.set(patch.id, patch);
+      });
+
+      let matchedCount = 0;
+      const changedItems: CatalogItem[] = [];
+      let selectedChangedItem: CatalogItem | null = null;
+      for (const item of catalogItems) {
+        const patch = patchMap.get(item.id);
+        if (!patch) continue;
+        matchedCount += 1;
+        const merged = mergeDefinedFields(item, patch);
+        const nextItem = { ...merged, id: item.id };
+        if (isDeepEqual(item, nextItem)) continue;
+        changedItems.push(nextItem);
+        if (selectedPackageId && nextItem.id === selectedPackageId) {
+          selectedChangedItem = nextItem;
+        }
+      }
+
+      if (matchedCount === 0) {
+        throw new Error('一致する id のパッケージが見つかりませんでした');
+      }
+
+      if (changedItems.length > 0) {
+        const changedMap = new Map(changedItems.map((item) => [item.id, item]));
+        setCatalogItems((prev) => prev.map((item) => changedMap.get(item.id) || item));
+        setError('');
+      }
+
+      if (selectedChangedItem) {
+        const form = entryToForm(selectedChangedItem, catalogBaseUrl);
+        const tags = commaListToArray(form.tagsText);
+        setInitialTags(tags);
+        setCurrentTags(tags);
+        tagListRef.current = tags;
+        setPackageForm((prev) => {
+          cleanupImagePreviews(prev.images);
+          return form;
+        });
+      }
+
+      return changedItems;
+    },
+    [catalogBaseUrl, catalogItems, selectedPackageId, setCatalogItems, setError, setPackageForm],
+  );
+
   return {
     catalogItems,
     setCatalogItems,
@@ -179,5 +335,6 @@ export default function useRegisterCatalogState({
     handleSelectPackage,
     handleStartNewPackage,
     handlePackageSearchChange,
+    applyCatalogJsonPatch,
   };
 }

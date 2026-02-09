@@ -107,3 +107,7 @@ export function isInsideRect(rect: DOMRect | null, x: number, y: number): boolea
   if (!rect) return false;
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
+
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

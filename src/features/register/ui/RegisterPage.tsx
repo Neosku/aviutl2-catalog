@@ -3,7 +3,9 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSettings } from '../../../utils/index.js';
-import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm } from '../model/form';
+import { getRegisterDraft, saveRegisterDraft } from '../model/draft';
+import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm, entryToForm } from '../model/form';
+import { commaListToArray, getErrorMessage } from '../model/helpers';
 import type { RegisterPackageForm } from '../model/types';
 import type { DragHandleState, RegisterSuccessDialogState } from './types';
 import useRegisterBatchSubmit from './hooks/useRegisterBatchSubmit';
@@ -17,7 +19,7 @@ import useRegisterSubmitHandler from './hooks/useRegisterSubmitHandler';
 import useRegisterTestState from './hooks/useRegisterTestState';
 import useRegisterVersionHandlers from './hooks/useRegisterVersionHandlers';
 import RegisterFormLayout from './layouts/RegisterFormLayout';
-import { RegisterSuccessDialog } from './sections';
+import { RegisterJsonImportDialog, RegisterSuccessDialog } from './sections';
 
 export default function Register() {
   const submitEndpoint = (import.meta.env.VITE_SUBMIT_ENDPOINT || '').trim();
@@ -39,6 +41,9 @@ export default function Register() {
     packageAction: '',
     packageId: '',
   });
+  const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+  const [jsonDialogText, setJsonDialogText] = useState('');
+  const [jsonDialogError, setJsonDialogError] = useState('');
 
   const versionDateRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const installListRef = useRef<HTMLDivElement | null>(null);
@@ -100,6 +105,11 @@ export default function Register() {
     setSuccessDialog,
   });
 
+  const getCatalogPackageById = useCallback(
+    (packageId: string) => catalog.catalogItems.find((item) => item.id === packageId) || null,
+    [catalog.catalogItems],
+  );
+
   const draftState = useRegisterDraftState({
     packageForm,
     packageSender,
@@ -107,6 +117,7 @@ export default function Register() {
     userEditToken,
     selectedPackageId: catalog.selectedPackageId,
     setSelectedPackageId: catalog.setSelectedPackageId,
+    getCatalogPackageById,
     onSelectCatalogPackage: catalog.handleSelectPackage,
     onStartCatalogNewPackage: catalog.handleStartNewPackage,
     applyTagList: catalog.applyTagList,
@@ -176,6 +187,48 @@ export default function Register() {
   const togglePreviewDarkMode = useCallback(() => {
     setPreviewDarkMode((prev) => !prev);
   }, []);
+
+  const openJsonDialog = useCallback(() => {
+    setJsonDialogError('');
+    setJsonDialogOpen(true);
+  }, []);
+
+  const closeJsonDialog = useCallback(() => {
+    setJsonDialogOpen(false);
+    setJsonDialogError('');
+  }, []);
+
+  const applyCatalogJsonPatch = useCallback(() => {
+    try {
+      const changedItems = catalog.applyCatalogJsonPatch(jsonDialogText);
+      if (changedItems.length === 0) {
+        setJsonDialogError('変更がありませんでした。');
+        return;
+      }
+
+      changedItems.forEach((item) => {
+        const form = entryToForm(item, catalog.catalogBaseUrl);
+        const tags = commaListToArray(form.tagsText);
+        const existingDraft = getRegisterDraft(form.id);
+        saveRegisterDraft({
+          packageForm: form,
+          tags,
+          packageSender: existingDraft?.packageSender || packageSender,
+        });
+      });
+      draftState.reloadDraftPackages();
+      closeJsonDialog();
+    } catch (e: unknown) {
+      setJsonDialogError(getErrorMessage(e));
+    }
+  }, [
+    catalog.applyCatalogJsonPatch,
+    catalog.catalogBaseUrl,
+    closeJsonDialog,
+    draftState.reloadDraftPackages,
+    jsonDialogText,
+    packageSender,
+  ]);
 
   const successPrimaryText = successDialog.packageName
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
@@ -400,6 +453,7 @@ export default function Register() {
       submitting,
       pendingSubmitCount: draftState.pendingSubmitCount,
       submittingLabel: batchSubmit.submitProgressText ? `送信中… (${batchSubmit.submitProgressText})` : '送信中…',
+      onOpenJsonImport: openJsonDialog,
       onPackageSenderChange: (value: string) => {
         markUserEdit();
         setPackageSender(value);
@@ -411,6 +465,7 @@ export default function Register() {
       submitting,
       draftState.pendingSubmitCount,
       batchSubmit.submitProgressText,
+      openJsonDialog,
       markUserEdit,
       setPackageSender,
     ],
@@ -423,6 +478,14 @@ export default function Register() {
         primaryText={successPrimaryText}
         supportText={successSupportText}
         onClose={closeSuccessDialog}
+      />
+      <RegisterJsonImportDialog
+        open={jsonDialogOpen}
+        value={jsonDialogText}
+        error={jsonDialogError}
+        onChange={setJsonDialogText}
+        onClose={closeJsonDialog}
+        onApply={applyCatalogJsonPatch}
       />
       <RegisterFormLayout
         error={error}
