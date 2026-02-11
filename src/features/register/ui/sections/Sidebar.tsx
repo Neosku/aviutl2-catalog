@@ -51,7 +51,7 @@ export default function RegisterSidebar({
                 const isSelected = selectedPackageId === draft.packageId;
                 return (
                   <div
-                    key={draft.packageId}
+                    key={draft.draftId}
                     className={`group flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-900/20'
@@ -61,7 +61,7 @@ export default function RegisterSidebar({
                     <button
                       type="button"
                       className="min-w-0 flex-1 text-left"
-                      onClick={() => onOpenDraftPackage(draft.packageId)}
+                      onClick={() => onOpenDraftPackage(draft.draftId)}
                     >
                       <div
                         className={`truncate text-sm font-semibold ${
@@ -79,7 +79,7 @@ export default function RegisterSidebar({
                       ariaLabel={`${draft.packageId} の一時保存を削除`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        onDeleteDraftPackage(draft.packageId);
+                        onDeleteDraftPackage(draft.draftId);
                       }}
                     />
                   </div>

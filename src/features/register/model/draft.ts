@@ -5,7 +5,7 @@ import { basename, generateKey, normalizeArrayText } from './helpers';
 import { getFileExtension } from './parse';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
 
-const DRAFT_STORAGE_PREFIX = 'register-draft:v1:';
+const DRAFT_STORAGE_PREFIX = 'register-draft:';
 
 interface RegisterDraftImageSnapshot {
   key: string;
@@ -24,6 +24,7 @@ type RegisterDraftFormSnapshot = Omit<RegisterPackageForm, 'images'> & {
 };
 
 export interface RegisterDraftRecord {
+  draftId: string;
   packageId: string;
   packageName: string;
   packageSender: string;
@@ -39,6 +40,7 @@ export interface RegisterDraftRecord {
 }
 
 export interface RegisterDraftListItem {
+  draftId: string;
   packageId: string;
   packageName: string;
   savedAt: number;
@@ -70,8 +72,15 @@ function getStorage(): Storage | null {
   }
 }
 
-function createDraftStorageKey(packageId: string): string {
-  return `${DRAFT_STORAGE_PREFIX}${encodeURIComponent(packageId)}`;
+function createDraftStorageKey(draftId: string): string {
+  return `${DRAFT_STORAGE_PREFIX}${encodeURIComponent(draftId)}`;
+}
+
+function createDraftId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function computeTextHash(text: string): string {
@@ -224,6 +233,8 @@ export function isRegisterDraftReadyForSubmit(record: RegisterDraftRecord): bool
 function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
   if (!raw || typeof raw !== 'object') return null;
   const candidate = raw as Partial<RegisterDraftRecord>;
+  const draftId = String(candidate.draftId || '').trim();
+  if (!draftId) return null;
   if (typeof candidate.packageId !== 'string' || !candidate.packageId.trim()) return null;
   if (!candidate.form || typeof candidate.form !== 'object') return null;
   const fallbackContentHash = computeTextHash(
@@ -234,6 +245,7 @@ function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
     }),
   );
   return {
+    draftId,
     packageId: candidate.packageId.trim(),
     packageName: String(candidate.packageName || candidate.packageId || ''),
     packageSender: String(candidate.packageSender || ''),
@@ -311,6 +323,7 @@ export function saveRegisterDraft(args: {
   packageForm: RegisterPackageForm;
   tags: string[];
   packageSender: string;
+  draftId?: string;
 }): RegisterDraftRecord {
   const storage = getStorage();
   if (!storage) {
@@ -320,9 +333,12 @@ export function saveRegisterDraft(args: {
   if (!packageId) {
     throw new Error('一時保存には ID の入力が必要です。');
   }
-  const previous = getRegisterDraft(packageId);
+  const requestedDraftId = String(args.draftId || '').trim();
+  const previous = requestedDraftId ? getRegisterDraftById(requestedDraftId) : getRegisterDraft(packageId);
+  const draftId = String(previous?.draftId || requestedDraftId || createDraftId()).trim();
   const contentHash = computeRegisterDraftContentHash(args);
   const record: RegisterDraftRecord = {
+    draftId,
     packageId,
     packageName: String(args.packageForm.name || packageId || '').trim(),
     packageSender: String(args.packageSender || ''),
@@ -336,14 +352,21 @@ export function saveRegisterDraft(args: {
     lastSubmitError: String(previous?.lastSubmitError || ''),
     form: toDraftFormSnapshot(args.packageForm),
   };
-  storage.setItem(createDraftStorageKey(packageId), JSON.stringify(record));
+  storage.setItem(createDraftStorageKey(draftId), JSON.stringify(record));
+  const records = listRegisterDraftRecords();
+  for (let i = 0; i < records.length; i += 1) {
+    const current = records[i];
+    if (current.packageId !== packageId) continue;
+    if (current.draftId === draftId) continue;
+    storage.removeItem(createDraftStorageKey(current.draftId));
+  }
   return record;
 }
 
-export function getRegisterDraft(packageId: string): RegisterDraftRecord | null {
+export function getRegisterDraftById(draftId: string): RegisterDraftRecord | null {
   const storage = getStorage();
   if (!storage) return null;
-  const id = String(packageId || '').trim();
+  const id = String(draftId || '').trim();
   if (!id) return null;
   const raw = storage.getItem(createDraftStorageKey(id));
   if (!raw) return null;
@@ -354,8 +377,19 @@ export function getRegisterDraft(packageId: string): RegisterDraftRecord | null 
   }
 }
 
+export function getRegisterDraft(packageId: string): RegisterDraftRecord | null {
+  const id = String(packageId || '').trim();
+  if (!id) return null;
+  const records = listRegisterDraftRecords();
+  for (let i = 0; i < records.length; i += 1) {
+    if (records[i].packageId === id) return records[i];
+  }
+  return null;
+}
+
 export function listRegisterDrafts(): RegisterDraftListItem[] {
   return listRegisterDraftRecords().map((record) => ({
+    draftId: record.draftId,
     packageId: record.packageId,
     packageName: record.packageName,
     savedAt: record.savedAt,
@@ -386,11 +420,11 @@ export function listRegisterDraftRecords(): RegisterDraftRecord[] {
 }
 
 export function updateRegisterDraftSubmitState(args: {
-  packageId: string;
+  draftId: string;
   submittedHash?: string;
   errorMessage?: string;
 }): RegisterDraftRecord | null {
-  const record = getRegisterDraft(args.packageId);
+  const record = getRegisterDraftById(args.draftId);
   if (!record) return null;
   const next: RegisterDraftRecord = {
     ...record,
@@ -400,16 +434,16 @@ export function updateRegisterDraftSubmitState(args: {
   };
   const storage = getStorage();
   if (!storage) return null;
-  storage.setItem(createDraftStorageKey(next.packageId), JSON.stringify(next));
+  storage.setItem(createDraftStorageKey(next.draftId), JSON.stringify(next));
   return next;
 }
 
 export function updateRegisterDraftTestState(args: {
-  packageId: string;
+  draftId: string;
   kind: RegisterDraftTestKind;
   testedHash: string;
 }): RegisterDraftRecord | null {
-  const record = getRegisterDraft(args.packageId);
+  const record = getRegisterDraftById(args.draftId);
   if (!record) return null;
   const testedHash = String(args.testedHash || '');
   if (!testedHash || testedHash !== String(record.contentHash || '')) {
@@ -421,14 +455,14 @@ export function updateRegisterDraftTestState(args: {
   };
   const storage = getStorage();
   if (!storage) return null;
-  storage.setItem(createDraftStorageKey(next.packageId), JSON.stringify(next));
+  storage.setItem(createDraftStorageKey(next.draftId), JSON.stringify(next));
   return next;
 }
 
-export function deleteRegisterDraft(packageId: string): void {
+export function deleteRegisterDraft(draftId: string): void {
   const storage = getStorage();
   if (!storage) return;
-  const id = String(packageId || '').trim();
+  const id = String(draftId || '').trim();
   if (!id) return;
   storage.removeItem(createDraftStorageKey(id));
 }

@@ -6,6 +6,7 @@ import {
   deleteRegisterDraft,
   computeRegisterDraftContentHash,
   getRegisterDraft,
+  getRegisterDraftById,
   isRegisterDraftPending,
   isRegisterDraftReadyForSubmit,
   listRegisterDrafts,
@@ -21,6 +22,7 @@ import type { CatalogItem, RegisterDraftListItemView } from '../types';
 
 function toDraftListItem(record: RegisterDraftRecord): RegisterDraftListItemView {
   return {
+    draftId: record.draftId,
     packageId: record.packageId,
     packageName: record.packageName,
     savedAt: record.savedAt,
@@ -72,6 +74,7 @@ export default function useRegisterDraftState({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestUserEditTokenRef = useRef(userEditToken);
   const persistedUserEditTokenRef = useRef(userEditToken);
+  const activeDraftIdRef = useRef('');
 
   useEffect(() => {
     latestUserEditTokenRef.current = userEditToken;
@@ -99,10 +102,12 @@ export default function useRegisterDraftState({
       packageForm,
       tags: currentTags,
       packageSender,
+      draftId: activeDraftIdRef.current,
     });
+    activeDraftIdRef.current = record.draftId;
     const nextItem = toDraftListItem(record);
     setDraftPackages((prev) => {
-      const filtered = prev.filter((item) => item.packageId !== nextItem.packageId);
+      const filtered = prev.filter((item) => item.draftId !== nextItem.draftId);
       return [nextItem, ...filtered];
     });
     markUserEditsAsHandled();
@@ -127,6 +132,7 @@ export default function useRegisterDraftState({
         cleanupImagePreviews(restored.packageForm.images);
         return;
       }
+      activeDraftIdRef.current = draft.draftId;
       setPackageForm((prev) => {
         cleanupImagePreviews(prev.images);
         return restored.packageForm;
@@ -163,8 +169,10 @@ export default function useRegisterDraftState({
     }
     const draft = getRegisterDraft(selectedId);
     if (!draft) {
+      activeDraftIdRef.current = '';
       return;
     }
+    activeDraftIdRef.current = draft.draftId;
     if (!isRegisterDraftPending(draft)) {
       return;
     }
@@ -219,6 +227,11 @@ export default function useRegisterDraftState({
       flushBeforeNavigation();
       suspendNextAutoSave();
       onSelectCatalogPackage(item);
+      if (!item) {
+        activeDraftIdRef.current = '';
+        return;
+      }
+      activeDraftIdRef.current = String(getRegisterDraft(item.id)?.draftId || '').trim();
     },
     [flushBeforeNavigation, onSelectCatalogPackage, suspendNextAutoSave],
   );
@@ -226,27 +239,33 @@ export default function useRegisterDraftState({
   const handleStartNewPackage = useCallback(() => {
     flushBeforeNavigation();
     suspendNextAutoSave();
+    activeDraftIdRef.current = '';
     onStartCatalogNewPackage();
   }, [flushBeforeNavigation, onStartCatalogNewPackage, suspendNextAutoSave]);
 
   const handleDeleteDraftPackage = useCallback(
-    (packageId: string) => {
-      const targetId = packageId.trim();
-      if (!targetId) return;
-      deleteRegisterDraft(targetId);
-      setDraftPackages((prev) => prev.filter((item) => item.packageId !== targetId));
+    (draftId: string) => {
+      const targetDraftId = draftId.trim();
+      if (!targetDraftId) return;
+      const targetDraft = getRegisterDraftById(targetDraftId);
+      const targetPackageId = String(targetDraft?.packageId || '').trim();
+      deleteRegisterDraft(targetDraftId);
+      setDraftPackages((prev) => prev.filter((item) => item.draftId !== targetDraftId));
 
-      const activeId = selectedPackageId.trim();
-      if (activeId !== targetId) return;
+      const selectedId = selectedPackageId.trim();
+      const isActiveDraft = activeDraftIdRef.current === targetDraftId;
+      const isSelectedPackageDraft = targetPackageId && selectedId === targetPackageId;
+      if (!isActiveDraft && !isSelectedPackageDraft) return;
 
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = null;
       }
+      activeDraftIdRef.current = '';
       markUserEditsAsHandled();
       suspendNextAutoSave();
 
-      const catalogItem = getCatalogPackageById(targetId);
+      const catalogItem = getCatalogPackageById(targetPackageId);
       if (catalogItem) {
         onSelectCatalogPackage(catalogItem);
       } else {
@@ -266,16 +285,16 @@ export default function useRegisterDraftState({
   );
 
   const handleOpenDraftPackage = useCallback(
-    async (packageId: string) => {
+    async (draftId: string) => {
       flushBeforeNavigation();
-      const draft = getRegisterDraft(packageId);
+      const draft = getRegisterDraftById(draftId);
       if (!draft) {
         reloadDraftPackages();
         setError('対象の一時保存が見つかりませんでした。');
         return;
       }
-      skipNextSelectedRestoreIdRef.current = packageId;
-      setSelectedPackageId(packageId);
+      skipNextSelectedRestoreIdRef.current = draft.packageId;
+      setSelectedPackageId(draft.packageId);
       await applyDraftRecord(draft);
     },
     [applyDraftRecord, flushBeforeNavigation, reloadDraftPackages, setError, setSelectedPackageId],
@@ -285,20 +304,27 @@ export default function useRegisterDraftState({
     (kind: RegisterDraftTestKind) => {
       const packageId = String(packageForm.id || '').trim();
       if (!packageId) return;
+      let draftId = String(activeDraftIdRef.current || '').trim();
+      if (!draftId) {
+        const latest = getRegisterDraft(packageId);
+        if (!latest) return;
+        draftId = latest.draftId;
+        activeDraftIdRef.current = draftId;
+      }
       const testedHash = computeRegisterDraftContentHash({
         packageForm,
         tags: currentTags,
         packageSender,
       });
       const updated = updateRegisterDraftTestState({
-        packageId,
+        draftId,
         kind,
         testedHash,
       });
       if (!updated) return;
       const nextItem = toDraftListItem(updated);
       setDraftPackages((prev) => {
-        const filtered = prev.filter((item) => item.packageId !== nextItem.packageId);
+        const filtered = prev.filter((item) => item.draftId !== nextItem.draftId);
         return [nextItem, ...filtered];
       });
     },

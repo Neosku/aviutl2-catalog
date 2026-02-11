@@ -196,11 +196,12 @@ export interface RegisterSidebarProps {
   onPackageSearchChange: (value: string) => void;
   onSelectPackage: (item: CatalogItem | null) => void;
   onStartNewPackage: () => void;
-  onOpenDraftPackage: (packageId: string) => void;
-  onDeleteDraftPackage: (packageId: string) => void;
+  onOpenDraftPackage: (draftId: string) => void;
+  onDeleteDraftPackage: (draftId: string) => void;
 }
 
 export interface RegisterDraftListItemView {
+  draftId: string;
   packageId: string;
   packageName: string;
   savedAt: number;

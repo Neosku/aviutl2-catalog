@@ -87,13 +87,13 @@ export default function useRegisterBatchSubmit({
             lastSuccessUrl = submitResult.url || lastSuccessUrl;
             lastSuccessName = submitResult.packageName || lastSuccessName;
             successCount += 1;
-            deleteRegisterDraft(draft.packageId);
+            deleteRegisterDraft(draft.draftId);
           } catch (err) {
             const message =
               err instanceof Error ? err.message : '送信に失敗しました。ネットワークや設定をご確認ください。';
             failureCount += 1;
             updateRegisterDraftSubmitState({
-              packageId: draft.packageId,
+              draftId: draft.draftId,
               errorMessage: message,
             });
             if (!firstError) {

@@ -216,6 +216,7 @@ export default function Register() {
           packageForm: form,
           tags,
           packageSender: existingDraft?.packageSender || packageSender,
+          draftId: existingDraft?.draftId,
         });
       });
       draftState.reloadDraftPackages();
