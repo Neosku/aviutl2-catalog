@@ -22,6 +22,14 @@ export default function Home() {
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const sortedAllTags = useMemo(
+    () => (allTags || []).toSorted((a, b) => a.localeCompare(b, 'ja', { sensitivity: 'base' })),
+    [allTags],
+  );
+  const sortedSelectedTags = useMemo(
+    () => (selectedTags || []).toSorted((a, b) => a.localeCompare(b, 'ja', { sensitivity: 'base' })),
+    [selectedTags],
+  );
   const listSearch = useMemo(() => {
     const params = new URLSearchParams(location.search);
     if (searchQuery) params.set('q', searchQuery);
@@ -51,7 +59,7 @@ export default function Home() {
                   <button
                     key={cat}
                     onClick={() => setCategory(cat)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap cursor-pointer
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap cursor-pointer
                       ${
                         selectedCategory === cat
                           ? 'bg-blue-600 text-white shadow-md'
@@ -166,7 +174,7 @@ export default function Home() {
           {!isFilterExpanded && selectedTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 mt-4 animate-in slide-in-from-top-1">
               <span className="text-sm text-slate-400 font-medium">選択中:</span>
-              {selectedTags.map((tag) => (
+              {sortedSelectedTags.map((tag) => (
                 <button
                   key={tag}
                   onClick={() => toggleTag(tag)}
@@ -207,7 +215,7 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                {(allTags || []).map((tag) => (
+                {sortedAllTags.map((tag) => (
                   <button
                     key={tag}
                     onClick={() => toggleTag(tag)}
