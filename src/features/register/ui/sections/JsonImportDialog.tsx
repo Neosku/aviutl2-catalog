@@ -40,7 +40,8 @@ export default function RegisterJsonImportDialog({
         </div>
         <div className="space-y-3 px-6 py-5">
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            `template.json` と同じ形式の JSON を貼り付けてください。 一致する項目のみ部分上書きします。
+            `template.json` と同じ形式の JSON を貼り付けてください。 一致する項目は部分上書きし、未一致の id
+            は新規追加します。複数パッケージをまとめて追加することもできます。
           </p>
           <textarea
             value={value}

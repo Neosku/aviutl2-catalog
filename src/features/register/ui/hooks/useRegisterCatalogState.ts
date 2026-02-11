@@ -3,7 +3,7 @@
  */
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useCatalog } from '../../../../utils/catalogStore.jsx';
-import { createEmptyPackageForm, entryToForm } from '../../model/form';
+import { buildPackageEntry, createEmptyPackageForm, entryToForm } from '../../model/form';
 import {
   cleanupImagePreviews,
   commaListToArray,
@@ -86,6 +86,15 @@ function extractCatalogPatchList(json: unknown): CatalogPatch[] {
     throw new Error('上書き対象の要素がありません。');
   }
   return list;
+}
+
+function createCatalogItemFromPatch(patch: CatalogPatch): CatalogItem {
+  const emptyForm = createEmptyPackageForm();
+  emptyForm.id = patch.id;
+  const base = buildPackageEntry(emptyForm, []);
+  const merged = mergeDefinedFields(base, patch);
+  const nextItem: CatalogItem = { ...merged, id: patch.id };
+  return nextItem;
 }
 
 function isCatalogItem(value: unknown): value is CatalogItem {
@@ -274,23 +283,31 @@ export default function useRegisterCatalogState({
         patchMap.set(patch.id, patch);
       });
 
-      let matchedCount = 0;
+      const existingIds = new Set(catalogItems.map((item) => item.id));
+      const nextCatalogItems: CatalogItem[] = [];
       const changedItems: CatalogItem[] = [];
       for (const item of catalogItems) {
         const patch = patchMap.get(item.id);
-        if (!patch) continue;
-        matchedCount += 1;
+        if (!patch) {
+          nextCatalogItems.push(item);
+          continue;
+        }
         const merged = mergeDefinedFields(item, patch);
-        const nextItem = { ...merged, id: item.id };
+        const nextItem: CatalogItem = { ...merged, id: item.id };
+        nextCatalogItems.push(nextItem);
         if (isDeepEqual(item, nextItem)) continue;
         changedItems.push(nextItem);
       }
 
-      if (matchedCount === 0) {
-        throw new Error('一致する id のパッケージが見つかりませんでした');
+      for (const patch of patchMap.values()) {
+        if (existingIds.has(patch.id)) continue;
+        const nextItem = createCatalogItemFromPatch(patch);
+        nextCatalogItems.push(nextItem);
+        changedItems.push(nextItem);
+        existingIds.add(patch.id);
       }
 
-      return changedItems;
+      return { changedItems, nextCatalogItems };
     },
     [catalogItems],
   );
