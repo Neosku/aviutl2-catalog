@@ -10,15 +10,20 @@ export default function RegisterSubmitBar({
   packageSender,
   submitting,
   pendingSubmitCount,
+  blockedSubmitCount,
   submittingLabel,
   onPackageSenderChange,
   onOpenJsonImport,
 }: RegisterSubmitBarProps) {
+  const hasBlockedDrafts = blockedSubmitCount > 0;
+  const canSubmit = pendingSubmitCount > 0 && !hasBlockedDrafts;
   const submitButtonLabel = submitting
     ? submittingLabel || '送信中…'
-    : pendingSubmitCount <= 1
-      ? '送信する'
-      : `${pendingSubmitCount}件まとめて送信`;
+    : hasBlockedDrafts
+      ? `テスト未完了 (${blockedSubmitCount}件)`
+      : pendingSubmitCount <= 1
+        ? '送信する'
+        : `${pendingSubmitCount}件まとめて送信`;
 
   return (
     <section className="sticky bottom-6 z-20 mb-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
@@ -60,7 +65,7 @@ export default function RegisterSubmitBar({
           <button
             type="submit"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-blue-500"
-            disabled={submitting || pendingSubmitCount <= 0}
+            disabled={submitting || !canSubmit}
           >
             {submitting ? (
               <>
@@ -76,6 +81,11 @@ export default function RegisterSubmitBar({
           </button>
         </div>
       </div>
+      {!submitting && hasBlockedDrafts && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          インストーラーテスト未完了のパッケージ: {blockedSubmitCount}件
+        </div>
+      )}
     </section>
   );
 }

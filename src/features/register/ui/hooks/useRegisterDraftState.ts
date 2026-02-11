@@ -4,16 +4,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   deleteRegisterDraft,
+  computeRegisterDraftContentHash,
   getRegisterDraft,
   isRegisterDraftPending,
+  isRegisterDraftReadyForSubmit,
   listRegisterDrafts,
   restoreRegisterDraft,
   saveRegisterDraft,
+  updateRegisterDraftTestState,
   type RegisterDraftRecord,
+  type RegisterDraftTestKind,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { CatalogItem, RegisterDraftListItemView } from '../types';
+
+function toDraftListItem(record: RegisterDraftRecord): RegisterDraftListItemView {
+  return {
+    packageId: record.packageId,
+    packageName: record.packageName,
+    savedAt: record.savedAt,
+    pending: isRegisterDraftPending(record),
+    readyForSubmit: isRegisterDraftReadyForSubmit(record),
+    lastSubmitError: String(record.lastSubmitError || ''),
+  };
+}
 
 interface UseRegisterDraftStateArgs {
   packageForm: RegisterPackageForm;
@@ -85,13 +100,7 @@ export default function useRegisterDraftState({
       tags: currentTags,
       packageSender,
     });
-    const nextItem: RegisterDraftListItemView = {
-      packageId: record.packageId,
-      packageName: record.packageName,
-      savedAt: record.savedAt,
-      pending: isRegisterDraftPending(record),
-      lastSubmitError: String(record.lastSubmitError || ''),
-    };
+    const nextItem = toDraftListItem(record);
     setDraftPackages((prev) => {
       const filtered = prev.filter((item) => item.packageId !== nextItem.packageId);
       return [nextItem, ...filtered];
@@ -154,6 +163,9 @@ export default function useRegisterDraftState({
     }
     const draft = getRegisterDraft(selectedId);
     if (!draft) {
+      return;
+    }
+    if (!isRegisterDraftPending(draft)) {
       return;
     }
     void applyDraftRecord(draft);
@@ -269,14 +281,47 @@ export default function useRegisterDraftState({
     [applyDraftRecord, flushBeforeNavigation, reloadDraftPackages, setError, setSelectedPackageId],
   );
 
+  const markCurrentDraftTestPassed = useCallback(
+    (kind: RegisterDraftTestKind) => {
+      const packageId = String(packageForm.id || '').trim();
+      if (!packageId) return;
+      const testedHash = computeRegisterDraftContentHash({
+        packageForm,
+        tags: currentTags,
+        packageSender,
+      });
+      const updated = updateRegisterDraftTestState({
+        packageId,
+        kind,
+        testedHash,
+      });
+      if (!updated) return;
+      const nextItem = toDraftListItem(updated);
+      setDraftPackages((prev) => {
+        const filtered = prev.filter((item) => item.packageId !== nextItem.packageId);
+        return [nextItem, ...filtered];
+      });
+    },
+    [currentTags, packageForm, packageSender],
+  );
+
   const pendingDraftPackages = useMemo(() => draftPackages.filter((item) => item.pending), [draftPackages]);
-  const pendingSubmitCount = useMemo(() => pendingDraftPackages.length, [pendingDraftPackages]);
+  const pendingSubmitCount = useMemo(
+    () => pendingDraftPackages.filter((item) => item.readyForSubmit).length,
+    [pendingDraftPackages],
+  );
+  const blockedSubmitCount = useMemo(
+    () => pendingDraftPackages.length - pendingSubmitCount,
+    [pendingDraftPackages, pendingSubmitCount],
+  );
 
   return {
     pendingDraftPackages,
     pendingSubmitCount,
+    blockedSubmitCount,
     reloadDraftPackages,
     flushAutoSaveNow,
+    markCurrentDraftTestPassed,
     handleSelectPackage,
     handleStartNewPackage,
     handleOpenDraftPackage,

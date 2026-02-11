@@ -928,7 +928,15 @@ async function runInstaller(exeAbsPath, args = [], elevate = false, _tmpPath) {
     'exit ($p.ExitCode)',
   ].join('\n');
   const encodedCommand = toPowerShellEncodedCommand(body);
-  const argsPs = ['-ExecutionPolicy', 'Bypass', '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand];
+  const argsPs = [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-EncodedCommand',
+    encodedCommand,
+  ];
   const cmd = shell.Command.create('powershell', argsPs, { encoding: 'utf-8' });
   const res = await cmd.execute();
   if (res.code !== 0) {
@@ -1270,8 +1278,42 @@ const STEP_PROGRESS_LABELS = {
 
 const STEP_PROGRESS_OFFSET = 0;
 
+const TEST_OPERATION_LABELS = {
+  download: 'ダウンロード',
+  extract: '展開',
+  extract_sfx: 'SFX展開',
+  copy: 'コピー',
+  delete: '削除',
+  run: '実行',
+  run_auo_setup: '実行',
+};
+
+function toTestOperationKind(action) {
+  const value = String(action || '');
+  if (value === 'download') return 'download';
+  if (value === 'extract') return 'extract';
+  if (value === 'extract_sfx') return 'extract_sfx';
+  if (value === 'copy') return 'copy';
+  if (value === 'delete') return 'delete';
+  if (value === 'run' || value === 'run_auo_setup') return 'run';
+  return 'error';
+}
+
+function toTestOperationLabel(action) {
+  const value = String(action || '');
+  return TEST_OPERATION_LABELS[value] || value || '処理';
+}
+
+function emitTestOperation(onOperation, operation) {
+  if (typeof onOperation !== 'function' || !operation || typeof operation !== 'object') return;
+  try {
+    onOperation(operation);
+  } catch {
+  }
+}
+
 // インストールの実行
-export async function runInstallerForItem(item, dispatch, onProgress) {
+export async function runInstallerForItem(item, dispatch, onProgress, onOperation) {
   await ensureAviutlClosed();
   // 実行用コンテキストを構築
   const version = item['latest-version'];
@@ -1322,16 +1364,26 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
     await logInfo(`[installer ${item.id}] start version=${version || ''} steps=${steps.length}`);
     for (let idx = 0; idx < steps.length; idx++) {
       const step = steps[idx];
+      const stepAction = String(step?.action || '');
+      const stepOperation = {
+        kind: toTestOperationKind(stepAction),
+        summary: toTestOperationLabel(stepAction),
+        fromPath: undefined,
+        toPath: undefined,
+        targetPath: undefined,
+      };
       const runningUnits = idx;
       emitProgress(runningUnits, step, idx, 'running');
       try {
-        switch (step.action) {
+        switch (stepAction) {
           case 'download': {
             const src = item?.installer?.source;
             if (!src) throw new Error(`Download source is not specified`);
+            let sourceLabel = '';
             // 1. Google Drive ダウンロード
             if (src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
               const fileId = src.GoogleDrive.id;
+              sourceLabel = `Google Drive fileId=${fileId}`;
               const stepSpan = 1 - STEP_PROGRESS_OFFSET;
               const startUnits = runningUnits;
               const maxUnits = idx + 1 - 0.01;
@@ -1373,11 +1425,10 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
               }
               ctx.downloadPath = tmpDir;
               logInfo(`[installer ${item.id}] downloading from Google Drive fileId=${src.GoogleDrive.id} to ${tmpDir}`);
-              break;
-            }
-            // 2. BOOTH 直リンクの場合
-            if (typeof src.booth === 'string' && src.booth) {
+            } else if (typeof src.booth === 'string' && src.booth) {
+              // 2. BOOTH 直リンクの場合
               const boothUrl = src.booth;
+              sourceLabel = boothUrl;
               logInfo(`[installer ${item.id}] downloading from BOOTH ${boothUrl} to ${tmpDir}`);
               const stepSpan = 1 - STEP_PROGRESS_OFFSET;
               const startUnits = runningUnits;
@@ -1396,35 +1447,46 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
                   }
                 },
               });
-              break;
+            } else {
+              let url = '';
+              // 3. GitHubの場合
+              if (src.github && src.github.owner && src.github.repo) {
+                url = await fetchGitHubURL(src.github);
+              }
+              // 4. 直接URLの場合
+              if (typeof src.direct === 'string' && src.direct) {
+                url = src.direct;
+              }
+              if (!url) throw new Error('Download source is not specified');
+              sourceLabel = url;
+              logInfo(`[installer ${item.id}] downloading from ${url} to ${tmpDir}`);
+              const stepSpan = 1 - STEP_PROGRESS_OFFSET;
+              const startUnits = runningUnits;
+              const maxUnits = idx + 1 - 0.01;
+              let unknownUnits = startUnits;
+              ctx.downloadPath = await downloadFileFromUrl(url, tmpDir, {
+                onProgress: ({ read, total }) => {
+                  if (typeof total === 'number' && total > 0) {
+                    const ratio = Math.min(1, Math.max(0, total ? read / total : 0));
+                    const units = startUnits + stepSpan * ratio;
+                    emitProgress(units, step, idx, 'running');
+                  } else if (typeof read === 'number' && read > 0) {
+                    const increment = stepSpan * 0.05;
+                    unknownUnits = Math.min(maxUnits, unknownUnits + increment);
+                    emitProgress(unknownUnits, step, idx, 'running');
+                  }
+                },
+              });
             }
-            let url = '';
-            // 3. GitHubの場合
-            if (src.github && src.github.owner && src.github.repo) {
-              url = await fetchGitHubURL(src.github);
-            }
-            // 4. 直接URLの場合
-            if (typeof src.direct === 'string' && src.direct) {
-              url = src.direct;
-            }
-            if (!url) throw new Error('Download source is not specified');
-            logInfo(`[installer ${item.id}] downloading from ${url} to ${tmpDir}`);
-            const stepSpan = 1 - STEP_PROGRESS_OFFSET;
-            const startUnits = runningUnits;
-            const maxUnits = idx + 1 - 0.01;
-            let unknownUnits = startUnits;
-            ctx.downloadPath = await downloadFileFromUrl(url, tmpDir, {
-              onProgress: ({ read, total }) => {
-                if (typeof total === 'number' && total > 0) {
-                  const ratio = Math.min(1, Math.max(0, total ? read / total : 0));
-                  const units = startUnits + stepSpan * ratio;
-                  emitProgress(units, step, idx, 'running');
-                } else if (typeof read === 'number' && read > 0) {
-                  const increment = stepSpan * 0.05;
-                  unknownUnits = Math.min(maxUnits, unknownUnits + increment);
-                  emitProgress(unknownUnits, step, idx, 'running');
-                }
-              },
+            stepOperation.fromPath = sourceLabel;
+            stepOperation.toPath = String(ctx.downloadPath || tmpDir || '');
+            emitTestOperation(onOperation, {
+              kind: stepOperation.kind,
+              status: 'done',
+              summary: stepOperation.summary,
+              detail: '',
+              fromPath: stepOperation.fromPath,
+              toPath: stepOperation.toPath,
             });
             break;
           }
@@ -1433,8 +1495,18 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
             const toRel = await expandMacros(step.to || `{tmp}`, ctx);
             const from = ensureAbsolutePath(fromRel, `install.extract.from`);
             const to = ensureAbsolutePath(toRel, `install.extract.to`);
+            stepOperation.fromPath = from;
+            stepOperation.toPath = to;
             logInfo(`[installer ${item.id}] extracting from ${from} to ${to}`);
             await extractZip(from, to);
+            emitTestOperation(onOperation, {
+              kind: stepOperation.kind,
+              status: 'done',
+              summary: stepOperation.summary,
+              detail: '',
+              fromPath: stepOperation.fromPath,
+              toPath: stepOperation.toPath,
+            });
             break;
           }
           case 'extract_sfx': {
@@ -1444,38 +1516,77 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
             const to = ensureAbsolutePath(toRel, `install.extract_sfx.to`);
             logInfo(`[installer ${item.id}] extracting SFX from ${from} to ${to}`);
             await extractSevenZipSfx(from, to);
+            emitTestOperation(onOperation, {
+              kind: 'extract_sfx',
+              status: 'done',
+              summary: 'extract_sfx を実行しました',
+              detail: '',
+            });
             break;
           }
           case 'copy': {
             const from = ensureAbsolutePath(await expandMacros(step.from, ctx), `install.copy.from`);
             const to = ensureAbsolutePath(await expandMacros(step.to, ctx), `install.copy.to`);
+            stepOperation.fromPath = from;
+            stepOperation.toPath = to;
             const count = await copyPattern(from, to);
             logInfo(`[installer ${item.id}] copy matched ${count} files (from=${from} to=${to})`);
             if (count === 0) {
               throw new Error(`copy matched 0 files (from=${from} to=${to})`);
             }
+            emitTestOperation(onOperation, {
+              kind: stepOperation.kind,
+              status: 'done',
+              summary: stepOperation.summary,
+              detail: `一致件数: ${count}件`,
+              fromPath: stepOperation.fromPath,
+              toPath: stepOperation.toPath,
+            });
             break;
           }
           // aviutl2本体のインストールを対象
           case 'run': {
             const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.run.path`);
+            stepOperation.targetPath = pRaw;
             const args = await Promise.all((step.args || []).map((a) => expandMacros(String(a), ctx)));
             await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
+            emitTestOperation(onOperation, {
+              kind: stepOperation.kind,
+              status: 'done',
+              summary: stepOperation.summary,
+              detail: '',
+              targetPath: stepOperation.targetPath,
+            });
             break;
           }
           case 'run_auo_setup': {
             const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.run_auo_setup.path`);
             await runAuoSetup(pRaw);
+            emitTestOperation(onOperation, {
+              kind: 'run',
+              status: 'done',
+              summary: 'run_auo_setup を実行しました',
+              detail: '',
+            });
             break;
           }
           default:
-            throw new Error(`unsupported action: ${String(step.action)}`);
+            throw new Error(`unsupported action: ${String(stepAction)}`);
         }
         emitProgress(idx + 1, step, idx, 'step-complete');
       } catch (e) {
         emitProgress(runningUnits, step, idx, 'error');
         const err = e instanceof Error ? e : new Error(String(e));
-        const prefix = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${step.action} failed`;
+        emitTestOperation(onOperation, {
+          kind: stepOperation.kind,
+          status: 'error',
+          summary: `${toTestOperationLabel(stepAction)} 失敗`,
+          detail: err.message || String(err),
+          fromPath: stepOperation.fromPath,
+          toPath: stepOperation.toPath,
+          targetPath: stepOperation.targetPath,
+        });
+        const prefix = `[installer ${item.id}] step ${idx + 1}/${steps.length} action=${stepAction} failed`;
         try {
           await logError(`${prefix}:\n${err.message}\n${err.stack ?? '(no stack)'}`);
         } catch {}
@@ -1513,7 +1624,7 @@ export async function runInstallerForItem(item, dispatch, onProgress) {
 }
 
 // アンインストールを実行
-export async function runUninstallerForItem(item, dispatch) {
+export async function runUninstallerForItem(item, dispatch, onOperation) {
   await ensureAviutlClosed();
   const version = item['latest-version'];
   const idVersion = `${item.id}-${version || 'latest'}`.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -1528,15 +1639,39 @@ export async function runUninstallerForItem(item, dispatch) {
     // アンインストール手順を順に実行
     for (let i = 0; i < item.installer.uninstall.length; i++) {
       const step = item.installer.uninstall[i];
+      const stepAction = String(step?.action || '');
+      const stepOperation = {
+        kind: toTestOperationKind(stepAction),
+        summary: toTestOperationLabel(stepAction),
+        targetPath: undefined,
+      };
       try {
-        switch (step.action) {
+        switch (stepAction) {
           case 'delete': {
             const p = await expandMacros(step.path, ctx);
             try {
               const abs = ensureAbsolutePath(p, `uninstall.delete.path`);
+              stepOperation.targetPath = abs;
               const ok = await deletePath(abs);
-              if (ok) await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
-              else await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
+              if (ok) {
+                await logInfo(`[uninstall ${item.id}] delete ok path="${p}"`);
+                emitTestOperation(onOperation, {
+                  kind: stepOperation.kind,
+                  status: 'done',
+                  summary: stepOperation.summary,
+                  detail: '',
+                  targetPath: stepOperation.targetPath,
+                });
+              } else {
+                await logInfo(`[uninstall ${item.id}] delete skip (not found) path="${p}"`);
+                emitTestOperation(onOperation, {
+                  kind: stepOperation.kind,
+                  status: 'skip',
+                  summary: '削除スキップ',
+                  detail: '対象が見つからないためスキップ',
+                  targetPath: stepOperation.targetPath,
+                });
+              }
             } catch (e) {
               throw new Error(`delete failed path=${p}: ${e?.message || e}`, { cause: e });
             }
@@ -1544,16 +1679,37 @@ export async function runUninstallerForItem(item, dispatch) {
           }
           case 'run': {
             const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `uninstall.run.path`);
+            stepOperation.targetPath = pRaw;
             const args = await Promise.all((step.args || []).map((a) => expandMacros(String(a), ctx)));
             await runInstaller(pRaw, args, !!step.elevate, ctx.tmpDir);
+            emitTestOperation(onOperation, {
+              kind: stepOperation.kind,
+              status: 'done',
+              summary: stepOperation.summary,
+              detail: '',
+              targetPath: stepOperation.targetPath,
+            });
             break;
           }
           default:
-            await logInfo(`[uninstall ${item.id}] skip unsupported action=${String(step.action)}`);
+            await logInfo(`[uninstall ${item.id}] skip unsupported action=${String(stepAction)}`);
+            emitTestOperation(onOperation, {
+              kind: 'error',
+              status: 'skip',
+              summary: '未対応アクション',
+              detail: stepAction,
+            });
             break;
         }
       } catch (e) {
-        const msg = `[uninstall ${item.id}] step ${i + 1}/${item.installer.uninstall.length} action=${step.action} failed: ${e?.message || e}`;
+        const msg = `[uninstall ${item.id}] step ${i + 1}/${item.installer.uninstall.length} action=${stepAction} failed: ${e?.message || e}`;
+        emitTestOperation(onOperation, {
+          kind: stepOperation.kind,
+          status: 'error',
+          summary: `${toTestOperationLabel(stepAction)} 失敗`,
+          detail: e?.message || String(e),
+          targetPath: stepOperation.targetPath,
+        });
         try {
           await logError(msg);
         } catch {}

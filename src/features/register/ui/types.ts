@@ -28,6 +28,20 @@ export interface InstallerTestProgress {
   phase: string;
 }
 
+export type RegisterTestOperationKind = 'download' | 'extract' | 'extract_sfx' | 'copy' | 'delete' | 'run' | 'error';
+export type RegisterTestOperationStatus = 'done' | 'skip' | 'error';
+
+export interface RegisterTestOperation {
+  key: string;
+  kind: RegisterTestOperationKind;
+  status: RegisterTestOperationStatus;
+  summary: string;
+  detail: string;
+  fromPath?: string;
+  toPath?: string;
+  targetPath?: string;
+}
+
 export interface SubmitPackagePayload {
   action: string;
   title: string;
@@ -191,6 +205,7 @@ export interface RegisterDraftListItemView {
   packageName: string;
   savedAt: number;
   pending: boolean;
+  readyForSubmit: boolean;
   lastSubmitError: string;
 }
 
@@ -240,6 +255,8 @@ export interface RegisterTestSectionProps {
   uninstallerTestLabel: string;
   uninstallerTestPercent: number;
   uninstallerTestError: string;
+  installerTestOperations: RegisterTestOperation[];
+  uninstallerTestOperations: RegisterTestOperation[];
   onInstallerTest: () => void;
   onUninstallerTest: () => void;
 }
@@ -249,6 +266,7 @@ export interface RegisterSubmitBarProps {
   packageSender: string;
   submitting: boolean;
   pendingSubmitCount: number;
+  blockedSubmitCount: number;
   submittingLabel?: string;
   onPackageSenderChange: (value: string) => void;
   onOpenJsonImport: () => void;

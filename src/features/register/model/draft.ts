@@ -30,6 +30,8 @@ export interface RegisterDraftRecord {
   tags: string[];
   savedAt: number;
   contentHash: string;
+  installerTestedHash: string;
+  uninstallerTestedHash: string;
   lastSubmittedHash: string;
   lastSubmitAt: number;
   lastSubmitError: string;
@@ -41,6 +43,7 @@ export interface RegisterDraftListItem {
   packageName: string;
   savedAt: number;
   pending: boolean;
+  readyForSubmit: boolean;
   lastSubmitError: string;
 }
 
@@ -49,6 +52,13 @@ export interface RegisterDraftRestoreResult {
   packageSender: string;
   tags: string[];
   warnings: string[];
+}
+
+export type RegisterDraftTestKind = 'installer' | 'uninstaller';
+
+export interface RegisterDraftTestStatus {
+  installerReady: boolean;
+  uninstallerReady: boolean;
 }
 
 function getStorage(): Storage | null {
@@ -102,7 +112,7 @@ function toDraftFormSnapshot(form: RegisterPackageForm): RegisterDraftFormSnapsh
   };
 }
 
-function computeRegisterDraftContentHash(args: {
+export function computeRegisterDraftContentHash(args: {
   packageForm: RegisterPackageForm;
   tags: string[];
   packageSender: string;
@@ -190,6 +200,27 @@ export function isRegisterDraftPending(record: RegisterDraftRecord): boolean {
   return String(record.contentHash || '') !== String(record.lastSubmittedHash || '');
 }
 
+export function getRegisterDraftTestStatus(record: RegisterDraftRecord): RegisterDraftTestStatus {
+  const contentHash = String(record.contentHash || '');
+  const installerTestedHash = String(record.installerTestedHash || '');
+  const uninstallerTestedHash = String(record.uninstallerTestedHash || '');
+  if (!contentHash) {
+    return {
+      installerReady: false,
+      uninstallerReady: false,
+    };
+  }
+  return {
+    installerReady: installerTestedHash === contentHash,
+    uninstallerReady: uninstallerTestedHash === contentHash,
+  };
+}
+
+export function isRegisterDraftReadyForSubmit(record: RegisterDraftRecord): boolean {
+  const status = getRegisterDraftTestStatus(record);
+  return status.installerReady && status.uninstallerReady;
+}
+
 function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
   if (!raw || typeof raw !== 'object') return null;
   const candidate = raw as Partial<RegisterDraftRecord>;
@@ -209,6 +240,8 @@ function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
     tags: normalizeArrayText(Array.isArray(candidate.tags) ? candidate.tags : []),
     savedAt: Number.isFinite(candidate.savedAt) ? Number(candidate.savedAt) : Date.now(),
     contentHash: String(candidate.contentHash || fallbackContentHash),
+    installerTestedHash: String(candidate.installerTestedHash || ''),
+    uninstallerTestedHash: String(candidate.uninstallerTestedHash || ''),
     lastSubmittedHash: String(candidate.lastSubmittedHash || ''),
     lastSubmitAt: Number.isFinite(candidate.lastSubmitAt) ? Number(candidate.lastSubmitAt) : 0,
     lastSubmitError: String(candidate.lastSubmitError || ''),
@@ -296,6 +329,8 @@ export function saveRegisterDraft(args: {
     tags: normalizeArrayText(args.tags),
     savedAt: Date.now(),
     contentHash,
+    installerTestedHash: String(previous?.installerTestedHash || ''),
+    uninstallerTestedHash: String(previous?.uninstallerTestedHash || ''),
     lastSubmittedHash: String(previous?.lastSubmittedHash || ''),
     lastSubmitAt: Number(previous?.lastSubmitAt || 0),
     lastSubmitError: String(previous?.lastSubmitError || ''),
@@ -325,6 +360,7 @@ export function listRegisterDrafts(): RegisterDraftListItem[] {
     packageName: record.packageName,
     savedAt: record.savedAt,
     pending: isRegisterDraftPending(record),
+    readyForSubmit: isRegisterDraftReadyForSubmit(record),
     lastSubmitError: String(record.lastSubmitError || ''),
   }));
 }
@@ -351,7 +387,7 @@ export function listRegisterDraftRecords(): RegisterDraftRecord[] {
 
 export function updateRegisterDraftSubmitState(args: {
   packageId: string;
-  submittedHash: string;
+  submittedHash?: string;
   errorMessage?: string;
 }): RegisterDraftRecord | null {
   const record = getRegisterDraft(args.packageId);
@@ -361,6 +397,27 @@ export function updateRegisterDraftSubmitState(args: {
     lastSubmitAt: Date.now(),
     lastSubmitError: String(args.errorMessage || ''),
     ...(args.errorMessage ? {} : { lastSubmittedHash: String(args.submittedHash || '') }),
+  };
+  const storage = getStorage();
+  if (!storage) return null;
+  storage.setItem(createDraftStorageKey(next.packageId), JSON.stringify(next));
+  return next;
+}
+
+export function updateRegisterDraftTestState(args: {
+  packageId: string;
+  kind: RegisterDraftTestKind;
+  testedHash: string;
+}): RegisterDraftRecord | null {
+  const record = getRegisterDraft(args.packageId);
+  if (!record) return null;
+  const testedHash = String(args.testedHash || '');
+  if (!testedHash || testedHash !== String(record.contentHash || '')) {
+    return null;
+  }
+  const next: RegisterDraftRecord = {
+    ...record,
+    ...(args.kind === 'installer' ? { installerTestedHash: testedHash } : { uninstallerTestedHash: testedHash }),
   };
   const storage = getStorage();
   if (!storage) return null;

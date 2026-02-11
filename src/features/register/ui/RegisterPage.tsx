@@ -93,11 +93,6 @@ export default function Register() {
     reorderSteps: formHandlers.reorderSteps,
   });
 
-  const testState = useRegisterTestState({
-    packageForm,
-    selectedPackageId: catalog.selectedPackageId,
-  });
-
   const submitHandlers = useRegisterSubmitHandler({
     submitEndpoint,
     setCatalogItems: catalog.setCatalogItems,
@@ -126,6 +121,13 @@ export default function Register() {
     setDescriptionTab,
     setExpandedVersionKeys,
     setError,
+  });
+
+  const testState = useRegisterTestState({
+    packageForm,
+    selectedPackageId: catalog.selectedPackageId,
+    flushDraftBeforeTest: draftState.flushAutoSaveNow,
+    onTestPassed: draftState.markCurrentDraftTestPassed,
   });
 
   const batchSubmit = useRegisterBatchSubmit({
@@ -413,6 +415,7 @@ export default function Register() {
       installerTestPercent: testState.installerTestPercent,
       installerTestDetectedVersion: testState.installerTestDetectedVersion,
       installerTestError: testState.installerTestError,
+      installerTestOperations: testState.installerTestOperations,
       uninstallerTestRunning: testState.uninstallerTestRunning,
       uninstallerTestValidation: testState.uninstallerTestValidation,
       uninstallerTestRatio: testState.uninstallerTestRatio,
@@ -421,6 +424,7 @@ export default function Register() {
       uninstallerTestLabel: testState.uninstallerTestLabel,
       uninstallerTestPercent: testState.uninstallerTestPercent,
       uninstallerTestError: testState.uninstallerTestError,
+      uninstallerTestOperations: testState.uninstallerTestOperations,
       onInstallerTest: testState.handleInstallerTest,
       onUninstallerTest: testState.handleUninstallerTest,
     }),
@@ -434,6 +438,7 @@ export default function Register() {
       testState.installerTestPercent,
       testState.installerTestDetectedVersion,
       testState.installerTestError,
+      testState.installerTestOperations,
       testState.uninstallerTestRunning,
       testState.uninstallerTestValidation,
       testState.uninstallerTestRatio,
@@ -442,6 +447,7 @@ export default function Register() {
       testState.uninstallerTestLabel,
       testState.uninstallerTestPercent,
       testState.uninstallerTestError,
+      testState.uninstallerTestOperations,
       testState.handleInstallerTest,
       testState.handleUninstallerTest,
     ],
@@ -452,6 +458,7 @@ export default function Register() {
       packageSender,
       submitting,
       pendingSubmitCount: draftState.pendingSubmitCount,
+      blockedSubmitCount: draftState.blockedSubmitCount,
       submittingLabel: batchSubmit.submitProgressText ? `送信中… (${batchSubmit.submitProgressText})` : '送信中…',
       onOpenJsonImport: openJsonDialog,
       onPackageSenderChange: (value: string) => {
@@ -464,6 +471,7 @@ export default function Register() {
       packageSender,
       submitting,
       draftState.pendingSubmitCount,
+      draftState.blockedSubmitCount,
       batchSubmit.submitProgressText,
       openJsonDialog,
       markUserEdit,
