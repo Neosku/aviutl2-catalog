@@ -45,6 +45,50 @@ function mergeDefinedFields<T>(base: T, patch: DeepPartial<T>): T {
   return next as T;
 }
 
+function extractVersionKey(value: unknown): string {
+  if (!isPlainObject(value)) return '';
+  return typeof value.version === 'string' ? value.version.trim() : '';
+}
+
+function mergeVersionListByVersionKey(baseList: CatalogItem['version'], patchList: unknown[]): CatalogItem['version'] {
+  const next: unknown[] = [...baseList];
+  const indexByVersion = new Map<string, number>();
+
+  for (let i = 0; i < next.length; i += 1) {
+    const key = extractVersionKey(next[i]);
+    if (!key || indexByVersion.has(key)) continue;
+    indexByVersion.set(key, i);
+  }
+
+  for (let i = 0; i < patchList.length; i += 1) {
+    const patchVersion = patchList[i];
+    const key = extractVersionKey(patchVersion);
+    const existingIndex = key ? indexByVersion.get(key) : undefined;
+    if (typeof existingIndex === 'number') {
+      next[existingIndex] = patchVersion;
+      continue;
+    }
+    next.push(patchVersion);
+    if (key) {
+      indexByVersion.set(key, next.length - 1);
+    }
+  }
+
+  return next as CatalogItem['version'];
+}
+
+function mergeCatalogItemWithPatch(base: CatalogItem, patch: CatalogPatch): CatalogItem {
+  const merged = mergeDefinedFields(base, patch);
+  if (!Object.prototype.hasOwnProperty.call(patch, 'version')) {
+    return { ...merged, id: base.id };
+  }
+  if (!Array.isArray(base.version) || !Array.isArray(patch.version)) {
+    return { ...merged, id: base.id };
+  }
+  const nextVersion = mergeVersionListByVersionKey(base.version, patch.version);
+  return { ...merged, id: base.id, version: nextVersion };
+}
+
 function isDeepEqual(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;
   if (Array.isArray(left) || Array.isArray(right)) {
@@ -292,8 +336,7 @@ export default function useRegisterCatalogState({
           nextCatalogItems.push(item);
           continue;
         }
-        const merged = mergeDefinedFields(item, patch);
-        const nextItem: CatalogItem = { ...merged, id: item.id };
+        const nextItem = mergeCatalogItemWithPatch(item, patch);
         nextCatalogItems.push(nextItem);
         if (isDeepEqual(item, nextItem)) continue;
         changedItems.push(nextItem);
