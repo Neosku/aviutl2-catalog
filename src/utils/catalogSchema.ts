@@ -42,6 +42,13 @@ export const installerActionSchema = z.discriminatedUnion('action', [
     action: z.literal('delete'),
     path: z.string(),
   }),
+
+  z.object({
+    action: z.literal('run'),
+    path: z.string(),
+    args: z.array(z.string()),
+    elevate: z.boolean().optional(),
+  }),
 ]);
 export type InstallerAction = z.infer<typeof installerActionSchema>;
 
