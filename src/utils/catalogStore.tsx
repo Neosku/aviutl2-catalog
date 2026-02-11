@@ -4,44 +4,65 @@
 // - loading/error: ローディング・エラー状態
 // - allTags/allTypes: UI のフィルター候補（全件から抽出）
 // - installedMap/detectedMap: インストール情報（検出結果）
-import React, { createContext, useReducer, useContext, useMemo } from 'react';
+import { createContext, useReducer, useContext, useMemo } from 'react';
 import { normalize, latestVersionOf } from './index.js';
+import { CatalogEntry } from './catalogSchema.js';
+
+type CatalogState = {
+  items: CatalogEntryState[];
+  loading: boolean;
+  error: string | null;
+  allTags: string[];
+  allTypes: string[];
+  installedIds: string[];
+  installedMap: Record<string, string>; // id -> version
+  detectedMap: Record<string, string>; // id -> version
+};
+
+export type CatalogEntryState = CatalogEntry & {
+  updatedAt: number | null;
+  nameKey: string;
+  authorKey: string;
+  summaryKey: string;
+  installed: boolean;
+  installedVersion?: string;
+  isLatest?: boolean;
+  catalogIndex: number;
+};
 
 // 読み取り用/更新用の Context を分離して、再レンダリングを最小化
-const CatalogStateContext = createContext(null);
-const CatalogDispatchContext = createContext(null);
+const CatalogStateContext = createContext<CatalogState | null>(null);
+const CatalogDispatchContext = createContext<React.Dispatch<CatalogAction> | null>(null);
 
 // 更新日のタイムスタンプを算出
 // 仕様: version[].release_date の最大値を updatedAt として使用
-function toUpdatedAt(pkg) {
-  const arr = Array.isArray(pkg.versions) ? pkg.versions : Array.isArray(pkg.version) ? pkg.version : [];
-  if (!arr.length) return null;
-  const last = arr[arr.length - 1];
-  const ts = new Date(last.release_date).getTime();
-  return Number.isFinite(ts) ? ts : null;
-}
-
-// popularity の数値化（無効値は null）
-function toPopularity(pkg) {
-  const score = Number(pkg?.popularity);
-  return Number.isFinite(score) ? score : null;
+function toUpdatedAt(pkg: CatalogEntry) {
+  if (!pkg.version.length) return null;
+  let maxTs = 0;
+  for (const ver of pkg.version) {
+    const dt = new Date(ver.release_date);
+    const ts = dt.getTime();
+    if (Number.isFinite(ts) && ts > maxTs) {
+      maxTs = ts;
+    }
+  }
+  return maxTs || null;
 }
 
 // 検索・ソート用の派生フィールドを付与
 // - updatedAt: 日付の数値化
 // - nameKey/authorKey/summaryKey: 正規化キー（部分一致検索に利用）
-function enrich(item) {
+function enrich(item: CatalogEntry) {
   return {
     ...item,
     updatedAt: toUpdatedAt(item),
-    popularityScore: toPopularity(item),
     nameKey: normalize(item.name || ''),
     authorKey: normalize(item.author || ''),
     summaryKey: normalize(item.summary || ''),
   };
 }
 
-export function initCatalog() {
+export function initCatalog(): CatalogState {
   // ストアの初期状態（アプリ起動直後）
   return {
     items: [],
@@ -55,35 +76,37 @@ export function initCatalog() {
   };
 }
 
-function catalogReducerInternal(state, action) {
+export type CatalogAction =
+  | { type: 'SET_ITEMS'; payload: CatalogEntry[] }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_INSTALLED_IDS'; payload: string[] }
+  | { type: 'SET_INSTALLED_MAP'; payload: Record<string, string> }
+  | { type: 'SET_DETECTED_MAP'; payload: Record<string, string> }
+  | { type: 'SET_DETECTED_ONE'; payload: { id: string; version: string } };
+
+function catalogReducerInternal(state: CatalogState, action: CatalogAction): CatalogState {
   switch (action.type) {
     case 'SET_ITEMS': {
       // カタログ本体の差し替え
       // - installer があるものは downloadURL を installer:// に置き換え（UI でインストーラ起動）
       // - detectedMap（検出済みバージョン）から installed/isLatest を付加
       const items = (action.payload || [])
-        .map((item, index) => enrich({ ...item, catalogIndex: index }))
+        .map((item, index) => ({ ...enrich({ ...item }), catalogIndex: index }))
         .map((it) => {
-          const hasInst = typeof it?.installer === 'string' || Array.isArray(it?.installer?.install);
-          const dl = hasInst ? `installer://${encodeURIComponent(it.id)}` : it.downloadURL;
           const detectedVersion = state.detectedMap?.[it.id] || '';
           const latest = latestVersionOf(it) || '';
           const isLatest = !!detectedVersion && !!latest && detectedVersion === latest;
           return {
             ...it,
-            downloadURL: dl,
             installed: detectedVersion !== '',
             installedVersion: detectedVersion,
             isLatest,
           };
         });
       // タグ・種類の候補一覧を集計（重複排除）
-      const tagSet = new Set();
-      const typeSet = new Set();
-      items.forEach((it) => {
-        (it.tags || []).forEach((t) => tagSet.add(t));
-        if (it.type) typeSet.add(it.type);
-      });
+      const tagSet = new Set(items.flatMap((item) => item.tags));
+      const typeSet = new Set(items.map((item) => item.type));
       return { ...state, items, allTags: Array.from(tagSet), allTypes: Array.from(typeSet) };
     }
     case 'SET_LOADING':
@@ -133,7 +156,13 @@ function catalogReducerInternal(state, action) {
   }
 }
 
-export function CatalogProvider({ children, init }) {
+export function CatalogProvider({
+  children,
+  init,
+}: {
+  children: React.ReactNode;
+  init: ReturnType<typeof initCatalog>;
+}) {
   // Provider で reducer を構築。state は useMemo でメモ化し不要な再描画を抑制
   const [state, dispatch] = useReducer(catalogReducerInternal, init);
   const memoState = useMemo(() => state, [state]);
@@ -144,14 +173,14 @@ export function CatalogProvider({ children, init }) {
   );
 }
 
-export function useCatalog() {
+export function useCatalog(): CatalogState {
   // 読み取り用フック。Provider 外での使用を防止
   const ctx = useContext(CatalogStateContext);
   if (!ctx) throw new Error('useCatalog must be used within CatalogProvider');
   return ctx;
 }
 
-export function useCatalogDispatch() {
+export function useCatalogDispatch(): React.Dispatch<CatalogAction> {
   // 更新用フック。Provider 外での使用を防止
   const ctx = useContext(CatalogDispatchContext);
   if (!ctx) throw new Error('useCatalogDispatch must be used within CatalogProvider');
