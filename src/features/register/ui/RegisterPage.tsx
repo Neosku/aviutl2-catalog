@@ -202,12 +202,11 @@ export default function Register() {
 
   const applyCatalogJsonPatch = useCallback(() => {
     try {
-      const { changedItems, nextCatalogItems } = catalog.applyCatalogJsonPatch(jsonDialogText);
+      const { changedItems } = catalog.applyCatalogJsonPatch(jsonDialogText);
       if (changedItems.length === 0) {
         setJsonDialogError('変更がありませんでした。');
         return;
       }
-      catalog.setCatalogItems(nextCatalogItems);
 
       changedItems.forEach((item) => {
         const form = entryToForm(item, catalog.catalogBaseUrl);
@@ -228,7 +227,6 @@ export default function Register() {
   }, [
     catalog.applyCatalogJsonPatch,
     catalog.catalogBaseUrl,
-    catalog.setCatalogItems,
     closeJsonDialog,
     draftState.reloadDraftPackages,
     jsonDialogText,
