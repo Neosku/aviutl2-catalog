@@ -33,6 +33,14 @@ export const installerActionSchema = z.discriminatedUnion('action', [
   }),
 
   z.object({
+    action: z.literal('extract'),
+  }),
+
+  z.object({
+    action: z.literal('extract_sfx'),
+  }),
+
+  z.object({
     action: z.literal('copy'),
     from: z.string(),
     to: z.string(),
@@ -49,13 +57,21 @@ export const installerActionSchema = z.discriminatedUnion('action', [
     args: z.array(z.string()),
     elevate: z.boolean().optional(),
   }),
+
+  z.object({
+    action: z.literal('run_auo_setup'),
+    path: z.string(),
+  })
 ]);
 export type InstallerAction = z.infer<typeof installerActionSchema>;
 
 export const installerSchema = z.object({
-  source: z.object({
-    github: githubSourceSchema,
-  }),
+  source: z.union([
+    z.object({ direct: z.string() }),
+    z.object({ booth: z.string() }),
+    z.object({ github: githubSourceSchema }),
+    z.object({ GoogleDrive: z.object({ id: z.string() }) }),
+  ]),
   install: z.array(installerActionSchema),
   uninstall: z.array(installerActionSchema),
 });
@@ -75,6 +91,14 @@ export const versionSchema = z.object({
   file: z.array(versionFileSchema),
 });
 export type Version = z.infer<typeof versionSchema>;
+
+/* ---------- image ---------- */
+
+export const imageSchema = z.object({
+  thumbnail: z.string().optional(),
+  infoImg: z.array(z.string()).optional(),
+});
+export type Image = z.infer<typeof imageSchema>;
 
 /* ---------- catalog entry ---------- */
 
@@ -96,7 +120,7 @@ export const catalogEntrySchema = z.object({
 
   tags: z.array(z.string()),
   dependencies: z.array(z.string()),
-  images: z.array(z.string()),
+  images: z.array(imageSchema),
 
   installer: installerSchema,
   version: z.array(versionSchema),

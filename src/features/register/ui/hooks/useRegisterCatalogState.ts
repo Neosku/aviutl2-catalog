@@ -6,7 +6,7 @@ import { useCatalog } from '../../../../utils/catalogStore.jsx';
 import { createEmptyPackageForm, entryToForm } from '../../model/form';
 import { cleanupImagePreviews, commaListToArray, normalizeArrayText, resolveBaseUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
-import type { CatalogItem } from '../types';
+import { CatalogEntry, catalogIndexSchema } from '../../../../utils/catalogSchema.js';
 
 interface UseRegisterCatalogStateArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -23,7 +23,7 @@ export default function useRegisterCatalogState({
   setError,
   onUserEdit,
 }: UseRegisterCatalogStateArgs) {
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogEntry[]>([]);
   const [catalogLoadState, setCatalogLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [catalogBaseUrl, setCatalogBaseUrl] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
@@ -68,9 +68,7 @@ export default function useRegisterCatalogState({
       const endpoint = import.meta.env.VITE_REMOTE || './index.json';
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const rawList = Array.isArray(json) ? json : Array.isArray((json as any)?.packages) ? (json as any).packages : [];
-      const list = (Array.isArray(rawList) ? rawList : []) as CatalogItem[];
+      const list = catalogIndexSchema.parse(await res.json());
       setCatalogItems(list);
       const base = resolveBaseUrl(res.url || endpoint) || '';
       setCatalogBaseUrl(base);
@@ -114,7 +112,7 @@ export default function useRegisterCatalogState({
   }, [catalogItems, deferredPackageSearch]);
 
   const handleSelectPackage = useCallback(
-    (item: CatalogItem | null) => {
+    (item: CatalogEntry | null) => {
       if (!item) {
         setSelectedPackageId('');
         setInitialTags([]);
