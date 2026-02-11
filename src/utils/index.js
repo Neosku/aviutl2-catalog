@@ -1308,8 +1308,7 @@ function emitTestOperation(onOperation, operation) {
   if (typeof onOperation !== 'function' || !operation || typeof operation !== 'object') return;
   try {
     onOperation(operation);
-  } catch {
-  }
+  } catch {}
 }
 
 // インストールの実行

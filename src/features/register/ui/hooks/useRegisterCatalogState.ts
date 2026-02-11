@@ -276,7 +276,6 @@ export default function useRegisterCatalogState({
 
       let matchedCount = 0;
       const changedItems: CatalogItem[] = [];
-      let selectedChangedItem: CatalogItem | null = null;
       for (const item of catalogItems) {
         const patch = patchMap.get(item.id);
         if (!patch) continue;
@@ -285,36 +284,15 @@ export default function useRegisterCatalogState({
         const nextItem = { ...merged, id: item.id };
         if (isDeepEqual(item, nextItem)) continue;
         changedItems.push(nextItem);
-        if (selectedPackageId && nextItem.id === selectedPackageId) {
-          selectedChangedItem = nextItem;
-        }
       }
 
       if (matchedCount === 0) {
         throw new Error('一致する id のパッケージが見つかりませんでした');
       }
 
-      if (changedItems.length > 0) {
-        const changedMap = new Map(changedItems.map((item) => [item.id, item]));
-        setCatalogItems((prev) => prev.map((item) => changedMap.get(item.id) || item));
-        setError('');
-      }
-
-      if (selectedChangedItem) {
-        const form = entryToForm(selectedChangedItem, catalogBaseUrl);
-        const tags = commaListToArray(form.tagsText);
-        setInitialTags(tags);
-        setCurrentTags(tags);
-        tagListRef.current = tags;
-        setPackageForm((prev) => {
-          cleanupImagePreviews(prev.images);
-          return form;
-        });
-      }
-
       return changedItems;
     },
-    [catalogBaseUrl, catalogItems, selectedPackageId, setCatalogItems, setError, setPackageForm],
+    [catalogItems],
   );
 
   return {
