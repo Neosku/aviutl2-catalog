@@ -2,7 +2,7 @@
  * 送信バーコンポーネント
  */
 import React from 'react';
-import { BookOpen, Send } from 'lucide-react';
+import { BookOpen, FileBraces, Send } from 'lucide-react';
 import type { RegisterSubmitBarProps } from '../types';
 
 export default function RegisterSubmitBar({
@@ -45,6 +45,7 @@ export default function RegisterSubmitBar({
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             onClick={onOpenJsonImport}
           >
+            <FileBraces size={16} />
             JSON入力
           </button>
         </div>
@@ -81,11 +82,6 @@ export default function RegisterSubmitBar({
           </button>
         </div>
       </div>
-      {!submitting && hasBlockedDrafts && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          インストーラーテスト未完了のパッケージ: {blockedSubmitCount}件
-        </div>
-      )}
     </section>
   );
 }

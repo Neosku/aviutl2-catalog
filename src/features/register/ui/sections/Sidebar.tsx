@@ -32,6 +32,14 @@ export default function RegisterSidebar({
   onOpenDraftPackage,
   onDeleteDraftPackage,
 }: RegisterSidebarProps) {
+  const hasDraftPackages = draftPackages.length > 0;
+  const blockedDraftCount = draftPackages.filter((draft) => !draft.readyForSubmit).length;
+  const submitListTestStatus = blockedDraftCount > 0 ? `${blockedDraftCount}件テスト未完了` : 'テスト完了';
+  const headerStatusClass =
+    blockedDraftCount > 0
+      ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200'
+      : 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800/80 dark:bg-emerald-900/40 dark:text-emerald-200';
+
   return (
     <aside className="lg:sticky lg:top-6 lg:self-start lg:h-[calc(100dvh-32px-3rem)]">
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:h-full">
@@ -45,14 +53,22 @@ export default function RegisterSidebar({
             新規パッケージ作成
           </button>
           <div className="space-y-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/40 lg:mb-3 lg:shrink-0">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">送信予定一覧</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">送信予定一覧</div>
+              {hasDraftPackages && (
+                <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${headerStatusClass}`}>
+                  {submitListTestStatus}
+                </span>
+              )}
+            </div>
             <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-scrollbar lg:max-h-[30vh]">
               {draftPackages.map((draft) => {
                 const isSelected = selectedPackageId === draft.packageId;
+                const isTestReady = draft.readyForSubmit;
                 return (
                   <div
                     key={draft.draftId}
-                    className={`group flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${
+                    className={`group flex items-center rounded-lg border px-2 py-1.5 transition ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-900/20'
                         : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -71,8 +87,19 @@ export default function RegisterSidebar({
                       >
                         {draft.packageName || draft.packageId}
                       </div>
-                      <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {formatSavedAt(draft.savedAt)}
+                      <div className="flex items-center gap-1.5">
+                        <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                          {formatSavedAt(draft.savedAt)}
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                            isTestReady
+                              ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800/80 dark:bg-emerald-900/40 dark:text-emerald-200'
+                              : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200'
+                          }`}
+                        >
+                          {isTestReady ? 'テスト完了' : 'テスト未完了'}
+                        </span>
                       </div>
                     </button>
                     <DeleteButton
