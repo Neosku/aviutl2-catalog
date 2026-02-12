@@ -6,131 +6,57 @@
   "permissions": [
     {
       "identifier": "http:default",
-      "allow": ["https://*", "http://*", { "url": "https://*:*" }, { "url": "http://*:*" }]
+      "allow": [
+        "https://*",
+        "http://*",
+        {
+          "url": "https://*:*"
+        },
+        {
+          "url": "http://*:*"
+        }
+      ]
     },
     {
       "identifier": "shell:allow-execute",
-      "allow": [{ "name": "powershell", "cmd": "powershell" }]
+      "allow": [
+        {
+          "name": "powershell",
+          "cmd": "powershell"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-read-file",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-write-file",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-read-dir",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-copy-file",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-mkdir",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-remove",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-rename",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     },
     {
       "identifier": "fs:allow-exists",
-      "allow": [
-        "$APPCONFIG/*",
-        "$APPDATA/*",
-        "$APPLOCALDATA/*",
-        "$HOME/*",
-        "$DESKTOP/*",
-        "$DOCUMENT/*",
-        "$DOWNLOAD/*",
-        "C:/**",
-        "D:/**",
-        "E:/**"
-      ]
+      "allow": ["**/**"]
     }
   ]
 }
