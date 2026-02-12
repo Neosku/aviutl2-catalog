@@ -1272,6 +1272,7 @@ const STEP_PROGRESS_LABELS = {
   extract: '展開中',
   extract_sfx: '展開中',
   copy: 'コピー中',
+  delete: '削除中',
   run: '実行中',
   run_auo_setup: '実行中',
 };
@@ -1541,6 +1542,36 @@ export async function runInstallerForItem(item, dispatch, onProgress, onOperatio
               fromPath: stepOperation.fromPath,
               toPath: stepOperation.toPath,
             });
+            break;
+          }
+          case 'delete': {
+            const p = await expandMacros(step.path, ctx);
+            try {
+              const abs = ensureAbsolutePath(p, `install.delete.path`);
+              stepOperation.targetPath = abs;
+              const ok = await deletePath(abs);
+              if (ok) {
+                await logInfo(`[installer ${item.id}] delete ok path="${p}"`);
+                emitTestOperation(onOperation, {
+                  kind: stepOperation.kind,
+                  status: 'done',
+                  summary: stepOperation.summary,
+                  detail: '',
+                  targetPath: stepOperation.targetPath,
+                });
+              } else {
+                await logInfo(`[installer ${item.id}] delete skip (not found) path="${p}"`);
+                emitTestOperation(onOperation, {
+                  kind: stepOperation.kind,
+                  status: 'skip',
+                  summary: '削除スキップ',
+                  detail: '対象が見つからないためスキップ',
+                  targetPath: stepOperation.targetPath,
+                });
+              }
+            } catch (e) {
+              throw new Error(`delete failed path=${p}: ${e?.message || e}`, { cause: e });
+            }
             break;
           }
           // aviutl2本体のインストールを対象

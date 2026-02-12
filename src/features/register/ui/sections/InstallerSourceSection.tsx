@@ -97,7 +97,7 @@ export default function InstallerSourceSection({ installer, updateInstallerField
                 id="installer-github-pattern"
                 value={installer.githubPattern}
                 onChange={(e) => updateInstallerField('githubPattern', e.target.value)}
-                placeholder="^aviutl_plugin_.*\\.zip$"
+                placeholder="^aviutl_plugin_.*\.zip$"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 リリースファイル名に一致する正規表現を指定してください。

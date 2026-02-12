@@ -4,7 +4,7 @@
 import { LICENSE_TEMPLATES } from '../../../utils/licenseTemplates.js';
 import type { RegisterInstallerOption } from './types';
 
-export const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy'];
+export const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy', 'delete'];
 export const SPECIAL_INSTALL_ACTIONS = ['extract_sfx', 'run_auo_setup'];
 export const UNINSTALL_ACTIONS = ['delete', 'run'];
 export const ID_PATTERN = /^[A-Za-z0-9._-]+$/;

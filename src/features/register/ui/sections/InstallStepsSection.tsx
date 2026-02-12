@@ -125,6 +125,25 @@ export default function InstallStepsSection({
                   </div>
                 </div>
               )}
+              {!isSpecialAction && step.action === 'delete' && (
+                <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+                  <div className="space-y-1">
+                    <label
+                      className="text-xs font-medium text-slate-600 dark:text-slate-400"
+                      htmlFor={`install-${step.key}-path`}
+                    >
+                      削除するパス
+                    </label>
+                    <input
+                      id={`install-${step.key}-path`}
+                      value={step.path}
+                      onChange={(e) => updateInstallStep(step.key, 'path', e.target.value)}
+                      placeholder="（例：{pluginsDir}/example.auo）"
+                      className="!bg-white dark:!bg-slate-800"
+                    />
+                  </div>
+                </div>
+              )}
               {!isSpecialAction && step.action === 'copy' && (
                 <div className="grid gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50 md:grid-cols-2">
                   <div className="space-y-1">
