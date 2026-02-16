@@ -48,6 +48,27 @@ export function formatDate(ts) {
 // 検索・フィルタリング・ソート
 // -------------------------
 
+export const PRIMARY_PACKAGE_TYPES = [
+  '本体',
+  'MOD',
+  '入力プラグイン',
+  '出力プラグイン',
+  '汎用プラグイン',
+  'フィルタプラグイン',
+  'スクリプト',
+];
+
+export const ORDERED_PACKAGE_TYPES = [...PRIMARY_PACKAGE_TYPES, 'その他'];
+
+function normalizePackageType(type) {
+  return typeof type === 'string' ? type.trim() : '';
+}
+
+function isOtherPackageType(type) {
+  const normalized = normalizePackageType(type);
+  return !normalized || !PRIMARY_PACKAGE_TYPES.includes(normalized);
+}
+
 // 検索を行う関数
 // 検索クエリをアイテムの name/author/summary に対して AND 条件で部分一致検索
 // JavaScript側での実装を維持（高速化は将来的にRust側で実装）
@@ -64,7 +85,14 @@ export function matchQuery(item, q) {
 export function filterByTagsAndType(items, tags = [], types = []) {
   return items.filter((it) => {
     const tagOk = !tags?.length || (it.tags || []).some((t) => tags.includes(t));
-    const typeOk = !types?.length || types.includes(it.type);
+    const itemType = normalizePackageType(it.type);
+    const typeOk =
+      !types?.length ||
+      types.some((selectedType) => {
+        const normalizedSelectedType = normalizePackageType(selectedType);
+        if (normalizedSelectedType === 'その他') return isOtherPackageType(itemType);
+        return itemType === normalizedSelectedType;
+      });
     return tagOk && typeOk;
   });
 }

@@ -42,7 +42,7 @@ export default function PackageCard({ item, listSearch = '' }) {
   const [updateProgress, setUpdateProgress] = useState(null);
 
   const thumbnail = useMemo(() => pickThumbnail(item), [item]);
-  const category = item.type || 'その他';
+  const category = typeof item.type === 'string' ? item.type : 'その他';
   const isInstalled = item.installed;
   const hasUpdate = isInstalled && !item.isLatest;
   const canInstall = hasInstaller(item);
