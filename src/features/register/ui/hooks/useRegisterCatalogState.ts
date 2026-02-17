@@ -50,7 +50,10 @@ function extractVersionKey(value: unknown): string {
   return typeof value.version === 'string' ? value.version.trim() : '';
 }
 
-function mergeVersionListByVersionKey(baseList: CatalogEntry['version'], patchList: unknown[]): CatalogEntry['version'] {
+function mergeVersionListByVersionKey(
+  baseList: CatalogEntry['version'],
+  patchList: unknown[],
+): CatalogEntry['version'] {
   const next: unknown[] = [...baseList];
   const indexByVersion = new Map<string, number>();
 

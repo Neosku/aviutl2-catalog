@@ -9,7 +9,15 @@ import type {
   RegisterPackageForm,
   RegisterUninstallStep,
 } from './types';
-import type { CatalogEntry, Image, Installer, InstallerAction, InstallerSource, License, Version } from '../../../utils/catalogSchema.js';
+import type {
+  CatalogEntry,
+  Image,
+  Installer,
+  InstallerAction,
+  InstallerSource,
+  License,
+  Version,
+} from '../../../utils/catalogSchema.js';
 
 function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
   if (form.installer.sourceType === 'direct') {
