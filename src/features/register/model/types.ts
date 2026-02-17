@@ -165,27 +165,6 @@ export interface RegisterVersionPayload {
   file: RegisterVersionPayloadFile[];
 }
 
-export interface RegisterCatalogEntry {
-  id: string;
-  name: string;
-  type: string;
-  summary: string;
-  description: string;
-  author: string;
-  originalAuthor?: string;
-  repoURL: string;
-  'latest-version': string;
-  popularity?: unknown;
-  trend?: unknown;
-  licenses: RegisterLicensePayload[];
-  niconiCommonsId?: string;
-  tags: string[];
-  dependencies: string[];
-  images: RegisterImagePayload[];
-  installer: RegisterInstallerPayload;
-  version: RegisterVersionPayload[];
-}
-
 export interface RegisterInstallerTestItem {
   id: string;
   installer: RegisterInstallerPayload;

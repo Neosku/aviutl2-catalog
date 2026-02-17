@@ -34,10 +34,14 @@ export const installerActionSchema = z.discriminatedUnion('action', [
 
   z.object({
     action: z.literal('extract'),
+    from: z.string().optional(),
+    to: z.string().optional(),
   }),
 
   z.object({
     action: z.literal('extract_sfx'),
+    from: z.string().optional(),
+    to: z.string().optional(),
   }),
 
   z.object({
@@ -61,17 +65,20 @@ export const installerActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('run_auo_setup'),
     path: z.string(),
-  })
+  }),
 ]);
 export type InstallerAction = z.infer<typeof installerActionSchema>;
 
+export const installerSourceSchema = z.union([
+  z.object({ direct: z.string() }),
+  z.object({ booth: z.string() }),
+  z.object({ github: githubSourceSchema }),
+  z.object({ GoogleDrive: z.object({ id: z.string() }) }),
+]);
+export type InstallerSource = z.infer<typeof installerSourceSchema>;
+
 export const installerSchema = z.object({
-  source: z.union([
-    z.object({ direct: z.string() }),
-    z.object({ booth: z.string() }),
-    z.object({ github: githubSourceSchema }),
-    z.object({ GoogleDrive: z.object({ id: z.string() }) }),
-  ]),
+  source: installerSourceSchema,
   install: z.array(installerActionSchema),
   uninstall: z.array(installerActionSchema),
 });
@@ -109,6 +116,7 @@ export const catalogEntrySchema = z.object({
   summary: z.string(),
   description: z.string(),
   author: z.string(),
+  originalAuthor: z.string().optional(),
   repoURL: z.string(),
   'latest-version': z.string(),
   popularity: z.number(),

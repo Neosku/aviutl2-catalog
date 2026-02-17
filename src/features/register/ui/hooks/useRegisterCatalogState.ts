@@ -6,7 +6,7 @@ import { useCatalog } from '../../../../utils/catalogStore.jsx';
 import { createEmptyPackageForm, entryToForm } from '../../model/form';
 import { cleanupImagePreviews, commaListToArray, normalizeArrayText, resolveBaseUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
-import { CatalogEntry, catalogIndexSchema } from '../../../../utils/catalogSchema.js';
+import { catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
 
 interface UseRegisterCatalogStateArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;

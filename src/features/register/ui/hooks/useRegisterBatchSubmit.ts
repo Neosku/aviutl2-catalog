@@ -9,12 +9,13 @@ import {
   updateRegisterDraftSubmitState,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
-import type { CatalogItem, RegisterSuccessDialogState } from '../types';
+import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
+import type { RegisterSuccessDialogState } from '../types';
 import type { SubmitSinglePackageInput, SubmitSinglePackageResult } from './useRegisterSubmitHandler';
 
 interface UseRegisterBatchSubmitArgs {
-  catalogItems: CatalogItem[];
-  setCatalogItems: React.Dispatch<React.SetStateAction<CatalogItem[]>>;
+  catalogItems: CatalogEntry[];
+  setCatalogItems: React.Dispatch<React.SetStateAction<CatalogEntry[]>>;
   submitPackage: (input: SubmitSinglePackageInput) => Promise<SubmitSinglePackageResult>;
   flushAutoSaveNow: () => void;
   reloadDraftPackages: () => void;

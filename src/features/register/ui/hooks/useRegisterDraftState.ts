@@ -12,8 +12,9 @@ import {
   type RegisterDraftRecord,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
+import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
 import type { RegisterPackageForm } from '../../model/types';
-import type { CatalogItem, RegisterDraftListItemView } from '../types';
+import type { RegisterDraftListItemView } from '../types';
 
 interface UseRegisterDraftStateArgs {
   packageForm: RegisterPackageForm;
@@ -22,7 +23,7 @@ interface UseRegisterDraftStateArgs {
   userEditToken: number;
   selectedPackageId: string;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
-  onSelectCatalogPackage: (item: CatalogItem | null) => void;
+  onSelectCatalogPackage: (item: CatalogEntry | null) => void;
   onStartCatalogNewPackage: () => void;
   applyTagList: (list: string[]) => void;
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -201,7 +202,7 @@ export default function useRegisterDraftState({
   }, [hasUnsavedUserEdits, markUserEditsAsHandled, persistCurrentDraft, setError]);
 
   const handleSelectPackage = useCallback(
-    (item: CatalogItem | null) => {
+    (item: CatalogEntry | null) => {
       flushBeforeNavigation();
       suspendNextAutoSave();
       onSelectCatalogPackage(item);
