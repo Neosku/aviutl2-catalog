@@ -1,5 +1,7 @@
 // アプリ全体で用いるユーティリティをまとめたファイル
 
+import { catalogIndexSchema } from './catalogSchema.ts';
+
 // -------------------------
 // 基本的なユーティリティ関数
 // -------------------------
@@ -304,11 +306,10 @@ export async function loadCatalogData(options = {}) {
       const res = await fetch(remote, { signal: ctrl.signal });
       clearTimeout(timer);
       if (res.ok) {
-        const json = await res.json();
-        const normalized = normalizeCatalogData(json);
+        const json = catalogIndexSchema.parse(await res.json());
         const resolvedBase = deriveCatalogBaseUrl(res.url || remote) || assetBase;
         assetBase = resolvedBase;
-        items = applyCatalogAssetBase(normalized, assetBase);
+        items = applyCatalogAssetBase(json, assetBase);
         source = 'remote';
         try {
           await writeCatalogCache(items);

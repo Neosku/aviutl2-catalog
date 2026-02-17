@@ -3,7 +3,7 @@
  */
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useCatalog } from '../../../../utils/catalogStore.jsx';
-import { buildPackageEntry, createEmptyPackageForm, entryToForm } from '../../model/form';
+import { createEmptyPackageForm, entryToForm } from '../../model/form';
 import {
   cleanupImagePreviews,
   commaListToArray,
@@ -12,7 +12,7 @@ import {
   resolveBaseUrl,
 } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
-import type { CatalogItem } from '../types';
+import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -22,7 +22,7 @@ type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Array<infer U> ? Array<DeepPartial<U>> : T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
 
-type CatalogPatch = DeepPartial<CatalogItem> & { id: string };
+type CatalogPatch = DeepPartial<CatalogEntry> & { id: string };
 
 function extractCatalogArray(json: unknown): unknown[] | null {
   if (Array.isArray(json)) return json;
@@ -50,7 +50,10 @@ function extractVersionKey(value: unknown): string {
   return typeof value.version === 'string' ? value.version.trim() : '';
 }
 
-function mergeVersionListByVersionKey(baseList: CatalogItem['version'], patchList: unknown[]): CatalogItem['version'] {
+function mergeVersionListByVersionKey(
+  baseList: CatalogEntry['version'],
+  patchList: unknown[],
+): CatalogEntry['version'] {
   const next: unknown[] = [...baseList];
   const indexByVersion = new Map<string, number>();
 
@@ -74,10 +77,10 @@ function mergeVersionListByVersionKey(baseList: CatalogItem['version'], patchLis
     }
   }
 
-  return next as CatalogItem['version'];
+  return next as CatalogEntry['version'];
 }
 
-function mergeCatalogItemWithPatch(base: CatalogItem, patch: CatalogPatch): CatalogItem {
+function mergeCatalogEntryWithPatch(base: CatalogEntry, patch: CatalogPatch): CatalogEntry {
   const merged = mergeDefinedFields(base, patch);
   if (!Object.prototype.hasOwnProperty.call(patch, 'version')) {
     return { ...merged, id: base.id };
@@ -123,7 +126,7 @@ function extractCatalogPatchList(json: unknown): CatalogPatch[] {
     .map((item) => {
       const id = typeof item.id === 'string' ? item.id.trim() : '';
       if (!id) return null;
-      return { ...(item as DeepPartial<CatalogItem>), id } as CatalogPatch;
+      return { ...(item as DeepPartial<CatalogEntry>), id } as CatalogPatch;
     })
     .filter((item): item is CatalogPatch => item !== null);
   if (list.length === 0) {
@@ -132,32 +135,31 @@ function extractCatalogPatchList(json: unknown): CatalogPatch[] {
   return list;
 }
 
-function createCatalogItemFromPatch(patch: CatalogPatch): CatalogItem {
-  const emptyForm = createEmptyPackageForm();
-  emptyForm.id = patch.id;
-  const base = buildPackageEntry(emptyForm, []);
+function createCatalogEntryFromPatch(patch: CatalogPatch): CatalogEntry {
+  const base: CatalogEntry = {
+    id: patch.id,
+    name: '',
+    type: '',
+    summary: '',
+    description: '',
+    author: '',
+    repoURL: '',
+    'latest-version': '',
+    popularity: 0,
+    trend: 0,
+    licenses: [],
+    tags: [],
+    dependencies: [],
+    images: [],
+    installer: {
+      source: { direct: '' },
+      install: [],
+      uninstall: [],
+    },
+    version: [],
+  };
   const merged = mergeDefinedFields(base, patch);
-  const nextItem: CatalogItem = { ...merged, id: patch.id };
-  return nextItem;
-}
-
-function isCatalogItem(value: unknown): value is CatalogItem {
-  if (!isPlainObject(value)) return false;
-  if (typeof value.id !== 'string') return false;
-  if (typeof value.name !== 'string') return false;
-  if (typeof value.type !== 'string') return false;
-  if (typeof value.summary !== 'string') return false;
-  if (typeof value.description !== 'string') return false;
-  if (typeof value.author !== 'string') return false;
-  if (typeof value.repoURL !== 'string') return false;
-  if (typeof value['latest-version'] !== 'string') return false;
-  if (!Array.isArray(value.licenses)) return false;
-  if (!Array.isArray(value.tags)) return false;
-  if (!Array.isArray(value.dependencies)) return false;
-  if (!Array.isArray(value.images)) return false;
-  if (!isPlainObject(value.installer)) return false;
-  if (!Array.isArray(value.version)) return false;
-  return true;
+  return catalogEntrySchema.parse({ ...merged, id: patch.id });
 }
 
 interface UseRegisterCatalogStateArgs {
@@ -175,7 +177,7 @@ export default function useRegisterCatalogState({
   setError,
   onUserEdit,
 }: UseRegisterCatalogStateArgs) {
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogEntry[]>([]);
   const [catalogLoadState, setCatalogLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [catalogBaseUrl, setCatalogBaseUrl] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
@@ -222,7 +224,10 @@ export default function useRegisterCatalogState({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const rawList = extractCatalogArray(json);
-      const list = Array.isArray(rawList) ? rawList.filter((item): item is CatalogItem => isCatalogItem(item)) : [];
+      if (!Array.isArray(rawList)) {
+        throw new Error('index.json の形式が不正です。');
+      }
+      const list = catalogIndexSchema.parse(rawList);
       setCatalogItems(list);
       const base = resolveBaseUrl(res.url || endpoint) || '';
       setCatalogBaseUrl(base);
@@ -266,7 +271,7 @@ export default function useRegisterCatalogState({
   }, [catalogItems, deferredPackageSearch]);
 
   const handleSelectPackage = useCallback(
-    (item: CatalogItem | null) => {
+    (item: CatalogEntry | null) => {
       if (!item) {
         setSelectedPackageId('');
         setInitialTags([]);
@@ -328,15 +333,15 @@ export default function useRegisterCatalogState({
       });
 
       const existingIds = new Set(catalogItems.map((item) => item.id));
-      const nextCatalogItems: CatalogItem[] = [];
-      const changedItems: CatalogItem[] = [];
+      const nextCatalogItems: CatalogEntry[] = [];
+      const changedItems: CatalogEntry[] = [];
       for (const item of catalogItems) {
         const patch = patchMap.get(item.id);
         if (!patch) {
           nextCatalogItems.push(item);
           continue;
         }
-        const nextItem = mergeCatalogItemWithPatch(item, patch);
+        const nextItem = catalogEntrySchema.parse(mergeCatalogEntryWithPatch(item, patch));
         nextCatalogItems.push(nextItem);
         if (isDeepEqual(item, nextItem)) continue;
         changedItems.push(nextItem);
@@ -344,7 +349,7 @@ export default function useRegisterCatalogState({
 
       for (const patch of patchMap.values()) {
         if (existingIds.has(patch.id)) continue;
-        const nextItem = createCatalogItemFromPatch(patch);
+        const nextItem = createCatalogEntryFromPatch(patch);
         nextCatalogItems.push(nextItem);
         changedItems.push(nextItem);
         existingIds.add(patch.id);

@@ -2,8 +2,8 @@
  * register UI 層で共有する型定義
  */
 import type { FormEvent, MouseEventHandler, PointerEvent } from 'react';
+import type { CatalogEntry } from '../../../utils/catalogSchema.js';
 import type {
-  RegisterCatalogEntry,
   RegisterImageState,
   RegisterInstallerOption,
   RegisterInstallerState,
@@ -18,8 +18,6 @@ export type RegisterStepType = 'install' | 'uninstall';
 export interface RefCell<T> {
   current: T;
 }
-
-export type CatalogItem = RegisterCatalogEntry;
 
 export interface InstallerTestProgress {
   ratio: number;
@@ -190,11 +188,11 @@ export interface RegisterSuccessDialogProps {
 export interface RegisterSidebarProps {
   packageSearch: string;
   catalogLoadState: 'idle' | 'loading' | 'loaded' | 'error';
-  filteredPackages: CatalogItem[];
+  filteredPackages: CatalogEntry[];
   draftPackages: RegisterDraftListItemView[];
   selectedPackageId: string;
   onPackageSearchChange: (value: string) => void;
-  onSelectPackage: (item: CatalogItem | null) => void;
+  onSelectPackage: (item: CatalogEntry | null) => void;
   onStartNewPackage: () => void;
   onOpenDraftPackage: (draftId: string) => void;
   onDeleteDraftPackage: (draftId: string) => void;

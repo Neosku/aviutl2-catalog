@@ -1,6 +1,7 @@
 /**
  * カタログデータをフォーム状態へ変換するパーサーモジュール
  */
+import type { CatalogEntry } from '../../../utils/catalogSchema.js';
 import { arrayToCommaList, buildPreviewUrl, isHttpsUrl, isMarkdownPath } from './helpers';
 import { INSTALL_ACTIONS, LICENSE_TEMPLATE_TYPES, SPECIAL_INSTALL_ACTIONS, UNINSTALL_ACTIONS } from './constants';
 import {
@@ -171,7 +172,7 @@ export function parseLicenses(rawLicenses: any, legacyLicense = ''): RegisterLic
   return [createEmptyLicense()];
 }
 
-export function entryToForm(item: any, baseUrl = ''): RegisterPackageForm {
+export function entryToForm(item: CatalogEntry | null | undefined, baseUrl = ''): RegisterPackageForm {
   if (!item || typeof item !== 'object') return createEmptyPackageForm();
   const form = createEmptyPackageForm();
   const rawDescription = typeof item.description === 'string' ? item.description : '';
@@ -191,11 +192,11 @@ export function entryToForm(item: any, baseUrl = ''): RegisterPackageForm {
   form.descriptionText =
     !isExternalDescription && descriptionValue && !isMarkdownPath(descriptionValue) ? descriptionValue : '';
   form.repoURL = String(item.repoURL || '');
-  form.licenses = parseLicenses(item.licenses, item.license);
+  form.licenses = parseLicenses(item.licenses, '');
   form.tagsText = arrayToCommaList(item.tags);
   form.dependenciesText = arrayToCommaList(item.dependencies);
   form.installer = parseInstallerSource(item.installer);
-  form.versions = parseVersions(item.version || item.versions);
+  form.versions = parseVersions(item.version);
   form.images = parseImages(item.images, baseUrl);
   return form;
 }

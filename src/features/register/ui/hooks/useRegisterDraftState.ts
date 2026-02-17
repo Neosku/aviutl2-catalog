@@ -3,8 +3,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  deleteRegisterDraft,
   computeRegisterDraftContentHash,
+  deleteRegisterDraft,
   getRegisterDraft,
   getRegisterDraftById,
   isRegisterDraftPending,
@@ -17,8 +17,9 @@ import {
   type RegisterDraftTestKind,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
+import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
 import type { RegisterPackageForm } from '../../model/types';
-import type { CatalogItem, RegisterDraftListItemView } from '../types';
+import type { RegisterDraftListItemView } from '../types';
 
 function toDraftListItem(record: RegisterDraftRecord): RegisterDraftListItemView {
   return {
@@ -39,8 +40,8 @@ interface UseRegisterDraftStateArgs {
   userEditToken: number;
   selectedPackageId: string;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
-  getCatalogPackageById: (packageId: string) => CatalogItem | null;
-  onSelectCatalogPackage: (item: CatalogItem | null) => void;
+  getCatalogPackageById: (packageId: string) => CatalogEntry | null;
+  onSelectCatalogPackage: (item: CatalogEntry | null) => void;
   onStartCatalogNewPackage: () => void;
   applyTagList: (list: string[]) => void;
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -223,7 +224,7 @@ export default function useRegisterDraftState({
   }, [hasUnsavedUserEdits, markUserEditsAsHandled, persistCurrentDraft, setError]);
 
   const handleSelectPackage = useCallback(
-    (item: CatalogItem | null) => {
+    (item: CatalogEntry | null) => {
       flushBeforeNavigation();
       suspendNextAutoSave();
       onSelectCatalogPackage(item);

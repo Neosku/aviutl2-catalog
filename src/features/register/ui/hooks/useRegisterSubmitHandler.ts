@@ -2,21 +2,22 @@
  * 送信 payload の構築と POST 実行を担当する hook
  */
 import { useCallback } from 'react';
+import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
 import { SUBMIT_ACTIONS, buildPackageEntry, getFileExtension, validatePackageForm } from '../../model/form';
 import { isHttpsUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
-import type { CatalogItem, RegisterSuccessDialogState, SubmitEndpointResponse, SubmitPackagePayload } from '../types';
+import type { RegisterSuccessDialogState, SubmitEndpointResponse, SubmitPackagePayload } from '../types';
 
 interface UseRegisterSubmitHandlerArgs {
   submitEndpoint: string;
-  setCatalogItems: React.Dispatch<React.SetStateAction<CatalogItem[]>>;
+  setCatalogItems: React.Dispatch<React.SetStateAction<CatalogEntry[]>>;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
   setSuccessDialog: React.Dispatch<React.SetStateAction<RegisterSuccessDialogState>>;
 }
 
 export interface SubmitSinglePackageInput {
   packageForm: RegisterPackageForm;
-  catalogItems: CatalogItem[];
+  catalogItems: CatalogEntry[];
   tags: string[];
   packageSender: string;
   syncCatalogState?: boolean;
@@ -24,7 +25,7 @@ export interface SubmitSinglePackageInput {
 }
 
 export interface SubmitSinglePackageResult {
-  nextCatalog: CatalogItem[];
+  nextCatalog: CatalogEntry[];
   packageId: string;
   packageName: string;
   actionLabel: string;
@@ -59,23 +60,22 @@ export default function useRegisterSubmitHandler({
       }
       const entryId = targetForm.id.trim();
       const existingIndex = targetCatalogItems.findIndex((item) => item.id === entryId);
-      const inherited: Record<string, unknown> = {};
+      const inherited: Partial<Pick<CatalogEntry, 'popularity' | 'trend'>> = {};
       if (existingIndex >= 0) {
         // popularity/trend はクライアントで再計算しないため、既存値を保持する。
         const existingItem = targetCatalogItems[existingIndex];
-        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'popularity')) {
+        if (existingItem) {
           inherited.popularity = existingItem.popularity;
-        }
-        if (existingItem && Object.prototype.hasOwnProperty.call(existingItem, 'trend')) {
           inherited.trend = existingItem.trend;
         }
       }
-      const entry: CatalogItem = buildPackageEntry(targetForm, tags, inherited);
+      const entry: CatalogEntry = catalogEntrySchema.parse(buildPackageEntry(targetForm, tags, inherited));
       const useExternalDescription = targetForm.descriptionMode === 'external' && isHttpsUrl(targetForm.descriptionUrl);
-      const nextCatalog =
+      const mergedCatalog =
         existingIndex >= 0
           ? targetCatalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
           : [...targetCatalogItems, entry];
+      const nextCatalog: CatalogEntry[] = catalogIndexSchema.parse(mergedCatalog);
 
       const formData = new FormData();
       let packageAttachmentCount = 0;

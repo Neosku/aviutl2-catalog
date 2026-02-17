@@ -4,80 +4,110 @@
 import { commaListToArray, isHttpsUrl, normalizeArrayText } from './helpers';
 import { getFileExtension } from './parse';
 import type {
-  RegisterCatalogEntry,
-  RegisterImagePayload,
   RegisterInstallStep,
-  RegisterInstallStepPayload,
-  RegisterInstallerPayload,
-  RegisterInstallerSourcePayload,
   RegisterInstallerTestItem,
-  RegisterLicensePayload,
   RegisterPackageForm,
   RegisterUninstallStep,
-  RegisterUninstallStepPayload,
-  RegisterVersionPayload,
 } from './types';
+import type {
+  CatalogEntry,
+  Image,
+  Installer,
+  InstallerAction,
+  InstallerSource,
+  License,
+  Version,
+} from '../../../utils/catalogSchema.js';
 
-function extractInstallerSource(form: RegisterPackageForm): RegisterInstallerSourcePayload {
-  const source: RegisterInstallerSourcePayload = {};
-  if (form.installer.sourceType === 'direct' && form.installer.directUrl.trim()) {
-    source.direct = form.installer.directUrl.trim();
-  } else if (form.installer.sourceType === 'booth' && form.installer.boothUrl.trim()) {
-    source.booth = form.installer.boothUrl.trim();
-  } else if (form.installer.sourceType === 'github') {
+function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
+  if (form.installer.sourceType === 'direct') {
+    const direct = form.installer.directUrl.trim();
+    if (!direct) throw new Error('installer.source.direct is required');
+    return { direct };
+  }
+  if (form.installer.sourceType === 'booth') {
+    const booth = form.installer.boothUrl.trim();
+    if (!booth) throw new Error('installer.source.booth is required');
+    return { booth };
+  }
+  if (form.installer.sourceType === 'github') {
     const owner = form.installer.githubOwner.trim();
     const repo = form.installer.githubRepo.trim();
     const pattern = form.installer.githubPattern.trim();
-    if (owner && repo && pattern) {
-      source.github = { owner, repo, pattern };
+    if (!owner || !repo || !pattern) {
+      throw new Error('installer.source.github owner/repo/pattern are required');
     }
-  } else if (form.installer.sourceType === 'GoogleDrive' && form.installer.googleDriveId.trim()) {
-    source.GoogleDrive = { id: form.installer.googleDriveId.trim() };
+    return { github: { owner, repo, pattern } };
   }
-  return source;
+  if (form.installer.sourceType === 'GoogleDrive') {
+    const id = form.installer.googleDriveId.trim();
+    if (!id) throw new Error('installer.source.GoogleDrive.id is required');
+    return { GoogleDrive: { id } };
+  }
+  throw new Error('installer.source must be selected');
 }
 
-function serializeInstallStep(step: RegisterInstallStep): RegisterInstallStepPayload {
-  const payload: RegisterInstallStepPayload = { action: step.action };
-  if (step.path && step.path.trim()) {
-    payload.path = step.path.trim();
-  }
-  if (step.action === 'run') {
-    if (step.argsText) {
-      payload.args = step.argsText
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean);
-    }
-    if (step.elevate) payload.elevate = true;
-  }
-  if (step.from && step.from.trim()) {
-    payload.from = step.from.trim();
-  }
-  if (step.to && step.to.trim()) {
-    payload.to = step.to.trim();
-  }
-  return payload;
+function parseArgsText(argsText: string): string[] {
+  if (!argsText) return [];
+  return argsText
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
-function serializeUninstallStep(step: RegisterUninstallStep): RegisterUninstallStepPayload {
-  const payload: RegisterUninstallStepPayload = { action: step.action };
-  if (step.action === 'run') {
-    if (step.path) payload.path = step.path;
-    if (step.argsText) {
-      payload.args = step.argsText
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean);
-    }
-    if (step.elevate) payload.elevate = true;
-  } else if (step.action === 'delete' && step.path) {
-    payload.path = step.path;
+function serializeInstallStep(step: RegisterInstallStep): InstallerAction {
+  const action = String(step.action || '').trim();
+  const path = String(step.path || '').trim();
+  const from = String(step.from || '').trim();
+  const to = String(step.to || '').trim();
+
+  if (action === 'download') return { action: 'download' };
+  if (action === 'extract') {
+    return { action: 'extract', ...(from ? { from } : {}), ...(to ? { to } : {}) };
   }
-  return payload;
+  if (action === 'extract_sfx') {
+    return { action: 'extract_sfx', ...(from ? { from } : {}), ...(to ? { to } : {}) };
+  }
+  if (action === 'copy') {
+    if (!from || !to) throw new Error('copy action requires from/to');
+    return { action: 'copy', from, to };
+  }
+  if (action === 'run') {
+    if (!path) throw new Error('run action requires path');
+    return {
+      action: 'run',
+      path,
+      args: parseArgsText(step.argsText),
+      ...(step.elevate ? { elevate: true } : {}),
+    };
+  }
+  if (action === 'run_auo_setup') {
+    if (!path) throw new Error('run_auo_setup action requires path');
+    return { action: 'run_auo_setup', path };
+  }
+  throw new Error(`unsupported install action: ${action || '(empty)'}`);
 }
 
-export function buildInstallerPayload(form: RegisterPackageForm): RegisterInstallerPayload {
+function serializeUninstallStep(step: RegisterUninstallStep): InstallerAction {
+  const action = String(step.action || '').trim();
+  const path = String(step.path || '').trim();
+  if (action === 'delete') {
+    if (!path) throw new Error('delete action requires path');
+    return { action: 'delete', path };
+  }
+  if (action === 'run') {
+    if (!path) throw new Error('run action requires path');
+    return {
+      action: 'run',
+      path,
+      args: parseArgsText(step.argsText),
+      ...(step.elevate ? { elevate: true } : {}),
+    };
+  }
+  throw new Error(`unsupported uninstall action: ${action || '(empty)'}`);
+}
+
+export function buildInstallerPayload(form: RegisterPackageForm): Installer {
   const source = extractInstallerSource(form);
   return {
     source,
@@ -86,9 +116,9 @@ export function buildInstallerPayload(form: RegisterPackageForm): RegisterInstal
   };
 }
 
-function buildLicensesPayload(form: RegisterPackageForm): RegisterLicensePayload[] {
+function buildLicensesPayload(form: RegisterPackageForm): License[] {
   return (form.licenses || [])
-    .map((license): RegisterLicensePayload | null => {
+    .map((license): License | null => {
       const type = String(license.type || '').trim();
       const licenseName = String(license.licenseName || '').trim();
       const resolvedType = type === 'その他' ? licenseName : type;
@@ -110,12 +140,12 @@ function buildLicensesPayload(form: RegisterPackageForm): RegisterLicensePayload
         licenseBody: isCustom ? licenseBody : null,
       };
     })
-    .filter((value): value is RegisterLicensePayload => value !== null);
+    .filter((value): value is License => value !== null);
 }
 
-function buildImagesPayload(form: RegisterPackageForm): RegisterImagePayload[] {
+function buildImagesPayload(form: RegisterPackageForm): Image[] {
   const id = form.id.trim();
-  const group: RegisterImagePayload = {};
+  const group: Image = {};
   if (form.images.thumbnail) {
     if (form.images.thumbnail.file) {
       const ext = getFileExtension(form.images.thumbnail.file.name) || 'png';
@@ -140,7 +170,7 @@ function buildImagesPayload(form: RegisterPackageForm): RegisterImagePayload[] {
   return [group];
 }
 
-function buildVersionPayload(form: RegisterPackageForm): RegisterVersionPayload[] {
+function buildVersionPayload(form: RegisterPackageForm): Version[] {
   return form.versions.map((ver) => ({
     version: ver.version.trim(),
     release_date: ver.release_date.trim(),
@@ -155,6 +185,11 @@ export function computeLatestVersion(form: RegisterPackageForm): string {
   if (!form.versions.length) return '';
   const last = form.versions[form.versions.length - 1];
   return last?.version?.trim() || '';
+}
+
+function toFiniteNumber(value: unknown, fallback = 0): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
 }
 
 export async function computeHashFromFile(fileOrPath: any): Promise<string> {
@@ -174,39 +209,34 @@ export async function computeHashFromFile(fileOrPath: any): Promise<string> {
 export function buildPackageEntry(
   form: RegisterPackageForm,
   tags: string[],
-  inherited: Record<string, unknown> = {},
-): RegisterCatalogEntry {
+  inherited: Partial<Pick<CatalogEntry, 'popularity' | 'trend'>> = {},
+): CatalogEntry {
   const id = form.id.trim();
   const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
   const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
   const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
   const niconiCommonsId = String(form.niconiCommonsId || '').trim();
-  const entry: RegisterCatalogEntry = {
+  const originalAuthor = String(form.originalAuthor || '').trim();
+  const entry: CatalogEntry = {
     id,
     name: form.name.trim(),
     type: form.type.trim(),
     summary: form.summary.trim(),
     description: useExternalDescription ? externalDescriptionUrl : `./md/${id}.md`,
     author: form.author.trim(),
-    originalAuthor: form.originalAuthor.trim(),
+    ...(originalAuthor ? { originalAuthor } : {}),
     repoURL: form.repoURL.trim(),
     'latest-version': computeLatestVersion(form),
-    ...(Object.prototype.hasOwnProperty.call(inherited, 'popularity') ? { popularity: inherited.popularity } : {}),
-    ...(Object.prototype.hasOwnProperty.call(inherited, 'trend') ? { trend: inherited.trend } : {}),
+    popularity: toFiniteNumber(inherited.popularity, 0),
+    trend: toFiniteNumber(inherited.trend, 0),
     licenses: buildLicensesPayload(form),
-    niconiCommonsId,
+    ...(niconiCommonsId ? { niconiCommonsId } : {}),
     tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
     dependencies: commaListToArray(form.dependenciesText),
     images: buildImagesPayload(form),
     installer: buildInstallerPayload(form),
     version: buildVersionPayload(form),
   };
-  if (!entry.originalAuthor) delete entry.originalAuthor;
-  if (!entry.niconiCommonsId) delete entry.niconiCommonsId;
-  if (!entry.repoURL) entry.repoURL = '';
-  if (!entry.licenses.length) entry.licenses = [];
-  if (!entry.tags.length) entry.tags = [];
-  if (!entry.dependencies.length) entry.dependencies = [];
   return entry;
 }
 
