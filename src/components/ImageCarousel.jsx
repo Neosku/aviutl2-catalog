@@ -1,6 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+/**
+ * @param {{ images?: Array<{ src: string; alt?: string }> }} props
+ */
 export default function ImageCarousel({ images = [] }) {
   const ref = useRef(null);
   const [index, setIndex] = useState(0);

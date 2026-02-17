@@ -5,7 +5,7 @@ import { basename, generateKey, normalizeArrayText } from './helpers';
 import { getFileExtension } from './parse';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
 
-const DRAFT_STORAGE_PREFIX = 'register-draft:v1:';
+const DRAFT_STORAGE_PREFIX = 'register-draft:';
 
 interface RegisterDraftImageSnapshot {
   key: string;
@@ -24,12 +24,15 @@ type RegisterDraftFormSnapshot = Omit<RegisterPackageForm, 'images'> & {
 };
 
 export interface RegisterDraftRecord {
+  draftId: string;
   packageId: string;
   packageName: string;
   packageSender: string;
   tags: string[];
   savedAt: number;
   contentHash: string;
+  installerTestedHash: string;
+  uninstallerTestedHash: string;
   lastSubmittedHash: string;
   lastSubmitAt: number;
   lastSubmitError: string;
@@ -37,10 +40,12 @@ export interface RegisterDraftRecord {
 }
 
 export interface RegisterDraftListItem {
+  draftId: string;
   packageId: string;
   packageName: string;
   savedAt: number;
   pending: boolean;
+  readyForSubmit: boolean;
   lastSubmitError: string;
 }
 
@@ -49,6 +54,13 @@ export interface RegisterDraftRestoreResult {
   packageSender: string;
   tags: string[];
   warnings: string[];
+}
+
+export type RegisterDraftTestKind = 'installer' | 'uninstaller';
+
+export interface RegisterDraftTestStatus {
+  installerReady: boolean;
+  uninstallerReady: boolean;
 }
 
 function getStorage(): Storage | null {
@@ -60,8 +72,15 @@ function getStorage(): Storage | null {
   }
 }
 
-function createDraftStorageKey(packageId: string): string {
-  return `${DRAFT_STORAGE_PREFIX}${encodeURIComponent(packageId)}`;
+function createDraftStorageKey(draftId: string): string {
+  return `${DRAFT_STORAGE_PREFIX}${encodeURIComponent(draftId)}`;
+}
+
+function createDraftId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function computeTextHash(text: string): string {
@@ -102,7 +121,7 @@ function toDraftFormSnapshot(form: RegisterPackageForm): RegisterDraftFormSnapsh
   };
 }
 
-function computeRegisterDraftContentHash(args: {
+export function computeRegisterDraftContentHash(args: {
   packageForm: RegisterPackageForm;
   tags: string[];
   packageSender: string;
@@ -190,9 +209,32 @@ export function isRegisterDraftPending(record: RegisterDraftRecord): boolean {
   return String(record.contentHash || '') !== String(record.lastSubmittedHash || '');
 }
 
+export function getRegisterDraftTestStatus(record: RegisterDraftRecord): RegisterDraftTestStatus {
+  const contentHash = String(record.contentHash || '');
+  const installerTestedHash = String(record.installerTestedHash || '');
+  const uninstallerTestedHash = String(record.uninstallerTestedHash || '');
+  if (!contentHash) {
+    return {
+      installerReady: false,
+      uninstallerReady: false,
+    };
+  }
+  return {
+    installerReady: installerTestedHash === contentHash,
+    uninstallerReady: uninstallerTestedHash === contentHash,
+  };
+}
+
+export function isRegisterDraftReadyForSubmit(record: RegisterDraftRecord): boolean {
+  const status = getRegisterDraftTestStatus(record);
+  return status.installerReady && status.uninstallerReady;
+}
+
 function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
   if (!raw || typeof raw !== 'object') return null;
   const candidate = raw as Partial<RegisterDraftRecord>;
+  const draftId = String(candidate.draftId || '').trim();
+  if (!draftId) return null;
   if (typeof candidate.packageId !== 'string' || !candidate.packageId.trim()) return null;
   if (!candidate.form || typeof candidate.form !== 'object') return null;
   const fallbackContentHash = computeTextHash(
@@ -203,12 +245,15 @@ function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
     }),
   );
   return {
+    draftId,
     packageId: candidate.packageId.trim(),
     packageName: String(candidate.packageName || candidate.packageId || ''),
     packageSender: String(candidate.packageSender || ''),
     tags: normalizeArrayText(Array.isArray(candidate.tags) ? candidate.tags : []),
     savedAt: Number.isFinite(candidate.savedAt) ? Number(candidate.savedAt) : Date.now(),
     contentHash: String(candidate.contentHash || fallbackContentHash),
+    installerTestedHash: String(candidate.installerTestedHash || ''),
+    uninstallerTestedHash: String(candidate.uninstallerTestedHash || ''),
     lastSubmittedHash: String(candidate.lastSubmittedHash || ''),
     lastSubmitAt: Number.isFinite(candidate.lastSubmitAt) ? Number(candidate.lastSubmitAt) : 0,
     lastSubmitError: String(candidate.lastSubmitError || ''),
@@ -278,6 +323,7 @@ export function saveRegisterDraft(args: {
   packageForm: RegisterPackageForm;
   tags: string[];
   packageSender: string;
+  draftId?: string;
 }): RegisterDraftRecord {
   const storage = getStorage();
   if (!storage) {
@@ -287,28 +333,40 @@ export function saveRegisterDraft(args: {
   if (!packageId) {
     throw new Error('一時保存には ID の入力が必要です。');
   }
-  const previous = getRegisterDraft(packageId);
+  const requestedDraftId = String(args.draftId || '').trim();
+  const previous = requestedDraftId ? getRegisterDraftById(requestedDraftId) : getRegisterDraft(packageId);
+  const draftId = String(previous?.draftId || requestedDraftId || createDraftId()).trim();
   const contentHash = computeRegisterDraftContentHash(args);
   const record: RegisterDraftRecord = {
+    draftId,
     packageId,
     packageName: String(args.packageForm.name || packageId || '').trim(),
     packageSender: String(args.packageSender || ''),
     tags: normalizeArrayText(args.tags),
     savedAt: Date.now(),
     contentHash,
+    installerTestedHash: String(previous?.installerTestedHash || ''),
+    uninstallerTestedHash: String(previous?.uninstallerTestedHash || ''),
     lastSubmittedHash: String(previous?.lastSubmittedHash || ''),
     lastSubmitAt: Number(previous?.lastSubmitAt || 0),
     lastSubmitError: String(previous?.lastSubmitError || ''),
     form: toDraftFormSnapshot(args.packageForm),
   };
-  storage.setItem(createDraftStorageKey(packageId), JSON.stringify(record));
+  storage.setItem(createDraftStorageKey(draftId), JSON.stringify(record));
+  const records = listRegisterDraftRecords();
+  for (let i = 0; i < records.length; i += 1) {
+    const current = records[i];
+    if (current.packageId !== packageId) continue;
+    if (current.draftId === draftId) continue;
+    storage.removeItem(createDraftStorageKey(current.draftId));
+  }
   return record;
 }
 
-export function getRegisterDraft(packageId: string): RegisterDraftRecord | null {
+export function getRegisterDraftById(draftId: string): RegisterDraftRecord | null {
   const storage = getStorage();
   if (!storage) return null;
-  const id = String(packageId || '').trim();
+  const id = String(draftId || '').trim();
   if (!id) return null;
   const raw = storage.getItem(createDraftStorageKey(id));
   if (!raw) return null;
@@ -319,12 +377,24 @@ export function getRegisterDraft(packageId: string): RegisterDraftRecord | null 
   }
 }
 
+export function getRegisterDraft(packageId: string): RegisterDraftRecord | null {
+  const id = String(packageId || '').trim();
+  if (!id) return null;
+  const records = listRegisterDraftRecords();
+  for (let i = 0; i < records.length; i += 1) {
+    if (records[i].packageId === id) return records[i];
+  }
+  return null;
+}
+
 export function listRegisterDrafts(): RegisterDraftListItem[] {
   return listRegisterDraftRecords().map((record) => ({
+    draftId: record.draftId,
     packageId: record.packageId,
     packageName: record.packageName,
     savedAt: record.savedAt,
     pending: isRegisterDraftPending(record),
+    readyForSubmit: isRegisterDraftReadyForSubmit(record),
     lastSubmitError: String(record.lastSubmitError || ''),
   }));
 }
@@ -350,11 +420,11 @@ export function listRegisterDraftRecords(): RegisterDraftRecord[] {
 }
 
 export function updateRegisterDraftSubmitState(args: {
-  packageId: string;
-  submittedHash: string;
+  draftId: string;
+  submittedHash?: string;
   errorMessage?: string;
 }): RegisterDraftRecord | null {
-  const record = getRegisterDraft(args.packageId);
+  const record = getRegisterDraftById(args.draftId);
   if (!record) return null;
   const next: RegisterDraftRecord = {
     ...record,
@@ -364,14 +434,35 @@ export function updateRegisterDraftSubmitState(args: {
   };
   const storage = getStorage();
   if (!storage) return null;
-  storage.setItem(createDraftStorageKey(next.packageId), JSON.stringify(next));
+  storage.setItem(createDraftStorageKey(next.draftId), JSON.stringify(next));
   return next;
 }
 
-export function deleteRegisterDraft(packageId: string): void {
+export function updateRegisterDraftTestState(args: {
+  draftId: string;
+  kind: RegisterDraftTestKind;
+  testedHash: string;
+}): RegisterDraftRecord | null {
+  const record = getRegisterDraftById(args.draftId);
+  if (!record) return null;
+  const testedHash = String(args.testedHash || '');
+  if (!testedHash || testedHash !== String(record.contentHash || '')) {
+    return null;
+  }
+  const next: RegisterDraftRecord = {
+    ...record,
+    ...(args.kind === 'installer' ? { installerTestedHash: testedHash } : { uninstallerTestedHash: testedHash }),
+  };
+  const storage = getStorage();
+  if (!storage) return null;
+  storage.setItem(createDraftStorageKey(next.draftId), JSON.stringify(next));
+  return next;
+}
+
+export function deleteRegisterDraft(draftId: string): void {
   const storage = getStorage();
   if (!storage) return;
-  const id = String(packageId || '').trim();
+  const id = String(draftId || '').trim();
   if (!id) return;
   storage.removeItem(createDraftStorageKey(id));
 }

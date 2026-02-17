@@ -15,7 +15,7 @@ import {
   maybeSendPackageStateSnapshot,
 } from './utils/index.js';
 import { useUpdatePrompt } from './utils/useUpdatePrompt.js';
-import InitSetupApp from './pages/InitSetupApp.jsx';
+import InitSetupPage from './features/init-setup/ui/InitSetupPage';
 // eslint-disable-next-line import/no-unassigned-import
 import './styles/index.css';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -296,7 +296,7 @@ function RootApp() {
     return null;
   }
   if (mode === 'init') {
-    return <InitSetupApp />;
+    return <InitSetupPage />;
   }
   return <App />;
 }

@@ -25,12 +25,13 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
+marked.setOptions({ mangle: false, headerIds: false, breaks: true, gfm: true });
+
 export function renderMarkdown(md = '') {
   if (!md) return '';
   const text = String(md).replace(/\r\n?/g, '\n');
   // 生の HTML は受け付けず、Markdown のみをパースするために一旦エスケープ
   const escaped = escapeHtml(text);
-  marked.setOptions({ mangle: false, headerIds: false, breaks: true, gfm: true });
   try {
     const parsed = marked.parse(escaped);
     return enhanceMarkdownHtml(parsed);
@@ -44,10 +45,19 @@ function enhanceMarkdownHtml(html) {
   if (!html || typeof document === 'undefined' || typeof document.createElement !== 'function') {
     return html || '';
   }
+  const hasCalloutCandidate = html.includes('<blockquote') && html.includes('[!');
+  const hasTableBreakCandidate = html.includes('<table') && html.includes('<br');
+  if (!hasCalloutCandidate && !hasTableBreakCandidate) {
+    return html;
+  }
   const tpl = document.createElement('template');
   tpl.innerHTML = html;
-  transformCallouts(tpl.content);
-  convertTableLiteralBreaks(tpl.content);
+  if (hasCalloutCandidate) {
+    transformCallouts(tpl.content);
+  }
+  if (hasTableBreakCandidate) {
+    convertTableLiteralBreaks(tpl.content);
+  }
   return tpl.innerHTML;
 }
 

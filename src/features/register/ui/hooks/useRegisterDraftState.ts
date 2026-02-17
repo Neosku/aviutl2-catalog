@@ -3,18 +3,35 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  computeRegisterDraftContentHash,
   deleteRegisterDraft,
   getRegisterDraft,
+  getRegisterDraftById,
   isRegisterDraftPending,
+  isRegisterDraftReadyForSubmit,
   listRegisterDrafts,
   restoreRegisterDraft,
   saveRegisterDraft,
+  updateRegisterDraftTestState,
   type RegisterDraftRecord,
+  type RegisterDraftTestKind,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
 import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RegisterDraftListItemView } from '../types';
+
+function toDraftListItem(record: RegisterDraftRecord): RegisterDraftListItemView {
+  return {
+    draftId: record.draftId,
+    packageId: record.packageId,
+    packageName: record.packageName,
+    savedAt: record.savedAt,
+    pending: isRegisterDraftPending(record),
+    readyForSubmit: isRegisterDraftReadyForSubmit(record),
+    lastSubmitError: String(record.lastSubmitError || ''),
+  };
+}
 
 interface UseRegisterDraftStateArgs {
   packageForm: RegisterPackageForm;
@@ -23,6 +40,7 @@ interface UseRegisterDraftStateArgs {
   userEditToken: number;
   selectedPackageId: string;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
+  getCatalogPackageById: (packageId: string) => CatalogEntry | null;
   onSelectCatalogPackage: (item: CatalogEntry | null) => void;
   onStartCatalogNewPackage: () => void;
   applyTagList: (list: string[]) => void;
@@ -40,6 +58,7 @@ export default function useRegisterDraftState({
   userEditToken,
   selectedPackageId,
   setSelectedPackageId,
+  getCatalogPackageById,
   onSelectCatalogPackage,
   onStartCatalogNewPackage,
   applyTagList,
@@ -56,6 +75,7 @@ export default function useRegisterDraftState({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestUserEditTokenRef = useRef(userEditToken);
   const persistedUserEditTokenRef = useRef(userEditToken);
+  const activeDraftIdRef = useRef('');
 
   useEffect(() => {
     latestUserEditTokenRef.current = userEditToken;
@@ -83,16 +103,12 @@ export default function useRegisterDraftState({
       packageForm,
       tags: currentTags,
       packageSender,
+      draftId: activeDraftIdRef.current,
     });
-    const nextItem: RegisterDraftListItemView = {
-      packageId: record.packageId,
-      packageName: record.packageName,
-      savedAt: record.savedAt,
-      pending: isRegisterDraftPending(record),
-      lastSubmitError: String(record.lastSubmitError || ''),
-    };
+    activeDraftIdRef.current = record.draftId;
+    const nextItem = toDraftListItem(record);
     setDraftPackages((prev) => {
-      const filtered = prev.filter((item) => item.packageId !== nextItem.packageId);
+      const filtered = prev.filter((item) => item.draftId !== nextItem.draftId);
       return [nextItem, ...filtered];
     });
     markUserEditsAsHandled();
@@ -117,6 +133,7 @@ export default function useRegisterDraftState({
         cleanupImagePreviews(restored.packageForm.images);
         return;
       }
+      activeDraftIdRef.current = draft.draftId;
       setPackageForm((prev) => {
         cleanupImagePreviews(prev.images);
         return restored.packageForm;
@@ -153,6 +170,11 @@ export default function useRegisterDraftState({
     }
     const draft = getRegisterDraft(selectedId);
     if (!draft) {
+      activeDraftIdRef.current = '';
+      return;
+    }
+    activeDraftIdRef.current = draft.draftId;
+    if (!isRegisterDraftPending(draft)) {
       return;
     }
     void applyDraftRecord(draft);
@@ -206,6 +228,11 @@ export default function useRegisterDraftState({
       flushBeforeNavigation();
       suspendNextAutoSave();
       onSelectCatalogPackage(item);
+      if (!item) {
+        activeDraftIdRef.current = '';
+        return;
+      }
+      activeDraftIdRef.current = String(getRegisterDraft(item.id)?.draftId || '').trim();
     },
     [flushBeforeNavigation, onSelectCatalogPackage, suspendNextAutoSave],
   );
@@ -213,38 +240,115 @@ export default function useRegisterDraftState({
   const handleStartNewPackage = useCallback(() => {
     flushBeforeNavigation();
     suspendNextAutoSave();
+    activeDraftIdRef.current = '';
     onStartCatalogNewPackage();
   }, [flushBeforeNavigation, onStartCatalogNewPackage, suspendNextAutoSave]);
 
-  const handleDeleteDraftPackage = useCallback((packageId: string) => {
-    deleteRegisterDraft(packageId);
-    setDraftPackages((prev) => prev.filter((item) => item.packageId !== packageId));
-  }, []);
+  const handleDeleteDraftPackage = useCallback(
+    (draftId: string) => {
+      const targetDraftId = draftId.trim();
+      if (!targetDraftId) return;
+      const targetDraft = getRegisterDraftById(targetDraftId);
+      const targetPackageId = String(targetDraft?.packageId || '').trim();
+      deleteRegisterDraft(targetDraftId);
+      setDraftPackages((prev) => prev.filter((item) => item.draftId !== targetDraftId));
+
+      const selectedId = selectedPackageId.trim();
+      const isActiveDraft = activeDraftIdRef.current === targetDraftId;
+      const isSelectedPackageDraft = targetPackageId && selectedId === targetPackageId;
+      if (!isActiveDraft && !isSelectedPackageDraft) return;
+
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      activeDraftIdRef.current = '';
+      markUserEditsAsHandled();
+      suspendNextAutoSave();
+
+      const catalogItem = getCatalogPackageById(targetPackageId);
+      if (catalogItem) {
+        onSelectCatalogPackage(catalogItem);
+      } else {
+        onStartCatalogNewPackage();
+      }
+      setError('');
+    },
+    [
+      getCatalogPackageById,
+      markUserEditsAsHandled,
+      onSelectCatalogPackage,
+      onStartCatalogNewPackage,
+      selectedPackageId,
+      setError,
+      suspendNextAutoSave,
+    ],
+  );
 
   const handleOpenDraftPackage = useCallback(
-    async (packageId: string) => {
+    async (draftId: string) => {
       flushBeforeNavigation();
-      const draft = getRegisterDraft(packageId);
+      const draft = getRegisterDraftById(draftId);
       if (!draft) {
         reloadDraftPackages();
         setError('対象の一時保存が見つかりませんでした。');
         return;
       }
-      skipNextSelectedRestoreIdRef.current = packageId;
-      setSelectedPackageId(packageId);
+      skipNextSelectedRestoreIdRef.current = draft.packageId;
+      setSelectedPackageId(draft.packageId);
       await applyDraftRecord(draft);
     },
     [applyDraftRecord, flushBeforeNavigation, reloadDraftPackages, setError, setSelectedPackageId],
   );
 
+  const markCurrentDraftTestPassed = useCallback(
+    (kind: RegisterDraftTestKind) => {
+      const packageId = String(packageForm.id || '').trim();
+      if (!packageId) return;
+      let draftId = String(activeDraftIdRef.current || '').trim();
+      if (!draftId) {
+        const latest = getRegisterDraft(packageId);
+        if (!latest) return;
+        draftId = latest.draftId;
+        activeDraftIdRef.current = draftId;
+      }
+      const testedHash = computeRegisterDraftContentHash({
+        packageForm,
+        tags: currentTags,
+        packageSender,
+      });
+      const updated = updateRegisterDraftTestState({
+        draftId,
+        kind,
+        testedHash,
+      });
+      if (!updated) return;
+      const nextItem = toDraftListItem(updated);
+      setDraftPackages((prev) => {
+        const filtered = prev.filter((item) => item.draftId !== nextItem.draftId);
+        return [nextItem, ...filtered];
+      });
+    },
+    [currentTags, packageForm, packageSender],
+  );
+
   const pendingDraftPackages = useMemo(() => draftPackages.filter((item) => item.pending), [draftPackages]);
-  const pendingSubmitCount = useMemo(() => pendingDraftPackages.length, [pendingDraftPackages]);
+  const pendingSubmitCount = useMemo(
+    () => pendingDraftPackages.filter((item) => item.readyForSubmit).length,
+    [pendingDraftPackages],
+  );
+  const blockedSubmitCount = useMemo(
+    () => pendingDraftPackages.length - pendingSubmitCount,
+    [pendingDraftPackages, pendingSubmitCount],
+  );
 
   return {
     pendingDraftPackages,
     pendingSubmitCount,
+    blockedSubmitCount,
     reloadDraftPackages,
     flushAutoSaveNow,
+    markCurrentDraftTestPassed,
     handleSelectPackage,
     handleStartNewPackage,
     handleOpenDraftPackage,

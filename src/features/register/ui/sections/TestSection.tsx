@@ -4,7 +4,111 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, Download, Trash2 } from 'lucide-react';
 import ProgressCircle from '../../../../components/ProgressCircle.jsx';
-import type { RegisterTestSectionProps } from '../types';
+import type { RegisterTestOperation, RegisterTestSectionProps } from '../types';
+
+const KIND_LABELS: Record<RegisterTestOperation['kind'], string> = {
+  download: 'ダウンロード',
+  extract: '展開',
+  extract_sfx: 'SFX展開',
+  copy: 'コピー',
+  delete: '削除',
+  run: '実行',
+  error: 'エラー',
+};
+
+const STATUS_LABELS: Record<RegisterTestOperation['status'], string> = {
+  done: '完了',
+  skip: 'スキップ',
+  error: '失敗',
+};
+
+function operationStatusClass(status: RegisterTestOperation['status']): string {
+  switch (status) {
+    case 'error':
+      return 'border-red-300 bg-red-100 text-red-700 dark:border-red-800/80 dark:bg-red-900/40 dark:text-red-200';
+    case 'skip':
+      return 'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-800/80 dark:bg-amber-900/40 dark:text-amber-200';
+    case 'done':
+      return 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800/80 dark:bg-emerald-900/40 dark:text-emerald-200';
+    default: {
+      const unreachableStatus: never = status;
+      return unreachableStatus;
+    }
+  }
+}
+
+function OperationList({ operations }: { operations: RegisterTestOperation[] }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">実行ログ</div>
+      {operations.length ? (
+        <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/60">
+          {operations.map((operation) => {
+            const kindLabel = KIND_LABELS[operation.kind];
+            const showSummary = !!operation.summary && operation.summary !== kindLabel;
+            const hasFromTo = !!operation.fromPath || !!operation.toPath;
+            return (
+              <div
+                key={operation.key}
+                className="space-y-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800/70"
+              >
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    {kindLabel}
+                  </span>
+                  <span
+                    className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${operationStatusClass(operation.status)}`}
+                  >
+                    {STATUS_LABELS[operation.status]}
+                  </span>
+                </div>
+                {showSummary && <div className="text-xs text-slate-700 dark:text-slate-200">{operation.summary}</div>}
+                {hasFromTo && (
+                  <div className="rounded border border-slate-200 bg-white p-1.5 dark:border-slate-700 dark:bg-slate-900">
+                    <div className="space-y-1">
+                      <div className="min-w-0 rounded border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800/70">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">元のパス</div>
+                        <div className="break-all font-mono text-[11px] text-slate-700 dark:text-slate-200">
+                          {operation.fromPath || '-'}
+                        </div>
+                      </div>
+                      <div className="text-center text-xs text-slate-400 dark:text-slate-500">↓</div>
+                      <div className="min-w-0 rounded border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800/70">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">先のパス</div>
+                        <div className="break-all font-mono text-[11px] text-slate-700 dark:text-slate-200">
+                          {operation.toPath || '-'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {operation.targetPath && !hasFromTo && (
+                  <div className="space-y-1 rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] font-mono text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    <div className="break-all">
+                      <span className="mr-1 font-sans text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                        対象パス:
+                      </span>
+                      {operation.targetPath}
+                    </div>
+                  </div>
+                )}
+                {operation.detail && (
+                  <div className="whitespace-pre-wrap break-all rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    {operation.detail}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-100/70 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
+          実行ログはありません。
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RegisterTestSection({
   installerTestRunning,
@@ -16,6 +120,7 @@ export default function RegisterTestSection({
   installerTestPercent,
   installerTestDetectedVersion,
   installerTestError,
+  installerTestOperations,
   uninstallerTestRunning,
   uninstallerTestValidation,
   uninstallerTestRatio,
@@ -24,6 +129,7 @@ export default function RegisterTestSection({
   uninstallerTestLabel,
   uninstallerTestPercent,
   uninstallerTestError,
+  uninstallerTestOperations,
   onInstallerTest,
   onUninstallerTest,
 }: RegisterTestSectionProps) {
@@ -123,6 +229,7 @@ export default function RegisterTestSection({
               <div className="whitespace-pre-line text-xs">{installerTestError}</div>
             </div>
           )}
+          <OperationList operations={installerTestOperations} />
         </div>
         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
           <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">削除テスト</div>
@@ -166,6 +273,7 @@ export default function RegisterTestSection({
               <div className="whitespace-pre-line text-xs">{uninstallerTestError}</div>
             </div>
           )}
+          <OperationList operations={uninstallerTestOperations} />
         </div>
       </div>
     </section>

@@ -32,6 +32,9 @@ export function validateInstallerForTest(form: RegisterPackageForm): string {
     if (step.action === 'copy') {
       if (!step.from.trim() || !step.to.trim()) return 'コピー元/コピー先のパスを指定してください';
     }
+    if (step.action === 'delete') {
+      if (!step.path.trim()) return '削除するパスを指定してください';
+    }
   }
   return '';
 }
@@ -117,6 +120,9 @@ export function validatePackageForm(form: RegisterPackageForm): string {
     }
     if (step.action === 'copy') {
       if (!step.from.trim() || !step.to.trim()) return 'copy の from / to は必須です';
+    }
+    if (step.action === 'delete') {
+      if (!step.path.trim()) return 'delete の path は必須です';
     }
   }
   for (const step of form.installer.uninstallSteps) {

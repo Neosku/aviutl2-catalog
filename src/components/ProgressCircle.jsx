@@ -8,7 +8,7 @@ export default function ProgressCircle({
   showValue = false,
   showComplete = false,
   ariaLabel,
-  className,
+  className = '',
 }) {
   const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
   const radius = Math.max((size - strokeWidth) / 2, strokeWidth / 2);

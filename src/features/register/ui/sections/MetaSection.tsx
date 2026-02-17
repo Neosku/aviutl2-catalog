@@ -148,7 +148,6 @@ export default function RegisterMetaSection({
             id="package-summary"
             name="summary"
             value={packageForm.summary}
-            maxLength={35}
             onChange={(e) => onUpdatePackageField('summary', e.target.value)}
             required
             placeholder="パッケージの概要 (35文字以内)"

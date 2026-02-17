@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useCatalog } from '../utils/catalogStore.jsx';
-import { filterByTagsAndType, getSorter, matchQuery } from '../utils/index.js';
+import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../utils/index.js';
 import ErrorDialog from './ErrorDialog.jsx';
 import aviutl2Icon from '../../src-tauri/icons/aviutl2.png';
 import appIcon from '../../src-tauri/icons/icon.svg';
@@ -210,7 +210,7 @@ function SidebarSectionLabel({ label, isCollapsed, hideDivider = false, classNam
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { items, allTags, allTypes } = useCatalog();
+  const { items, allTags } = useCatalog();
   const [error, setError] = useState('');
   const scrollContainerRef = useRef(null);
   const homeScrollRef = useRef(0);
@@ -313,7 +313,7 @@ export default function AppShell() {
     el.style.scrollBehavior = previous;
   }, [isHome]);
 
-  const categories = useMemo(() => ['すべて', ...(allTypes || [])], [allTypes]);
+  const categories = useMemo(() => ['すべて', ...ORDERED_PACKAGE_TYPES], []);
 
   const filteredPackages = useMemo(() => {
     const base = searchQuery ? items.filter((item) => matchQuery(item, searchQuery)) : items;

@@ -15,7 +15,7 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={handleBackdrop} />
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">アップデート</span>
@@ -33,14 +33,19 @@ export default function UpdateDialog({ open, version, notes, busy, error, onConf
             <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">v{version}</span>
           )}
         </div>
-        <div className="px-6 py-4">
+        <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
               {error}
             </div>
           )}
           {markdownHtml ? (
-            <div className="prose prose-slate max-w-none dark:prose-invert" dangerouslySetInnerHTML={markdownMarkup} />
+            <div className="min-h-0 overflow-y-auto pr-1">
+              <div
+                className="prose prose-slate max-w-none break-words dark:prose-invert"
+                dangerouslySetInnerHTML={markdownMarkup}
+              />
+            </div>
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-400">更新内容の詳細は取得できませんでした。</p>
           )}

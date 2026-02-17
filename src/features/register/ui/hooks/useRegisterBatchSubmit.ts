@@ -3,7 +3,10 @@
  */
 import { useCallback, useState } from 'react';
 import {
+  deleteRegisterDraft,
+  getRegisterDraftTestStatus,
   isRegisterDraftPending,
+  isRegisterDraftReadyForSubmit,
   listRegisterDraftRecords,
   restoreRegisterDraft,
   updateRegisterDraftSubmitState,
@@ -46,6 +49,20 @@ export default function useRegisterBatchSubmit({
         if (pendingDrafts.length === 0) {
           return;
         }
+        const blockedDrafts = pendingDrafts.filter((draft) => !isRegisterDraftReadyForSubmit(draft));
+        if (blockedDrafts.length > 0) {
+          const blockedLabels = blockedDrafts.map((draft) => {
+            const status = getRegisterDraftTestStatus(draft);
+            const missing: string[] = [];
+            if (!status.installerReady) missing.push('install');
+            if (!status.uninstallerReady) missing.push('uninstall');
+            return `${draft.packageId}(${missing.join('/')})`;
+          });
+          const preview = blockedLabels.slice(0, 4).join(', ');
+          const suffix = blockedLabels.length > 4 ? ` ほか${blockedLabels.length - 4}件` : '';
+          setError(`テスト未完了のため送信できません: ${preview}${suffix}`);
+          return;
+        }
         setSubmitting(true);
         let workingCatalog = catalogItems;
         let successCount = 0;
@@ -71,17 +88,13 @@ export default function useRegisterBatchSubmit({
             lastSuccessUrl = submitResult.url || lastSuccessUrl;
             lastSuccessName = submitResult.packageName || lastSuccessName;
             successCount += 1;
-            updateRegisterDraftSubmitState({
-              packageId: draft.packageId,
-              submittedHash: draft.contentHash,
-            });
+            deleteRegisterDraft(draft.draftId);
           } catch (err) {
             const message =
               err instanceof Error ? err.message : '送信に失敗しました。ネットワークや設定をご確認ください。';
             failureCount += 1;
             updateRegisterDraftSubmitState({
-              packageId: draft.packageId,
-              submittedHash: draft.contentHash,
+              draftId: draft.draftId,
               errorMessage: message,
             });
             if (!firstError) {
