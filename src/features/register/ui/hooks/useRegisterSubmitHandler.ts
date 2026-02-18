@@ -2,6 +2,7 @@
  * 送信 payload の構築と POST 実行を担当する hook
  */
 import { useCallback } from 'react';
+import * as z from 'zod';
 import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
 import { SUBMIT_ACTIONS, buildPackageEntry, getFileExtension, validatePackageForm } from '../../model/form';
 import { isHttpsUrl } from '../../model/helpers';
@@ -14,6 +15,15 @@ interface UseRegisterSubmitHandlerArgs {
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
   setSuccessDialog: React.Dispatch<React.SetStateAction<RegisterSuccessDialogState>>;
 }
+
+const submitEndpointResponseSchema = z.object({
+  error: z.string().optional(),
+  message: z.string().optional(),
+  detail: z.string().optional(),
+  pr_url: z.string().optional(),
+  public_issue_url: z.string().optional(),
+  url: z.string().optional(),
+});
 
 export interface SubmitSinglePackageInput {
   packageForm: RegisterPackageForm;
@@ -131,7 +141,8 @@ export default function useRegisterSubmitHandler({
       let responseText = '';
       if (contentType.includes('application/json')) {
         const parsed = await res.json().catch(() => null);
-        responseJson = parsed && typeof parsed === 'object' ? (parsed as SubmitEndpointResponse) : null;
+        const validated = submitEndpointResponseSchema.safeParse(parsed);
+        responseJson = validated.success ? validated.data : null;
       } else if (res.status !== 204) {
         responseText = await res.text().catch(() => '');
       }

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
+import * as z from 'zod';
 import { safeLog } from '../../model/helpers';
 import type { SetupConfig } from '../../model/types';
 
 const SETUP_REMOTE_URL = import.meta.env.VITE_SETUP_REMOTE;
+const setupConfigResponseSchema = z.object({
+  corePackageId: z.string().trim().min(1),
+  requiredPluginIds: z.array(z.string().trim().min(1)).min(1),
+});
 
 export default function useInitSetupConfig() {
   const [setupConfig, setSetupConfig] = useState<SetupConfig | null>(null);
@@ -14,14 +19,12 @@ export default function useInitSetupConfig() {
       try {
         const response = await fetch(SETUP_REMOTE_URL, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = (await response.json()) as { corePackageId?: unknown; requiredPluginIds?: unknown };
-        const corePackageId = typeof data?.corePackageId === 'string' ? data.corePackageId.trim() : '';
-        const requiredPluginIds = Array.isArray(data?.requiredPluginIds)
-          ? data.requiredPluginIds.map((id) => String(id).trim()).filter(Boolean)
-          : [];
-        if (!corePackageId || requiredPluginIds.length === 0) {
+        const raw = await response.json();
+        const parsed = setupConfigResponseSchema.safeParse(raw);
+        if (!parsed.success) {
           throw new Error('invalid payload');
         }
+        const { corePackageId, requiredPluginIds } = parsed.data;
         if (cancelled) return;
         setSetupConfig({ corePackageId, requiredPluginIds });
         setSetupError('');

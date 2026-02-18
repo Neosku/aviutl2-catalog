@@ -1,6 +1,21 @@
 // アプリ全体で用いるユーティリティをまとめたファイル
 
+import * as z from 'zod';
 import { catalogIndexSchema } from './catalogSchema.ts';
+
+const stringMapSchema = z.record(z.string(), z.unknown()).transform((value) => {
+  const normalized = {};
+  Object.entries(value).forEach(([key, raw]) => {
+    normalized[key] = typeof raw === 'string' ? raw : '';
+  });
+  return normalized;
+});
+const settingsFileSchema = z.record(z.string(), z.unknown());
+const packageStateMetaFileSchema = z.object({
+  uid: z.string().optional(),
+  last_snapshot_ts: z.number().finite().optional(),
+});
+const packageStateQueueFileSchema = z.array(z.record(z.string(), z.unknown()));
 
 // -------------------------
 // 基本的なユーティリティ関数
@@ -347,12 +362,22 @@ export async function loadCatalogData(options = {}) {
 }
 
 // installed.jsonからインストールパッケージ一覧を読み込み（RustとJSを統合）
+/** @returns {Promise<Record<string, string>>} */
 export async function loadInstalledMap() {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    return await invoke('get_installed_map_cmd');
+    const raw = await invoke('get_installed_map_cmd');
+    const parsed = stringMapSchema.safeParse(raw);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    try {
+      await logError(`[loadInstalledMap] invalid response shape from get_installed_map_cmd`);
+    } catch {}
+    return {};
   } catch (e) {
     await logError(`[loadInstalledMap] invoke fallback: ${e?.message || e}`);
+    return {};
   }
 }
 
@@ -431,7 +456,14 @@ export async function getSettings() {
     if (!exists) return {};
     const raw = await fs.readTextFile(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
     const data = JSON.parse(raw || '{}');
-    return data && typeof data === 'object' ? data : {};
+    const parsed = settingsFileSchema.safeParse(data);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    try {
+      await logError(`[getSettings] invalid settings.json shape`);
+    } catch {}
+    return {};
   } catch (e) {
     try {
       await logError(`[getSettings] failed: ${e?.message || e}`);
@@ -493,7 +525,7 @@ async function getClientVersionCached() {
   return packageStateClientVersion;
 }
 // JSONファイルを読み込み
-async function readAppConfigJson(relPath, fallback) {
+async function readAppConfigJson(relPath, fallback, schema = null) {
   const fs = await import('@tauri-apps/plugin-fs');
   try {
     const exists = await fs.exists(relPath, { baseDir: fs.BaseDirectory.AppConfig });
@@ -502,6 +534,16 @@ async function readAppConfigJson(relPath, fallback) {
     const trimmed = typeof raw === 'string' ? raw.trim() : '';
     if (!trimmed) return fallback;
     const parsed = JSON.parse(raw);
+    if (schema) {
+      const validated = schema.safeParse(parsed);
+      if (validated.success) {
+        return validated.data;
+      }
+      try {
+        await logError(`[package-state] invalid JSON shape in ${relPath}`);
+      } catch {}
+      return fallback;
+    }
     return parsed ?? fallback;
   } catch (e) {
     try {
@@ -536,13 +578,17 @@ async function removeAppConfigFile(relPath) {
 }
 // メタ情報を正規化
 function normalizePackageStateMeta(raw) {
-  const uid = raw && typeof raw.uid === 'string' ? raw.uid : '';
-  const ts = Number.isFinite(raw?.last_snapshot_ts) ? raw.last_snapshot_ts : 0;
+  const parsed = packageStateMetaFileSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { uid: '', last_snapshot_ts: 0 };
+  }
+  const uid = parsed.data.uid || '';
+  const ts = Number.isFinite(parsed.data.last_snapshot_ts) ? parsed.data.last_snapshot_ts : 0;
   return { uid, last_snapshot_ts: ts };
 }
 // メタ情報を読み込み・保存
 async function loadPackageStateMeta() {
-  const raw = await readAppConfigJson(PACKAGE_STATE_META_FILE, {});
+  const raw = await readAppConfigJson(PACKAGE_STATE_META_FILE, {}, packageStateMetaFileSchema);
   return normalizePackageStateMeta(raw);
 }
 // メタ情報を保存
@@ -553,8 +599,7 @@ async function savePackageStateMeta(meta) {
 }
 // キューを読み込み・保存
 async function loadPackageStateQueue() {
-  const raw = await readAppConfigJson(PACKAGE_STATE_PENDING_FILE, []);
-  return Array.isArray(raw) ? raw : [];
+  return await readAppConfigJson(PACKAGE_STATE_PENDING_FILE, [], packageStateQueueFileSchema);
 }
 // キューを保存
 async function savePackageStateQueue(queue) {
@@ -859,11 +904,19 @@ export async function readAppLog() {
 // -------------------------
 
 // 指定パッケージのインストール済みバージョンを検出（Rust実装を使用）
+/** @returns {Promise<Record<string, string>>} */
 export async function detectInstalledVersionsMap(items) {
   const list = Array.isArray(items) ? items : [];
   const { invoke } = await import('@tauri-apps/api/core');
   const res = await invoke('detect_versions_map', { items: list });
-  return res && typeof res === 'object' ? res : {};
+  const parsed = stringMapSchema.safeParse(res);
+  if (parsed.success) {
+    return parsed.data;
+  }
+  try {
+    await logError(`[detectInstalledVersionsMap] invalid response shape from detect_versions_map`);
+  } catch {}
+  return {};
 }
 
 // -------------------------

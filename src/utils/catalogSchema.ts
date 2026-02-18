@@ -119,8 +119,8 @@ export const catalogEntrySchema = z.object({
   originalAuthor: z.string().optional(),
   repoURL: z.string(),
   'latest-version': z.string(),
-  popularity: z.number(),
-  trend: z.number(),
+  popularity: z.number().default(0),
+  trend: z.number().default(0),
 
   licenses: z.array(licenseSchema),
 

@@ -4,8 +4,25 @@
 import { basename, generateKey, normalizeArrayText } from './helpers';
 import { getFileExtension } from './parse';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
+import * as z from 'zod';
 
 const DRAFT_STORAGE_PREFIX = 'register-draft:';
+const unknownObjectSchema = z.object({}).catchall(z.unknown());
+const registerDraftRecordSchema = z.object({
+  draftId: z.string().trim().min(1),
+  packageId: z.string().trim().min(1),
+  packageName: z.string().optional(),
+  packageSender: z.string().optional(),
+  tags: z.array(z.unknown()).optional(),
+  savedAt: z.number().finite().optional(),
+  contentHash: z.string().optional(),
+  installerTestedHash: z.string().optional(),
+  uninstallerTestedHash: z.string().optional(),
+  lastSubmittedHash: z.string().optional(),
+  lastSubmitAt: z.number().finite().optional(),
+  lastSubmitError: z.string().optional(),
+  form: unknownObjectSchema,
+});
 
 interface RegisterDraftImageSnapshot {
   key: string;
@@ -231,12 +248,10 @@ export function isRegisterDraftReadyForSubmit(record: RegisterDraftRecord): bool
 }
 
 function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const candidate = raw as Partial<RegisterDraftRecord>;
-  const draftId = String(candidate.draftId || '').trim();
-  if (!draftId) return null;
-  if (typeof candidate.packageId !== 'string' || !candidate.packageId.trim()) return null;
-  if (!candidate.form || typeof candidate.form !== 'object') return null;
+  const parsed = registerDraftRecordSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  const candidate = parsed.data;
+  const draftId = candidate.draftId.trim();
   const fallbackContentHash = computeTextHash(
     JSON.stringify({
       form: candidate.form,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Moon, Sun, FolderOpen, Download, Upload, Info, Check } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import * as z from 'zod';
 import { useCatalog, useCatalogDispatch } from '../utils/catalogStore.jsx';
 import {
   detectInstalledVersionsMap,
@@ -15,6 +16,11 @@ import {
 } from '../utils/index.js';
 
 const iconBlockStyle = { display: 'block' };
+const installedImportValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null(), z.undefined()]);
+const installedImportSchema = z.union([
+  z.array(installedImportValueSchema),
+  z.record(z.string(), installedImportValueSchema),
+]);
 
 function applyTheme(theme) {
   const root = document?.documentElement;
@@ -508,19 +514,22 @@ export default function Settings() {
 }
 
 function normalizeInstalledImport(data) {
-  if (Array.isArray(data)) {
+  const parsed = installedImportSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error('インポートファイルの形式が正しくありません。');
+  }
+  const normalized = parsed.data;
+
+  if (Array.isArray(normalized)) {
     const out = {};
-    data.forEach((id) => {
+    normalized.forEach((id) => {
       const key = String(id || '').trim();
       if (key) out[key] = '';
     });
     return out;
   }
-  if (!data || typeof data !== 'object') {
-    throw new Error('インポートファイルの形式が正しくありません。');
-  }
   const out = {};
-  for (const [rawKey, rawValue] of Object.entries(data)) {
+  for (const [rawKey, rawValue] of Object.entries(normalized)) {
     const key = String(rawKey || '').trim();
     if (!key) continue;
     out[key] = rawValue == null ? '' : String(rawValue);

@@ -15,8 +15,17 @@ import type {
   InquirySubmitPayload,
   ParsedSubmitResponse,
 } from './types';
+import * as z from 'zod';
 
 type BugPayloadDiagnostics = Pick<FeedbackDiagnosticsSnapshot, 'device' | 'installedPackages' | 'appVersion'>;
+const submitEndpointResponseSchema = z.object({
+  error: z.string().optional(),
+  message: z.string().optional(),
+  detail: z.string().optional(),
+  pr_url: z.string().optional(),
+  public_issue_url: z.string().optional(),
+  url: z.string().optional(),
+});
 
 function formatOs(device: BugPayloadDiagnostics['device']) {
   return `${device?.os?.name || ''} ${device?.os?.version || ''} (${device?.os?.arch || ''})`.trim();
@@ -104,8 +113,9 @@ export function toInstalledPackages(installedMap: unknown) {
 export async function parseSubmitResponse(response: Response): Promise<ParsedSubmitResponse> {
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
-    const json = await response.json().catch(() => null);
-    return { json, text: '' };
+    const raw = await response.json().catch(() => null);
+    const parsed = submitEndpointResponseSchema.safeParse(raw);
+    return { json: parsed.success ? parsed.data : null, text: '' };
   }
   if (response.status !== 204) {
     const text = await response.text().catch(() => '');
