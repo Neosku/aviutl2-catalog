@@ -72,6 +72,10 @@ function serializeInstallStep(step: RegisterInstallStep): InstallerAction {
     if (!from || !to) throw new Error('copy action requires from/to');
     return { action: 'copy', from, to };
   }
+  if (action === 'delete') {
+    if (!path) throw new Error('delete action requires path');
+    return { action: 'delete', path };
+  }
   if (action === 'run') {
     if (!path) throw new Error('run action requires path');
     return {
