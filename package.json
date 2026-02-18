@@ -13,7 +13,8 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "verify": "npm run typecheck && npm run lint && npm run fmt"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",

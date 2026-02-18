@@ -7,7 +7,7 @@ import DeepLinkHandler from './components/DeepLinkHandler.jsx';
 import Home from './pages/Home.jsx';
 const Package = lazy(() => import('./features/package/ui/PackagePage.tsx'));
 const Updates = lazy(() => import('./pages/Updates.jsx'));
-const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Settings = lazy(() => import('./features/settings/ui/SettingsPage.tsx'));
 const Register = lazy(() => import('./features/register/ui/RegisterPage.tsx'));
 const Feedback = lazy(() => import('./features/feedback/ui/FeedbackPage.tsx'));
 const NiconiCommons = lazy(() => import('./pages/NiconiCommons.jsx'));
