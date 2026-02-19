@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useHomeContext } from '../../../../components/AppShell.jsx';
-import { HOME_SORT_OPTIONS } from '../../model/sortOptions';
+import { useHomeContext } from '../../../../layouts/app-shell/AppShell';
+import { SORT_OPTIONS } from '../../../../layouts/app-shell/constants';
 import type { HomeContextValue, HomeSortOrder } from '../types';
 
 const HOME_CATEGORY_ALL = 'すべて';
@@ -29,7 +29,7 @@ export default function useHomePage() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-  const sortOptions = HOME_SORT_OPTIONS;
+  const sortOptions = SORT_OPTIONS;
   const sortedAllTags = useMemo(() => sortTags(allTags), [allTags]);
   const sortedSelectedTags = useMemo(() => sortTags(selectedTags), [selectedTags]);
   const listSearch = useMemo(() => {

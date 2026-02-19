@@ -1,7 +1,7 @@
 // アプリケーションのルーティング設定
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AppShell from './components/AppShell.jsx';
+import AppShell from './layouts/app-shell/AppShell';
 import DeepLinkHandler from './components/DeepLinkHandler.jsx';
 
 const Home = lazy(() => import('./features/home/ui/HomePage.tsx'));

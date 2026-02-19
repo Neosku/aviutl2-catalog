@@ -1,23 +1,7 @@
 import type { PackageItem } from '../../package/model/types';
-import type { HomeSortOption, HomeSortOrder } from '../model/sortOptions';
+import type { HomeContextValue, HomeSortOption, HomeSortOrder } from '../../../layouts/app-shell/types';
 
-export type { HomeSortOption, HomeSortOrder };
-
-type UrlOverrideValue = string | string[] | null | undefined;
-
-export interface HomeContextValue {
-  filteredPackages: PackageItem[];
-  searchQuery: string;
-  selectedCategory: string;
-  updateUrl: (overrides: Record<string, UrlOverrideValue>) => void;
-  categories: string[];
-  allTags: string[];
-  selectedTags: string[];
-  toggleTag: (tag: string) => void;
-  filterInstalled: boolean;
-  sortOrder: HomeSortOrder;
-  setSortOrder: (order: HomeSortOrder) => void;
-}
+export type { HomeContextValue, HomeSortOption, HomeSortOrder };
 
 export interface FiltersSectionProps {
   categories: string[];
