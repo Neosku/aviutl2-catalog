@@ -25,4 +25,5 @@ export interface TableSectionProps {
   selectedMap: SelectedMap;
   onToggleAllVisible: () => void;
   onToggleItem: (id: string) => void;
+  onCopyCommonsId: (commonsId: string) => void;
 }

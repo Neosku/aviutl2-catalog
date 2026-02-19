@@ -6,7 +6,6 @@ export type EligibleItem = CatalogEntryState & {
 
 export interface CopyState {
   ok: boolean;
-  message: string;
   count: number;
 }
 

@@ -6,11 +6,10 @@ import { normalize } from '../../../../utils/index.js';
 import type { CopyState, EligibleItem, SelectedMap } from '../../model/types';
 
 const DESELECTED_IDS_STORAGE_KEY = 'niconiCommonsDeselectedIds';
-const EMPTY_COPY_STATE: CopyState = { ok: false, message: '', count: 0 };
+const EMPTY_COPY_STATE: CopyState = { ok: false, count: 0 };
 
 export default function useNiconiCommonsPage() {
   const { items } = useCatalog();
-  const deselectedIdsRef = useRef<string[]>([]);
   const skipPersistRef = useRef(true);
 
   const [query, setQuery] = useState('');
@@ -18,7 +17,7 @@ export default function useNiconiCommonsPage() {
   const [copyState, setCopyState] = useState<CopyState>(EMPTY_COPY_STATE);
 
   const eligibleItems = useMemo((): EligibleItem[] => {
-    return (items || [])
+    return items
       .filter((item) => item && item.installed)
       .filter((item): item is EligibleItem => Boolean(item.niconiCommonsId));
   }, [items]);
@@ -27,7 +26,7 @@ export default function useNiconiCommonsPage() {
     return eligibleItems.toSorted((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
   }, [eligibleItems]);
 
-  const queryKey = useMemo(() => normalize(query || ''), [query]);
+  const queryKey = useMemo(() => normalize(query), [query]);
 
   const filteredItems = useMemo(() => {
     if (!queryKey) return sortedEligible;
@@ -48,6 +47,7 @@ export default function useNiconiCommonsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const schema = z.array(z.string());
+    let deselectedIds: string[] = [];
 
     try {
       const raw = window.localStorage.getItem(DESELECTED_IDS_STORAGE_KEY);
@@ -55,12 +55,12 @@ export default function useNiconiCommonsPage() {
         const parsed = JSON.parse(raw);
         const result = schema.safeParse(parsed);
         if (result.success) {
-          deselectedIdsRef.current = result.data.filter(Boolean);
+          deselectedIds = result.data.filter(Boolean);
         }
       }
     } catch {}
 
-    const deselectedSet = new Set(deselectedIdsRef.current);
+    const deselectedSet = new Set(deselectedIds);
     setSelectedMap(() => {
       const next: Record<string, true> = {};
       eligibleItems.forEach((item) => {
@@ -78,17 +78,13 @@ export default function useNiconiCommonsPage() {
     }
 
     const deselected = eligibleItems.filter((item) => !selectedMap[item.id]).map((item) => item.id);
-    deselectedIdsRef.current = deselected;
     try {
       window.localStorage.setItem(DESELECTED_IDS_STORAGE_KEY, JSON.stringify(deselected));
     } catch {}
   }, [eligibleItems, selectedMap]);
 
   const selectedIds = useMemo(() => {
-    return eligibleItems
-      .filter((item) => selectedMap[item.id])
-      .map((item) => item.niconiCommonsId)
-      .filter((item): item is string => Boolean(item));
+    return eligibleItems.filter((item) => selectedMap[item.id]).map((item) => item.niconiCommonsId);
   }, [eligibleItems, selectedMap]);
 
   const selectedCount = selectedIds.length;
@@ -123,15 +119,23 @@ export default function useNiconiCommonsPage() {
     if (!ids.length) return;
     try {
       await navigator.clipboard.writeText(ids.join(' '));
-      setCopyState({ ok: true, message: `${ids.length}件をコピーしました`, count: ids.length });
+      setCopyState({ ok: true, count: ids.length });
     } catch {
-      setCopyState({ ok: false, message: 'コピーに失敗しました', count: 0 });
+      setCopyState(EMPTY_COPY_STATE);
     }
   }, []);
 
   const onCopySelected = useCallback(() => {
     void copyIds(selectedIds);
   }, [copyIds, selectedIds]);
+
+  const onCopyCommonsId = useCallback(
+    (commonsId: string) => {
+      if (!commonsId) return;
+      void copyIds([commonsId]);
+    },
+    [copyIds],
+  );
 
   const onOpenGuide = useCallback(async () => {
     try {
@@ -140,10 +144,10 @@ export default function useNiconiCommonsPage() {
   }, []);
 
   useEffect(() => {
-    if (!copyState.message) return;
+    if (!copyState.ok) return;
     const timer = setTimeout(() => setCopyState(EMPTY_COPY_STATE), 2000);
     return () => clearTimeout(timer);
-  }, [copyState.message]);
+  }, [copyState.ok]);
 
   return {
     copyState,
@@ -158,6 +162,7 @@ export default function useNiconiCommonsPage() {
     toggleAllVisible,
     toggleItem,
     onCopySelected,
+    onCopyCommonsId,
     onOpenGuide,
   };
 }

@@ -15,6 +15,7 @@ export default function NiconiCommonsPage() {
     toggleAllVisible,
     toggleItem,
     onCopySelected,
+    onCopyCommonsId,
     onOpenGuide,
   } = useNiconiCommonsPage();
 
@@ -39,6 +40,7 @@ export default function NiconiCommonsPage() {
         selectedMap={selectedMap}
         onToggleAllVisible={toggleAllVisible}
         onToggleItem={toggleItem}
+        onCopyCommonsId={onCopyCommonsId}
       />
     </div>
   );
