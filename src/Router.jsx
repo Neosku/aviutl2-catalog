@@ -10,7 +10,7 @@ const Updates = lazy(() => import('./features/updates/ui/UpdatesPage.tsx'));
 const Settings = lazy(() => import('./features/settings/ui/SettingsPage.tsx'));
 const Register = lazy(() => import('./features/register/ui/RegisterPage.tsx'));
 const Feedback = lazy(() => import('./features/feedback/ui/FeedbackPage.tsx'));
-const NiconiCommons = lazy(() => import('./pages/NiconiCommons.jsx'));
+const NiconiCommons = lazy(() => import('./features/niconi-commons/ui/NiconiCommonsPage.tsx'));
 
 export default function AppRouter() {
   return (
