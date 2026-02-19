@@ -17,16 +17,12 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { useCatalog } from '../utils/catalogStore.jsx';
 import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../utils/index.js';
+import { HOME_SORT_OPTIONS } from '../features/home/model/sortOptions';
 import ErrorDialog from './ErrorDialog.jsx';
 import aviutl2Icon from '../../src-tauri/icons/aviutl2.png';
 import appIcon from '../../src-tauri/icons/icon.svg';
 
-export const SORT_OPTIONS = [
-  { value: 'popularity_desc', label: '人気順' },
-  { value: 'trend_desc', label: 'トレンド順' },
-  { value: 'added_desc', label: '新着順' },
-  { value: 'updated_desc', label: '最終更新日順' },
-];
+export const SORT_OPTIONS = HOME_SORT_OPTIONS;
 
 function sortOrderFromQuery(sortKey, _dir) {
   if (sortKey === 'popularity') return 'popularity_desc';
@@ -463,7 +459,7 @@ export default function AppShell() {
       updateAvailableCount,
       sortOrder,
       setSortOrder,
-      // Exposed for Home.jsx filter bar
+      // Exposed for HomePage.tsx filter bar
       categories,
       allTags,
       selectedTags,

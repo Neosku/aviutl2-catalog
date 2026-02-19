@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import DeepLinkHandler from './components/DeepLinkHandler.jsx';
 
-import Home from './pages/Home.jsx';
+const Home = lazy(() => import('./features/home/ui/HomePage.tsx'));
 const Package = lazy(() => import('./features/package/ui/PackagePage.tsx'));
 const Updates = lazy(() => import('./features/updates/ui/UpdatesPage.tsx'));
 const Settings = lazy(() => import('./features/settings/ui/SettingsPage.tsx'));
