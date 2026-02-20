@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Download } from 'lucide-react';
-import ProgressCircle from '../../../../components/ProgressCircle.jsx';
+import ProgressCircle from '../../../../components/ProgressCircle';
 import DetailsSectionBase from '../components/DetailsSectionBase';
 import type { InstallDetailsSectionProps } from '../types';
 

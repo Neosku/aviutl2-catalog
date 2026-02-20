@@ -1,4 +1,4 @@
-import ProgressCircle from '../../../../components/ProgressCircle.jsx';
+import ProgressCircle from '../../../../components/ProgressCircle';
 import { latestVersionOf } from '../../../../utils/index.js';
 import type { UpdatesTableSectionProps } from '../types';
 

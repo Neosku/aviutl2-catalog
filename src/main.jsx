@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppRouter from './Router.jsx';
 import TitleBar from './layouts/app-shell/title-bar/TitleBar';
-import UpdateDialog from './components/UpdateDialog.jsx';
+import UpdateDialog from './components/UpdateDialog';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './utils/catalogStore.jsx';
 import {
   loadInstalledMap,

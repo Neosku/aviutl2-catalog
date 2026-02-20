@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
-import ErrorDialog from '../../../components/ErrorDialog.jsx';
+import ErrorDialog from '../../../components/ErrorDialog';
 import { formatDate, hasInstaller, latestVersionOf } from '../../../utils/index.js';
 import { buildLicenseBody } from '../../../utils/licenseTemplates.js';
 import { readFromSearch, shouldOpenExternalLink } from '../model/helpers';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Download, RefreshCw, Trash2 } from 'lucide-react';
-import ProgressCircle from '../../../../../components/ProgressCircle.jsx';
+import ProgressCircle from '../../../../../components/ProgressCircle';
 import type { PackageSidebarSectionProps } from '../../types';
 
 type PackageSidebarActionsCardProps = Pick<

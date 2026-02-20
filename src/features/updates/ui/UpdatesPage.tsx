@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import ErrorDialog from '../../../components/ErrorDialog.jsx';
+import ErrorDialog from '../../../components/ErrorDialog';
 import useUpdatesPage from './hooks/useUpdatesPage';
 import { BulkProgressSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
 

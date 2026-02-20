@@ -1,6 +1,24 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 // 円形の進捗リングを表示するシンプルなコンポーネント
+interface ProgressCircleProps {
+  value?: number;
+  size?: number;
+  strokeWidth?: number;
+  showValue?: boolean;
+  showComplete?: boolean;
+  ariaLabel?: string;
+  className?: string;
+  progressColorClassName?: string;
+}
+
+const textColorClassPattern = /\b(?:dark:)?text-(?:white|black|transparent|current|[a-z]+-\d{2,3}(?:\/\d{1,3})?)\b/g;
+
+function extractTextColorClasses(className: string): string {
+  const matches = className.match(textColorClassPattern);
+  return matches ? matches.join(' ') : '';
+}
+
 export default function ProgressCircle({
   value = 0,
   size = 24,
@@ -9,8 +27,10 @@ export default function ProgressCircle({
   showComplete = false,
   ariaLabel,
   className = '',
-}) {
+  progressColorClassName,
+}: ProgressCircleProps) {
   const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+  const center = size / 2;
   const radius = Math.max((size - strokeWidth) / 2, strokeWidth / 2);
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - clamped);
@@ -18,11 +38,21 @@ export default function ProgressCircle({
   const label = ariaLabel || `進行度 ${percent}%`;
   const isComplete = showComplete && clamped >= 1;
   const iconSize = Math.max(12, Math.round(size * 0.5));
+  const legacyColorClasses = useMemo(() => extractTextColorClasses(className), [className]);
+  const progressColorClasses = progressColorClassName || legacyColorClasses || 'text-blue-600';
   const sizeStyle = useMemo(() => ({ width: `${size}px`, height: `${size}px` }), [size]);
+  const baseCircleProps = {
+    cx: center,
+    cy: center,
+    r: radius,
+    strokeWidth,
+    stroke: 'currentColor',
+    fill: 'none' as const,
+  };
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center ${className || ''}`}
+      className={`relative inline-flex items-center justify-center ${className}`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -38,26 +68,13 @@ export default function ProgressCircle({
         focusable="false"
         aria-hidden="true"
       >
+        <circle className="text-slate-200 dark:text-slate-700" {...baseCircleProps} />
         <circle
-          className="text-slate-200 dark:text-slate-700"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="none"
-        />
-        <circle
-          className={className ? '' : 'text-blue-600'}
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
+          className={progressColorClasses}
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          stroke="currentColor"
-          fill="none"
+          {...baseCircleProps}
         />
       </svg>
       {showValue && !isComplete ? (

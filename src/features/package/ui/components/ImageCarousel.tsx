@@ -1,11 +1,18 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-/**
- * @param {{ images?: Array<{ src: string; alt?: string }> }} props
- */
-export default function ImageCarousel({ images = [] }) {
-  const ref = useRef(null);
+interface CarouselImage {
+  src: string;
+  alt?: string;
+}
+
+interface ImageCarouselProps {
+  images?: CarouselImage[];
+}
+
+export default function ImageCarousel({ images = [] }: ImageCarouselProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -13,19 +20,23 @@ export default function ImageCarousel({ images = [] }) {
     if (!el) return;
     const onScroll = () => {
       const i = Math.round(el.scrollLeft / el.clientWidth);
+      if (images.length < 1) {
+        setIndex(0);
+        return;
+      }
       setIndex(Math.min(Math.max(i, 0), images.length - 1));
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [images.length]);
 
-  function scrollTo(i) {
+  function scrollTo(i: number) {
     const el = ref.current;
     if (!el) return;
     el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
   }
 
-  function onKey(e) {
+  function onKey(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'ArrowRight') scrollTo(Math.min(index + 1, images.length - 1));
     if (e.key === 'ArrowLeft') scrollTo(Math.max(index - 1, 0));
   }

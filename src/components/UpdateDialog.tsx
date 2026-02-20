@@ -1,21 +1,46 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
 import { renderMarkdown } from '../utils/markdown.js';
 
-export default function UpdateDialog({ open, version, notes, busy, error, onConfirm, onCancel, publishedOn }) {
+interface UpdateDialogProps {
+  open: boolean;
+  version?: string;
+  notes?: string;
+  busy?: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  publishedOn?: string;
+}
+
+export default function UpdateDialog({
+  open,
+  version,
+  notes,
+  busy = false,
+  error,
+  onConfirm,
+  onCancel,
+  publishedOn,
+}: UpdateDialogProps) {
   const markdownHtml = useMemo(() => (notes ? renderMarkdown(notes) : ''), [notes]);
   const markdownMarkup = useMemo(() => ({ __html: markdownHtml }), [markdownHtml]);
   if (!open) return null;
 
   const handleBackdrop = () => {
     if (busy) return;
-    onCancel?.();
+    onCancel();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={handleBackdrop} />
-      <div className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-title"
+      >
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">アップデート</span>

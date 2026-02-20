@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, CheckCircle2, Download } from 'lucide-react';
-import ProgressCircle from '../../../../components/ProgressCircle.jsx';
+import ProgressCircle from '../../../../components/ProgressCircle';
 import type { PackagesSectionProps } from '../types';
 
 export default function PackagesSection({

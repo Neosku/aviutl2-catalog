@@ -3,7 +3,7 @@
  */
 import React, { useMemo } from 'react';
 import { AlertCircle, Download, Trash2 } from 'lucide-react';
-import ProgressCircle from '../../../../components/ProgressCircle.jsx';
+import ProgressCircle from '../../../../components/ProgressCircle';
 import type { RegisterTestOperation, RegisterTestSectionProps } from '../types';
 
 const KIND_LABELS: Record<RegisterTestOperation['kind'], string> = {

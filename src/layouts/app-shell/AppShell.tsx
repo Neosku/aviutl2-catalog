@@ -1,5 +1,5 @@
 import { Outlet, useOutletContext } from 'react-router-dom';
-import ErrorDialog from '../../components/ErrorDialog.jsx';
+import ErrorDialog from '../../components/ErrorDialog';
 import { SORT_OPTIONS } from './constants';
 import AppSidebar from './components/AppSidebar';
 import HomeSearchHeader from './components/HomeSearchHeader';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import TitleBar from '../../../layouts/app-shell/title-bar/TitleBar';
-import UpdateDialog from '../../../components/UpdateDialog.jsx';
+import UpdateDialog from '../../../components/UpdateDialog';
 import { ensureInitWindowVisible } from '../model/helpers';
 import StepIndicator from './components/StepIndicator';
 import useInitSetupState from './hooks/useInitSetupState';
