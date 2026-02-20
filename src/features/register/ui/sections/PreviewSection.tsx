@@ -3,7 +3,7 @@
  */
 import React, { useMemo, useRef } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import PackageCard from '../../../../components/PackageCard.jsx';
+import PackageCard from '../../../../components/package-card/PackageCard';
 import type { RegisterPreviewSectionProps } from '../types';
 
 export default function RegisterPreviewSection({

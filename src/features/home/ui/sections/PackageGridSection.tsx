@@ -1,11 +1,5 @@
-import type { ComponentType } from 'react';
-import PackageCardComponent from '../../../../components/PackageCard.jsx';
+import PackageCard from '../../../../components/package-card/PackageCard';
 import type { PackageGridSectionProps } from '../types';
-
-const PackageCard = PackageCardComponent as ComponentType<{
-  item: PackageGridSectionProps['filteredPackages'][number];
-  listSearch: string;
-}>;
 
 export default function PackageGridSection({ filteredPackages, listSearch }: PackageGridSectionProps) {
   return (
