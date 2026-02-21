@@ -1,4 +1,4 @@
-import { useUpdatePrompt } from '../../../../utils/useUpdatePrompt.js';
+import { useUpdatePrompt } from '../../../app-update/useUpdatePrompt';
 import { getErrorMessage } from '../../model/helpers';
 import useInitSetupBulkInstall from './useInitSetupBulkInstall';
 import useInitSetupConfig from './useInitSetupConfig';

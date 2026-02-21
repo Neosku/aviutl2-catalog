@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppRouter from './Router.jsx';
 import TitleBar from './layouts/app-shell/title-bar/TitleBar';
-import UpdateDialog from './components/UpdateDialog';
+import UpdateDialog from './features/app-update/UpdateDialog';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './utils/catalogStore.jsx';
 import {
   loadInstalledMap,
@@ -14,7 +14,7 @@ import {
   flushPackageStateQueue,
   maybeSendPackageStateSnapshot,
 } from './utils/index.js';
-import { useUpdatePrompt } from './utils/useUpdatePrompt.js';
+import { useUpdatePrompt } from './features/app-update/useUpdatePrompt';
 import InitSetupPage from './features/init-setup/ui/InitSetupPage';
 // eslint-disable-next-line import/no-unassigned-import
 import './styles/index.css';

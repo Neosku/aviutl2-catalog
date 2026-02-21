@@ -1,7 +1,53 @@
 import { useCallback, useEffect, useState } from 'react';
-import { logError } from './index.js';
+import { logError } from '../../utils/index.js';
 
-function resolvePubDate(update) {
+export interface UseUpdatePromptOptions {
+  autoCheck?: boolean;
+}
+
+export interface UpdatePromptInstallable {
+  downloadAndInstall: () => Promise<void>;
+}
+
+interface UpdateCheckResult extends UpdatePromptInstallable {
+  available?: boolean;
+  version?: unknown;
+  body?: unknown;
+  notes?: unknown;
+  pubDate?: unknown;
+  pub_date?: unknown;
+  publishDate?: unknown;
+  publishedAt?: unknown;
+  published_at?: unknown;
+  releaseDate?: unknown;
+  date?: unknown;
+}
+
+export interface UpdatePromptInfo {
+  update: UpdatePromptInstallable;
+  version: string;
+  notes: string;
+  publishedOn: string;
+}
+
+export interface UseUpdatePromptResult {
+  updateInfo: UpdatePromptInfo | null;
+  updateBusy: boolean;
+  updateError: string;
+  dismissUpdate: () => void;
+  confirmUpdate: () => Promise<void>;
+}
+
+function toErrorText(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return String(error ?? 'unknown');
+}
+
+function toCleanString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolvePubDate(update: UpdateCheckResult | null | undefined): { raw: string; label: string } {
   if (!update || typeof update !== 'object') return { raw: '', label: '' };
   const candidates = [
     update.pubDate,
@@ -12,56 +58,59 @@ function resolvePubDate(update) {
     update.releaseDate,
     update.date,
   ];
-  const raw = candidates.find((val) => typeof val === 'string' && val.trim()) || '';
+  const raw = candidates.map(toCleanString).find(Boolean) || '';
   if (!raw) return { raw: '', label: '' };
+
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return { raw, label: '' };
+
   let label = '';
   try {
     label = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric' }).format(parsed);
   } catch {
     label = `${parsed.getMonth() + 1}月${parsed.getDate()}日`;
   }
+
   return { raw, label };
 }
 
-export function useUpdatePrompt(options = {}) {
+export function useUpdatePrompt(options: UseUpdatePromptOptions = {}): UseUpdatePromptResult {
   const { autoCheck = true } = options;
-  const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdatePromptInfo | null>(null);
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateError, setUpdateError] = useState('');
 
   useEffect(() => {
     if (!autoCheck) return undefined;
-    if (import.meta?.env?.DEV) return undefined;
+    if (import.meta.env.DEV) return undefined;
+
     let cancelled = false;
+
     (async () => {
       try {
-        const { check } = await import('@tauri-apps/plugin-updater');
-        const update = await check();
-        if (!cancelled && update && (update.available ?? true)) {
-          const notes =
-            typeof update.body === 'string'
-              ? update.body.trim()
-              : typeof update.notes === 'string'
-                ? update.notes.trim()
-                : '';
+        const mod = (await import('@tauri-apps/plugin-updater')) as {
+          check?: () => Promise<UpdateCheckResult | null>;
+        };
+        if (typeof mod.check !== 'function') return;
+
+        const update = await mod.check();
+        if (!cancelled && update && (update.available ?? true) && typeof update.downloadAndInstall === 'function') {
+          const notes = toCleanString(update.body) || toCleanString(update.notes);
           const pubDate = resolvePubDate(update);
+
           setUpdateError('');
           setUpdateInfo({
             update,
-            version: update.version || '',
+            version: toCleanString(update.version),
             notes,
             publishedOn: pubDate.label,
-            rawPubDate: pubDate.raw,
           });
         }
-      } catch (e) {
-        try {
-          await logError(`[updater] check failed: ${e?.message || e}`);
-        } catch {}
+      } catch (error) {
+        await logError(`[updater] check failed: ${toErrorText(error)}`);
       }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -92,11 +141,9 @@ export function useUpdatePrompt(options = {}) {
         } catch {}
       }
       setUpdateInfo(null);
-    } catch (e) {
+    } catch (error) {
       setUpdateError('アップデートに失敗しました。ネットワークや権限をご確認ください。');
-      try {
-        await logError(`[updater] download/install failed: ${e?.message || e}`);
-      } catch {}
+      await logError(`[updater] download/install failed: ${toErrorText(error)}`);
     } finally {
       setUpdateBusy(false);
     }

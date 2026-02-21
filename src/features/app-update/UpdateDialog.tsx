@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
-import { renderMarkdown } from '../utils/markdown.js';
+import { renderMarkdown } from '../../utils/markdown';
 
 interface UpdateDialogProps {
   open: boolean;
