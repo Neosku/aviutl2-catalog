@@ -3,7 +3,11 @@
  */
 import React, { memo, useEffect, useState } from 'react';
 import { Check, ChevronDown, Copy } from 'lucide-react';
-import { LICENSE_TYPE_OPTIONS, buildLicenseBody } from '../../../../utils/licenseTemplates.js';
+import {
+  LICENSE_TYPE_OPTIONS,
+  buildLicenseBody,
+  requiresTemplateCopyrightFields,
+} from '../../../../utils/licenseTemplates';
 import { createEmptyLicense } from '../../model/form';
 import type { PackageLicenseSectionProps } from '../types';
 import ActionDropdown from '../components/ActionDropdown';
@@ -23,7 +27,7 @@ const PackageLicenseSection = memo(
     const isUnknown = type === '不明';
     const forceBodyInput = isOtherType;
     const useTemplate = !forceBodyInput && !isUnknown && !activeLicense.isCustom;
-    const needsCopyrightInput = useTemplate && type !== 'CC0-1.0';
+    const needsCopyrightInput = useTemplate && requiresTemplateCopyrightFields(type);
     const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
     const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
     const [copied, setCopied] = useState(false);

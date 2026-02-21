@@ -3,7 +3,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import ErrorDialog from '../../../components/ErrorDialog';
 import { formatDate, hasInstaller, latestVersionOf } from '../../../utils/index.js';
-import { buildLicenseBody } from '../../../utils/licenseTemplates.js';
+import { buildLicenseBody } from '../../../utils/licenseTemplates';
 import { readFromSearch, shouldOpenExternalLink } from '../model/helpers';
 import type { CarouselImage, PackageLicense, PackageLicenseEntry } from '../model/types';
 import LicenseModal from './components/LicenseModal';

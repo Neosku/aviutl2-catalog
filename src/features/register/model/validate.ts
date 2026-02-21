@@ -4,6 +4,7 @@
 import { isHttpsUrl } from './helpers';
 import { getFileExtension } from './parse';
 import { ID_PATTERN, INSTALL_ACTIONS, SPECIAL_INSTALL_ACTIONS, UNINSTALL_ACTIONS } from './constants';
+import { requiresTemplateCopyrightFields } from '../../../utils/licenseTemplates';
 import type { RegisterPackageForm } from './types';
 
 export function validateInstallerForTest(form: RegisterPackageForm): string {
@@ -79,7 +80,7 @@ export function validatePackageForm(form: RegisterPackageForm): string {
       (type !== '不明' && (license.isCustom || (license.licenseBody && license.licenseBody.trim().length > 0)));
     if (needsCustomBody && !String(license.licenseBody || '').trim()) return 'ライセンス本文を入力してください';
     const usesTemplate = type !== '不明' && type !== 'その他' && !license.isCustom;
-    const requiresCopyright = usesTemplate && type !== 'CC0-1.0';
+    const requiresCopyright = usesTemplate && requiresTemplateCopyrightFields(type);
     if (requiresCopyright) {
       const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
       const hasCopyright = entries.some((c) => String(c?.years || '').trim() && String(c?.holder || '').trim());

@@ -1,7 +1,7 @@
 /**
  * パッケージ登録で共有する定数群のモジュール
  */
-import { LICENSE_TEMPLATES } from '../../../utils/licenseTemplates.js';
+import { LICENSE_TEMPLATE_TYPE_VALUES } from '../../../utils/licenseTemplates';
 import type { RegisterInstallerOption } from './types';
 
 export const INSTALL_ACTIONS = ['download', 'extract', 'run', 'copy', 'delete'];
@@ -33,7 +33,7 @@ export const SUBMIT_ACTIONS = {
 export const PACKAGE_GUIDE_FALLBACK_URL =
   'https://github.com/Neosku/aviutl2-catalog-data/blob/main/register-package.md';
 
-export const LICENSE_TEMPLATE_TYPES = new Set(Object.keys(LICENSE_TEMPLATES));
+export const LICENSE_TEMPLATE_TYPES = new Set<string>(LICENSE_TEMPLATE_TYPE_VALUES);
 
 export const INSTALL_ACTION_OPTIONS: RegisterInstallerOption[] = INSTALL_ACTIONS.map((action) => ({
   value: action,
