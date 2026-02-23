@@ -3,13 +3,11 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { CatalogAction, CatalogEntryState } from '../../../../utils/catalogStore.jsx';
 import {
   detectInstalledVersionsMap,
-  hasInstaller,
   loadInstalledMap,
-  logError,
-  runInstallerForItem,
-  runUninstallerForItem,
   saveInstalledSnapshot,
-} from '../../../../utils/index.js';
+} from '../../../../utils/installed-map.js';
+import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../../../utils/installer.js';
+import { logError } from '../../../../utils/logging.js';
 import { normalizeInstalledImport, toErrorMessage } from '../../model/helpers';
 
 interface UseSettingsDataManagementParams {

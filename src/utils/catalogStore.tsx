@@ -5,8 +5,9 @@
 // - allTags/allTypes: UI のフィルター候補（全件から抽出）
 // - installedMap/detectedMap: インストール情報（検出結果）
 import { createContext, useReducer, useContext, useMemo } from 'react';
-import { normalize, latestVersionOf } from './index.js';
+import { latestVersionOf } from './catalog.js';
 import { CatalogEntry } from './catalogSchema.js';
+import { normalize } from './text.js';
 
 type CatalogState = {
   items: CatalogEntryState[];

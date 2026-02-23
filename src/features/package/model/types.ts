@@ -13,7 +13,7 @@ export interface PackageCopyright {
 export interface PackageLicense {
   type?: string;
   isCustom?: boolean;
-  licenseBody?: string;
+  licenseBody?: string | null;
   copyrights?: PackageCopyright[];
   body?: string;
   key?: string;
@@ -41,7 +41,7 @@ export interface PackageItem {
   installer?: PackageInstaller | string;
   downloadURL?: string;
   repoURL?: string;
-  niconiCommonsId?: string;
+  niconiCommonsId?: string | null;
   updatedAt?: string | number | null;
   installed?: boolean;
   installedVersion?: string;

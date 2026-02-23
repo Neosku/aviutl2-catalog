@@ -2,7 +2,8 @@
  * インストール／削除テストの進行状態を管理する hook
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { detectInstalledVersionsMap, runInstallerForItem, runUninstallerForItem } from '../../../../utils/index.js';
+import { detectInstalledVersionsMap } from '../../../../utils/installed-map.js';
+import { runInstallerForItem, runUninstallerForItem } from '../../../../utils/installer.js';
 import { buildInstallerTestItem, validateInstallerForTest, validateUninstallerForTest } from '../../model/form';
 import type { RegisterPackageForm } from '../../model/types';
 import type { InstallerTestItem, InstallerTestProgress, RegisterTestOperation } from '../types';

@@ -1,4 +1,4 @@
-import { logError } from '../../../../utils/index.js';
+import { logError } from '../../../../utils/logging.js';
 
 interface AppWindow {
   show?: () => void | Promise<void>;

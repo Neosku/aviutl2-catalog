@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { hasInstaller, runInstallerForItem } from '../../../../utils/index.js';
+import { hasInstaller, runInstallerForItem } from '../../../../utils/installer.js';
 import { getErrorMessage } from '../../model/helpers';
 import type { CatalogItem, InstallProgress, PackageItemsMap, PackageState } from '../../model/types';
 

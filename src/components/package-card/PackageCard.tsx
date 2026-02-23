@@ -1,7 +1,8 @@
 import type { KeyboardEvent } from 'react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatDate, hasInstaller } from '../../utils/index.js';
+import { hasInstaller } from '../../utils/installer.js';
+import { formatDate } from '../../utils/text.js';
 import ErrorDialog from '../ErrorDialog';
 import { pickThumbnail } from './helpers';
 import usePackageCardActions from './usePackageCardActions';

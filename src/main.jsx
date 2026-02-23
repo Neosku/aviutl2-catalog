@@ -4,16 +4,11 @@ import AppRouter from './Router.jsx';
 import TitleBar from './layouts/app-shell/title-bar/TitleBar';
 import UpdateDialog from './features/app-update/UpdateDialog';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from './utils/catalogStore.jsx';
-import {
-  loadInstalledMap,
-  detectInstalledVersionsMap,
-  saveInstalledSnapshot,
-  getSettings,
-  logError,
-  loadCatalogData,
-  flushPackageStateQueue,
-  maybeSendPackageStateSnapshot,
-} from './utils/index.js';
+import { loadCatalogData } from './utils/catalog.js';
+import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from './utils/installed-map.js';
+import { logError } from './utils/logging.js';
+import { flushPackageStateQueue, maybeSendPackageStateSnapshot } from './utils/package-state.js';
+import { getSettings } from './utils/settings.js';
 import { useUpdatePrompt } from './features/app-update/useUpdatePrompt';
 import InitSetupPage from './features/init-setup/ui/InitSetupPage';
 // eslint-disable-next-line import/no-unassigned-import

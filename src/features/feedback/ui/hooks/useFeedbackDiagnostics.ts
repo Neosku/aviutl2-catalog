@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { toInstalledPackages } from '../../model/helpers';
 import type { DeviceInfo, FeedbackDiagnosticsState, FeedbackMode } from '../../model/types';
-import { collectDeviceInfo, loadInstalledMap, readAppLog } from '../../../../utils/index.js';
+import { collectDeviceInfo, readAppLog } from '../../../../utils/diagnostics.js';
+import { loadInstalledMap } from '../../../../utils/installed-map.js';
 
 async function loadAppVersion() {
   try {
@@ -34,8 +35,8 @@ export default function useFeedbackDiagnostics(mode: FeedbackMode): FeedbackDiag
 
     const loadDiagnostics = async () => {
       setLoading(true);
-      const deviceInfo = await collectDeviceInfo().catch(() => null);
-      setIfActive(setDevice, (deviceInfo || null) as DeviceInfo | null);
+      const deviceInfo: DeviceInfo | null = await collectDeviceInfo().catch(() => null);
+      setIfActive(setDevice, deviceInfo);
 
       const version = await loadAppVersion();
       setIfActive(setAppVersion, version);

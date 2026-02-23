@@ -2,14 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import type { CatalogDispatch, PackageInstallProgress, PackageItem } from '../../model/types';
 import type { UsePackageInstallActionsResult } from '../types';
 import { errorMessage } from '../../model/helpers';
-import {
-  detectInstalledVersionsMap,
-  hasInstaller,
-  loadInstalledMap,
-  removeInstalledId,
-  runInstallerForItem,
-  runUninstallerForItem,
-} from '../../../../utils/index.js';
+import { detectInstalledVersionsMap, loadInstalledMap, removeInstalledId } from '../../../../utils/installed-map.js';
+import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../../../utils/installer.js';
 
 interface UsePackageInstallActionsParams {
   item: PackageItem | undefined;
