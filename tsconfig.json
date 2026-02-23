@@ -5,8 +5,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "allowJs": true,
-    "checkJs": false,
+    "allowJs": false,
     "strict": true,
     "noEmit": true,
     "resolveJsonModule": true,
@@ -14,5 +13,5 @@
     "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.js"]
+  "include": ["src", "vite.config.ts"]
 }
