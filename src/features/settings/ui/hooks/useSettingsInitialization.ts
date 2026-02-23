@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { logError } from '../../../../utils/logging.js';
-import { getSettings } from '../../../../utils/settings.js';
+import { logError } from '../../../../utils/logging';
+import { getSettings } from '../../../../utils/settings';
 import { applyTheme, toErrorMessage, toSettingsForm } from '../../model/helpers';
 import type { SettingsFormState } from '../../model/types';
 

@@ -1,5 +1,5 @@
-import { formatUnknownError } from './errors.js';
-import { logError } from './logging.js';
+import { formatUnknownError } from './errors';
+import { logError } from './logging';
 
 type JsonObject = Record<string, unknown>;
 

@@ -1,4 +1,4 @@
-import type { InstallerAction, InstallerSource } from '../catalogSchema.js';
+import type { InstallerAction, InstallerSource } from '../catalogSchema';
 
 export type InstallerMacroContext = {
   tmpDir: string;

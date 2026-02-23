@@ -1,4 +1,4 @@
-import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore.jsx';
+import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore';
 import type { CatalogDispatch, PackageItem } from '../../model/types';
 
 interface PackageCatalogSnapshot {

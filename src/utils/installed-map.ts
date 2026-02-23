@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import { formatUnknownError } from './errors.js';
-import { logError } from './logging.js';
+import { formatUnknownError } from './errors';
+import { logError } from './logging';
 
 const INSTALLED_FILE = 'installed.json';
 const stringMapSchema = z.record(z.string(), z.unknown()).transform((value): Record<string, string> => {

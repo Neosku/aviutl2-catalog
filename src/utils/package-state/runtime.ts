@@ -1,5 +1,5 @@
-import { formatUnknownError } from '../errors.js';
-import { logError } from '../logging.js';
+import { formatUnknownError } from '../errors';
+import { logError } from '../logging';
 
 let packageStateQueueOp: Promise<void> = Promise.resolve();
 let packageStateClientVersion: string | null = null;

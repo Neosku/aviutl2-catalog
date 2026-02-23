@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { toInstalledPackages } from '../../model/helpers';
 import type { DeviceInfo, FeedbackDiagnosticsState, FeedbackMode } from '../../model/types';
-import { collectDeviceInfo, readAppLog } from '../../../../utils/diagnostics.js';
-import { loadInstalledMap } from '../../../../utils/installed-map.js';
+import { collectDeviceInfo, readAppLog } from '../../../../utils/diagnostics';
+import { loadInstalledMap } from '../../../../utils/installed-map';
 
 async function loadAppVersion() {
   try {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Copy, Check } from 'lucide-react';
-import { logError } from '../utils/logging.js';
+import { logError } from '../utils/logging';
 
 interface ErrorDialogProps {
   open: boolean;

@@ -1,5 +1,5 @@
-import { formatUnknownError } from '../errors.js';
-import { bestEffortLogError } from '../logging.js';
+import { formatUnknownError } from '../errors';
+import { bestEffortLogError } from '../logging';
 
 function isAbsPath(p: unknown): boolean {
   return /^(?:[a-zA-Z]:[\\/]|\\\\|\/)/.test(String(p || ''));

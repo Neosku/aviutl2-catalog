@@ -3,4 +3,4 @@ export {
   maybeSendPackageStateSnapshot,
   recordPackageStateEvent,
   resetPackageStateLocalState,
-} from './package-state/service.js';
+} from './package-state/service';

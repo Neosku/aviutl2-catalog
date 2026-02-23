@@ -3,7 +3,7 @@
  */
 import { useCallback } from 'react';
 import * as z from 'zod';
-import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
+import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema';
 import { SUBMIT_ACTIONS, buildPackageEntry, getFileExtension, validatePackageForm } from '../../model/form';
 import { isHttpsUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';

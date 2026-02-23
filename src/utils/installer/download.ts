@@ -1,6 +1,6 @@
-import { formatUnknownError } from '../errors.js';
-import { bestEffortLogError } from '../logging.js';
-import type { DownloadEventPayload, DownloadOptions } from './types.js';
+import { formatUnknownError } from '../errors';
+import { bestEffortLogError } from '../logging';
+import type { DownloadEventPayload, DownloadOptions } from './types';
 
 const NOOP_RESOLVER = (_value: unknown): void => {};
 

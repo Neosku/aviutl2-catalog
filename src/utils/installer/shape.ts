@@ -1,6 +1,6 @@
-import { installerActionSchema, installerSourceSchema } from '../catalogSchema.js';
-import type { InstallerAction, InstallerSource } from '../catalogSchema.js';
-import type { InstallerConfigLike, TestOperationKind } from './types.js';
+import { installerActionSchema, installerSourceSchema } from '../catalogSchema';
+import type { InstallerAction, InstallerSource } from '../catalogSchema';
+import type { InstallerConfigLike, TestOperationKind } from './types';
 
 const TEST_OPERATION_LABELS: Record<string, string> = {
   download: 'ダウンロード',

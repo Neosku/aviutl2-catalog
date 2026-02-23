@@ -2,7 +2,7 @@
  * register UI 層で共有する型定義
  */
 import type { FormEvent, MouseEventHandler, PointerEvent } from 'react';
-import type { CatalogEntry } from '../../../utils/catalogSchema.js';
+import type { CatalogEntry } from '../../../utils/catalogSchema';
 import type {
   RegisterImageState,
   RegisterInstallerOption,

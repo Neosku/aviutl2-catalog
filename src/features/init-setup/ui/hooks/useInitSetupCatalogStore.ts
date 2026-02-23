@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { loadCatalogData } from '../../../../utils/catalog.js';
+import { loadCatalogData } from '../../../../utils/catalog';
 import { safeLog } from '../../model/helpers';
 import type {
   CatalogItem,

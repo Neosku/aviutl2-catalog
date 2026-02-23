@@ -1,14 +1,14 @@
-import type { InstallerAction } from '../catalogSchema.js';
-import { formatUnknownError } from '../errors.js';
-import { addInstalledId } from '../installed-map.js';
-import { bestEffortLogError, logInfo } from '../logging.js';
-import { recordPackageStateEvent } from '../package-state.js';
-import { syncDetectedVersionWithDispatch } from './actions.js';
-import { createInstallProgressTools } from './install-progress.js';
-import { executeInstallStep } from './install-step.js';
-import { deletePath, ensureAviutlClosed, ensureTmpDir } from './runtime.js';
-import { normalizeInstallerConfig, toTestOperationKind, toTestOperationLabel } from './shape.js';
-import type { CatalogDispatchFn, InstallProgressPayload, InstallerRunnableItem, TestOperationKind } from './types.js';
+import type { InstallerAction } from '../catalogSchema';
+import { formatUnknownError } from '../errors';
+import { addInstalledId } from '../installed-map';
+import { bestEffortLogError, logInfo } from '../logging';
+import { recordPackageStateEvent } from '../package-state';
+import { syncDetectedVersionWithDispatch } from './actions';
+import { createInstallProgressTools } from './install-progress';
+import { executeInstallStep } from './install-step';
+import { deletePath, ensureAviutlClosed, ensureTmpDir } from './runtime';
+import { normalizeInstallerConfig, toTestOperationKind, toTestOperationLabel } from './shape';
+import type { CatalogDispatchFn, InstallProgressPayload, InstallerRunnableItem, TestOperationKind } from './types';
 
 type InstallStepOperation = {
   kind: TestOperationKind;
@@ -111,7 +111,7 @@ export async function runInstallerForItem(
         await bestEffortLogError(`[installer ${item.id}] cleanup tmp failed: ${formatUnknownError(e)}`);
       }
     }
-    const { closeBoothAuthWindow } = await import('./download.js');
+    const { closeBoothAuthWindow } = await import('./download');
     await closeBoothAuthWindow();
   }
 }

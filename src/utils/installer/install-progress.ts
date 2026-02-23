@@ -1,5 +1,5 @@
-import type { InstallerAction } from '../catalogSchema.js';
-import type { DownloadProgress, InstallProgressPayload, InstallProgressPhase } from './types.js';
+import type { InstallerAction } from '../catalogSchema';
+import type { DownloadProgress, InstallProgressPayload, InstallProgressPhase } from './types';
 
 const STEP_PROGRESS_LABELS: Record<string, string> = {
   download: 'ダウンロード中',

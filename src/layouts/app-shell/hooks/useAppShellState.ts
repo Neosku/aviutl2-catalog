@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useCatalog } from '../../../utils/catalogStore.jsx';
-import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../../../utils/query.js';
+import { useCatalog } from '../../../utils/catalogStore';
+import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../../../utils/query';
 import { sortOrderFromQuery, sortParamsFromOrder } from '../constants';
 import type {
   ActivePage,

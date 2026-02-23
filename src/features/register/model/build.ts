@@ -17,7 +17,7 @@ import type {
   InstallerSource,
   License,
   Version,
-} from '../../../utils/catalogSchema.js';
+} from '../../../utils/catalogSchema';
 
 function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
   if (form.installer.sourceType === 'direct') {

@@ -1,8 +1,8 @@
-import type { InstallerAction, InstallerSource } from '../catalogSchema.js';
-import { assertNever } from '../errors.js';
-import { logInfo } from '../logging.js';
-import { executeDeleteAction, executeRunAction } from './actions.js';
-import { downloadFileFromBoothUrl, downloadFileFromGoogleDrive, downloadFileFromUrl } from './download.js';
+import type { InstallerAction, InstallerSource } from '../catalogSchema';
+import { assertNever } from '../errors';
+import { logInfo } from '../logging';
+import { executeDeleteAction, executeRunAction } from './actions';
+import { downloadFileFromBoothUrl, downloadFileFromGoogleDrive, downloadFileFromUrl } from './download';
 import {
   copyPattern,
   ensureAbsolutePath,
@@ -11,9 +11,9 @@ import {
   extractZip,
   fetchGitHubURL,
   runAuoSetup,
-} from './runtime.js';
-import { emitTestOperation } from './shape.js';
-import type { DownloadProgress, InstallerMacroContext, StepOperationTarget, TestOperationKind } from './types.js';
+} from './runtime';
+import { emitTestOperation } from './shape';
+import type { DownloadProgress, InstallerMacroContext, StepOperationTarget, TestOperationKind } from './types';
 
 type StepOperation = {
   kind: TestOperationKind;

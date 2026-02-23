@@ -1,4 +1,4 @@
-import Checkbox from '../../../../components/ui/Checkbox.js';
+import Checkbox from '../../../../components/ui/Checkbox';
 import type { TableSectionProps } from '../types';
 
 export default function TableSection({

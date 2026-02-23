@@ -1,4 +1,4 @@
-import { normalize } from './text.js';
+import { normalize } from './text';
 
 type NameSortable = {
   nameKey?: string | null;

@@ -1,5 +1,5 @@
 import ProgressCircle from '../../../../components/ProgressCircle';
-import { latestVersionOf } from '../../../../utils/catalog.js';
+import { latestVersionOf } from '../../../../utils/catalog';
 import type { UpdatesTableSectionProps } from '../types';
 
 export default function UpdatesTableSection({

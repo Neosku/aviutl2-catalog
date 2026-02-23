@@ -1,6 +1,6 @@
-import type { GithubSource } from '../catalogSchema.js';
-import { formatUnknownError } from '../errors.js';
-import { logError } from '../logging.js';
+import type { GithubSource } from '../catalogSchema';
+import { formatUnknownError } from '../errors';
+import { logError } from '../logging';
 
 type GitHubAsset = {
   name?: string;

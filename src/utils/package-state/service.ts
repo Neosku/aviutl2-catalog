@@ -1,21 +1,21 @@
-import { formatUnknownError } from '../errors.js';
-import { logError, logInfo } from '../logging.js';
-import { getSettings } from '../settings.js';
-import { generateUuidV4, getClientVersionCached, nowUnixSeconds, runPackageStateQueueOp } from './runtime.js';
+import { formatUnknownError } from '../errors';
+import { logError, logInfo } from '../logging';
+import { getSettings } from '../settings';
+import { generateUuidV4, getClientVersionCached, nowUnixSeconds, runPackageStateQueueOp } from './runtime';
 import {
   loadPackageStateMeta,
   loadPackageStateQueue,
   removeAppConfigFile,
   savePackageStateMeta,
   savePackageStateQueue,
-} from './storage.js';
+} from './storage';
 import {
   PACKAGE_STATE_ENDPOINT,
   PACKAGE_STATE_PENDING_FILE,
   PACKAGE_STATE_SNAPSHOT_INTERVAL_SEC,
   type PackageStateEvent,
   type PackageStateEventPayload,
-} from './types.js';
+} from './types';
 
 async function getCurrentWindowLabel(): Promise<string> {
   type WindowLike = {

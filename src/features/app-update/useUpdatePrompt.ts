@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { logError } from '../../utils/logging.js';
+import { logError } from '../../utils/logging';
 
 export interface UseUpdatePromptOptions {
   autoCheck?: boolean;

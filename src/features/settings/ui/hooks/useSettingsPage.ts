@@ -1,9 +1,9 @@
 import { type ChangeEvent, useCallback, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore.jsx';
-import { detectInstalledVersionsMap } from '../../../../utils/installed-map.js';
-import { logError } from '../../../../utils/logging.js';
-import { resetPackageStateLocalState } from '../../../../utils/package-state.js';
+import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore';
+import { detectInstalledVersionsMap } from '../../../../utils/installed-map';
+import { logError } from '../../../../utils/logging';
+import { resetPackageStateLocalState } from '../../../../utils/package-state';
 import { applyTheme, toErrorMessage } from '../../model/helpers';
 import type { SettingsFormState } from '../../model/types';
 import useSettingsDataManagement from './useSettingsDataManagement';

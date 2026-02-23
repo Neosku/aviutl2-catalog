@@ -1,10 +1,10 @@
-import type { InstallerAction } from '../catalogSchema.js';
-import { formatUnknownError } from '../errors.js';
-import { detectInstalledVersionsMap } from '../installed-map.js';
-import { logInfo } from '../logging.js';
-import { deletePath, ensureAbsolutePath, expandMacros, expandRunArgs, runInstallerExecutable } from './runtime.js';
-import { emitTestOperation } from './shape.js';
-import type { CatalogDispatchFn, InstallerMacroContext, InstallerRunnableItem, StepOperationTarget } from './types.js';
+import type { InstallerAction } from '../catalogSchema';
+import { formatUnknownError } from '../errors';
+import { detectInstalledVersionsMap } from '../installed-map';
+import { logInfo } from '../logging';
+import { deletePath, ensureAbsolutePath, expandMacros, expandRunArgs, runInstallerExecutable } from './runtime';
+import { emitTestOperation } from './shape';
+import type { CatalogDispatchFn, InstallerMacroContext, InstallerRunnableItem, StepOperationTarget } from './types';
 
 export async function syncDetectedVersionWithDispatch(
   item: InstallerRunnableItem,

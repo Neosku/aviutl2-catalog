@@ -1,4 +1,4 @@
-import type { InstallerMacroContext } from './types.js';
+import type { InstallerMacroContext } from './types';
 
 export async function expandMacros(s: unknown, ctx: InstallerMacroContext): Promise<unknown> {
   const { invoke } = await import('@tauri-apps/api/core');

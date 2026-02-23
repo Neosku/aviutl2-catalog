@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import { formatUnknownError } from './errors.js';
-import { logError } from './logging.js';
+import { formatUnknownError } from './errors';
+import { logError } from './logging';
 
 const SETTINGS_FILE = 'settings.json';
 const settingsFileSchema = z.object({

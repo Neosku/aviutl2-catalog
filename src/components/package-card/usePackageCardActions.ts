@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { detectInstalledVersionsMap, loadInstalledMap, removeInstalledId } from '../../utils/installed-map.js';
-import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../utils/installer.js';
-import { useCatalogDispatch } from '../../utils/catalogStore.jsx';
+import { detectInstalledVersionsMap, loadInstalledMap, removeInstalledId } from '../../utils/installed-map';
+import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../utils/installer';
+import { useCatalogDispatch } from '../../utils/catalogStore';
 import type { CatalogDispatch, PackageInstallProgress, PackageItem } from '../../features/package/model/types';
 import type { UsePackageCardActionsResult } from './types';
 

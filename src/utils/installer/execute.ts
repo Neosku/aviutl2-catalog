@@ -1,5 +1,5 @@
-import { formatUnknownError } from '../errors.js';
-import { logError } from '../logging.js';
+import { formatUnknownError } from '../errors';
+import { logError } from '../logging';
 
 declare const Buffer: {
   from(input: string, encoding: string): { toString(encoding: string): string };

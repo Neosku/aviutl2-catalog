@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore.jsx';
-import { hasInstaller, runInstallerForItem } from '../../../../utils/installer.js';
-import { logError } from '../../../../utils/logging.js';
+import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore';
+import { hasInstaller, runInstallerForItem } from '../../../../utils/installer';
+import { logError } from '../../../../utils/logging';
 import { toErrorMessage, toProgressLabel, toProgressRatio } from '../../model/helpers';
 import type {
   BulkUpdateProgress,

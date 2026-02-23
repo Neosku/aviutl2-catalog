@@ -1,11 +1,11 @@
-import { assertNever, formatUnknownError } from '../errors.js';
-import { removeInstalledId } from '../installed-map.js';
-import { bestEffortLogError, logInfo } from '../logging.js';
-import { recordPackageStateEvent } from '../package-state.js';
-import { executeDeleteAction, executeRunAction, syncDetectedVersionWithDispatch } from './actions.js';
-import { ensureAviutlClosed, ensureTmpDir } from './runtime.js';
-import { emitTestOperation, normalizeInstallerConfig, toTestOperationKind, toTestOperationLabel } from './shape.js';
-import type { CatalogDispatchFn, InstallerRunnableItem, TestOperationKind } from './types.js';
+import { assertNever, formatUnknownError } from '../errors';
+import { removeInstalledId } from '../installed-map';
+import { bestEffortLogError, logInfo } from '../logging';
+import { recordPackageStateEvent } from '../package-state';
+import { executeDeleteAction, executeRunAction, syncDetectedVersionWithDispatch } from './actions';
+import { ensureAviutlClosed, ensureTmpDir } from './runtime';
+import { emitTestOperation, normalizeInstallerConfig, toTestOperationKind, toTestOperationLabel } from './shape';
+import type { CatalogDispatchFn, InstallerRunnableItem, TestOperationKind } from './types';
 
 export async function runUninstallerForItem(
   item: InstallerRunnableItem,

@@ -17,7 +17,7 @@ import {
   type RegisterDraftTestKind,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
-import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
+import type { CatalogEntry } from '../../../../utils/catalogSchema';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RegisterDraftListItemView } from '../types';
 

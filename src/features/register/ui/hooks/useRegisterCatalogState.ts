@@ -2,7 +2,7 @@
  * カタログ読込・検索・選択状態を管理する hook
  */
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useCatalog } from '../../../../utils/catalogStore.jsx';
+import { useCatalog } from '../../../../utils/catalogStore';
 import { createEmptyPackageForm, entryToForm } from '../../model/form';
 import {
   cleanupImagePreviews,
@@ -12,7 +12,7 @@ import {
   resolveBaseUrl,
 } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
-import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema.js';
+import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '../../../../utils/catalogSchema';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

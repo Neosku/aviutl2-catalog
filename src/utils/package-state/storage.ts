@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from 'zod';
-import { formatUnknownError } from '../errors.js';
-import { logError } from '../logging.js';
+import { formatUnknownError } from '../errors';
+import { logError } from '../logging';
 import {
   PACKAGE_STATE_META_FILE,
   PACKAGE_STATE_PENDING_FILE,
@@ -8,7 +8,7 @@ import {
   packageStateQueueFileSchema,
   type PackageStateEvent,
   type PackageStateMeta,
-} from './types.js';
+} from './types';
 
 async function readAppConfigJson<T>(relPath: string, fallback: T, schema: ZodTypeAny | null = null): Promise<T> {
   const fs = await import('@tauri-apps/plugin-fs');

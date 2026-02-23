@@ -1,13 +1,9 @@
 import { useCallback, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { CatalogAction, CatalogEntryState } from '../../../../utils/catalogStore.jsx';
-import {
-  detectInstalledVersionsMap,
-  loadInstalledMap,
-  saveInstalledSnapshot,
-} from '../../../../utils/installed-map.js';
-import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../../../utils/installer.js';
-import { logError } from '../../../../utils/logging.js';
+import type { CatalogAction, CatalogEntryState } from '../../../../utils/catalogStore';
+import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '../../../../utils/installed-map';
+import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '../../../../utils/installer';
+import { logError } from '../../../../utils/logging';
 import { normalizeInstalledImport, toErrorMessage } from '../../model/helpers';
 
 interface UseSettingsDataManagementParams {

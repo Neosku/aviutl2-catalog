@@ -12,7 +12,7 @@ import {
   updateRegisterDraftSubmitState,
 } from '../../model/draft';
 import { cleanupImagePreviews } from '../../model/helpers';
-import type { CatalogEntry } from '../../../../utils/catalogSchema.js';
+import type { CatalogEntry } from '../../../../utils/catalogSchema';
 import type { RegisterSuccessDialogState } from '../types';
 import type { SubmitSinglePackageInput, SubmitSinglePackageResult } from './useRegisterSubmitHandler';
 

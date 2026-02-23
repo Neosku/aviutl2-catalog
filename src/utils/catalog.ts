@@ -1,6 +1,6 @@
-import { catalogIndexSchema, type CatalogEntry } from './catalogSchema.js';
-import { formatUnknownError } from './errors.js';
-import { logError } from './logging.js';
+import { catalogIndexSchema, type CatalogEntry } from './catalogSchema';
+import { formatUnknownError } from './errors';
+import { logError } from './logging';
 
 const CATALOG_CACHE_DIR = 'catalog';
 const CATALOG_CACHE_FILE = `${CATALOG_CACHE_DIR}/index.json`;

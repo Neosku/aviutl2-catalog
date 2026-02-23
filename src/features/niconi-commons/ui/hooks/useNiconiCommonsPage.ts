@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import * as z from 'zod';
-import { useCatalog } from '../../../../utils/catalogStore.jsx';
-import { normalize } from '../../../../utils/text.js';
+import { useCatalog } from '../../../../utils/catalogStore';
+import { normalize } from '../../../../utils/text';
 import type { CopyState, EligibleItem, SelectedMap } from '../../model/types';
 
 const DESELECTED_IDS_STORAGE_KEY = 'niconiCommonsDeselectedIds';
