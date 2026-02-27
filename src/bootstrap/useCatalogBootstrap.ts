@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { Dispatch } from 'react';
+import * as tauriCore from '@tauri-apps/api/core';
 import type { CatalogAction } from '../utils/catalogStore';
 import { loadCatalogData } from '../utils/catalog';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '../utils/installed-map';
@@ -57,8 +58,7 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
           const items = catalogItems;
           if (!cancelled) dispatch({ type: 'SET_ITEMS', payload: items });
           try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('set_catalog_index', { items });
+            await tauriCore.invoke('set_catalog_index', { items });
           } catch (error: unknown) {
             await logBootstrapError('set_catalog_index failed', error);
           }

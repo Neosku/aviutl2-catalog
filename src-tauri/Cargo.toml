@@ -3,7 +3,7 @@ name = "aviutl2-catalog"
 version = "0.3.2"
 description = "AviUtl2 Catalog"
 authors = ["Neosku"]
-edition = "2021"
+edition = "2024"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

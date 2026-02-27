@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import * as tauriCore from '@tauri-apps/api/core';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import { fetchWindowLabel, getErrorMessage, safeLog } from '../../model/helpers';
 import type { InitSetupStep, InstalledChoice, PickDirKind } from '../../model/types';
 
@@ -17,8 +19,7 @@ export default function useInitSetupFlow() {
     let cancelled = false;
     (async () => {
       try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const suggested = await invoke<string | null>('default_aviutl2_root');
+        const suggested = await tauriCore.invoke<string | null>('default_aviutl2_root');
         if (cancelled) return;
         const value = typeof suggested === 'string' ? suggested.trim() : '';
         if (value) {
@@ -61,16 +62,15 @@ export default function useInitSetupFlow() {
   const persistAviutlSettings = useCallback(async (rootPath: string, portableMode: boolean) => {
     const normalized = rootPath.trim();
     if (!normalized) throw new Error('AviUtl2 のフォルダを入力してください。');
-    const { invoke } = await import('@tauri-apps/api/core');
     let resolved = normalized;
     try {
-      const candidate = await invoke<string | null>('resolve_aviutl2_root', { raw: normalized });
+      const candidate = await tauriCore.invoke<string | null>('resolve_aviutl2_root', { raw: normalized });
       if (candidate) resolved = String(candidate);
     } catch (resolveError) {
       await safeLog('[init-window] resolve aviutl2 root failed', resolveError);
     }
     try {
-      await invoke('update_settings', {
+      await tauriCore.invoke('update_settings', {
         aviutl2Root: resolved,
         isPortableMode: Boolean(portableMode),
         theme: 'dark',
@@ -98,9 +98,8 @@ export default function useInitSetupFlow() {
 
   const pickDir = useCallback(async (kind: PickDirKind) => {
     try {
-      const dialog = await import('@tauri-apps/plugin-dialog');
       const title = kind === 'install' ? 'インストール先を選択' : 'AviUtl2 フォルダを選択';
-      const path = await dialog.open({ directory: true, multiple: false, title });
+      const path = await tauriDialog.open({ directory: true, multiple: false, title });
       if (!path || Array.isArray(path)) return;
       const value = String(path);
       if (kind === 'install') setInstallDir(value);
@@ -115,8 +114,7 @@ export default function useInitSetupFlow() {
     setBusy(true);
     setError('');
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('complete_initial_setup');
+      await tauriCore.invoke('complete_initial_setup');
     } catch (finalizeError) {
       setError(getErrorMessage(finalizeError) || '初期設定に失敗しました。');
     } finally {

@@ -212,7 +212,7 @@ export interface RegisterMetaSectionProps {
   packageForm: RegisterPackageForm;
   initialTags: string[];
   tagCandidates: string[];
-  onUpdatePackageField: (field: keyof RegisterPackageForm, value: any) => void;
+  onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
   onTagsChange: (list: string[]) => void;
 }
 
@@ -225,7 +225,7 @@ export interface RegisterDescriptionSectionProps {
   hasExternalDescriptionUrl: boolean;
   isExternalDescriptionLoaded: boolean;
   externalDescriptionStatus: string;
-  onUpdatePackageField: (field: keyof RegisterPackageForm, value: any) => void;
+  onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
   onSetDescriptionTab: (tab: string) => void;
 }
 

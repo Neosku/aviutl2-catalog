@@ -1,8 +1,10 @@
+import * as tauriCore from '@tauri-apps/api/core';
+import * as tauriPath from '@tauri-apps/api/path';
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import type { InstallerMacroContext } from './types';
 
 export async function expandMacros(s: unknown, ctx: InstallerMacroContext): Promise<unknown> {
-  const { invoke } = await import('@tauri-apps/api/core');
-  const rawDirs = await invoke('get_app_dirs');
+  const rawDirs = await tauriCore.invoke('get_app_dirs');
   const dirs = rawDirs && typeof rawDirs === 'object' ? (rawDirs as Record<string, unknown>) : {};
   if (typeof s !== 'string') return s;
   return s
@@ -15,14 +17,12 @@ export async function expandMacros(s: unknown, ctx: InstallerMacroContext): Prom
 }
 
 export async function ensureTmpDir(idVersion: string): Promise<string> {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const path = await import('@tauri-apps/api/path');
   const base = 'installer-tmp';
-  await fs.mkdir(base, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
+  await tauriFs.mkdir(base, { baseDir: tauriFs.BaseDirectory.AppConfig, recursive: true });
   const sub = `${base}/${idVersion}`;
-  await fs.mkdir(sub, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-  const basePath = await path.appConfigDir();
-  const absPath = await path.join(basePath, sub);
+  await tauriFs.mkdir(sub, { baseDir: tauriFs.BaseDirectory.AppConfig, recursive: true });
+  const basePath = await tauriPath.appConfigDir();
+  const absPath = await tauriPath.join(basePath, sub);
   return absPath;
 }
 

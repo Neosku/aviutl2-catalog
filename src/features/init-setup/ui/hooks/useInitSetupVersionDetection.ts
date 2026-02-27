@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import * as tauriCore from '@tauri-apps/api/core';
 import { safeLog } from '../../model/helpers';
 import type { CatalogItem, InitSetupStep, PackageItemsMap, PackageVersionsMap } from '../../model/types';
 
@@ -34,10 +35,11 @@ export default function useInitSetupVersionDetection({
       if (step !== 'packages') return;
       if (versionsDetected) return;
       try {
-        const { invoke } = await import('@tauri-apps/api/core');
         const itemsForDetect = requiredPluginIds.map((id) => packageItems[id]).filter(Boolean) as CatalogItem[];
         if (itemsForDetect.length === 0) return;
-        const result = await invoke<Record<string, string> | null>('detect_versions_map', { items: itemsForDetect });
+        const result = await tauriCore.invoke<Record<string, string> | null>('detect_versions_map', {
+          items: itemsForDetect,
+        });
         if (cancelled) return;
         const versions = result && typeof result === 'object' ? result : {};
         setPackageVersions(versions);

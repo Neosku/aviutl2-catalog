@@ -294,9 +294,5 @@ fn resolve_aviutl_root(raw: &str) -> PathBuf {
 #[tauri::command]
 pub fn resolve_aviutl2_root(raw: String) -> Result<String, String> {
     let resolved = resolve_aviutl_root(&raw);
-    if resolved.as_os_str().is_empty() {
-        Err(String::from("AviUtl2 のフォルダを選択してください。"))
-    } else {
-        Ok(pathbuf_to_string(&resolved))
-    }
+    if resolved.as_os_str().is_empty() { Err(String::from("AviUtl2 のフォルダを選択してください。")) } else { Ok(pathbuf_to_string(&resolved)) }
 }

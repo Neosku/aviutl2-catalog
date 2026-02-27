@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import type { Dispatch, SetStateAction } from 'react';
 import type { CatalogAction, CatalogEntryState } from '../../../../utils/catalogStore';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '../../../../utils/installed-map';
@@ -30,14 +32,13 @@ export default function useSettingsDataManagement({
     setSyncBusy(true);
     setSyncStatus('エクスポート先を選択しています…');
     try {
-      const dialog = await import('@tauri-apps/plugin-dialog');
       const now = new Date();
       const stamp = [
         now.getFullYear(),
         String(now.getMonth() + 1).padStart(2, '0'),
         String(now.getDate()).padStart(2, '0'),
       ].join('');
-      const output = await dialog.save({
+      const output = await tauriDialog.save({
         title: 'パッケージ一覧のエクスポート',
         defaultPath: `installed-export-${stamp}.json`,
         filters: [{ name: 'JSON', extensions: ['json'] }],
@@ -47,10 +48,9 @@ export default function useSettingsDataManagement({
 
       setSyncStatus('エクスポートを作成中…');
       const installed = await loadInstalledMap();
-      const fs = await import('@tauri-apps/plugin-fs');
-      await fs.writeTextFile(savePath, JSON.stringify(installed || {}, null, 2));
+      await tauriFs.writeTextFile(savePath, JSON.stringify(installed || {}, null, 2));
       try {
-        await dialog.message('エクスポートを保存しました。', { title: 'エクスポート', kind: 'info' });
+        await tauriDialog.message('エクスポートを保存しました。', { title: 'エクスポート', kind: 'info' });
       } catch {}
     } catch (exportError) {
       setError('エクスポートに失敗しました。\n権限や保存先を確認してください。');
@@ -69,15 +69,17 @@ export default function useSettingsDataManagement({
     setSyncBusy(true);
     setSyncStatus('インポート準備中…');
     try {
-      const dialog = await import('@tauri-apps/plugin-dialog');
-      const ok = await dialog.confirm('インポート内容に合わせてパッケージをインストール/削除します。\n続行しますか？', {
-        title: 'インポート',
-        kind: 'warning',
-      });
+      const ok = await tauriDialog.confirm(
+        'インポート内容に合わせてパッケージをインストール/削除します。\n続行しますか？',
+        {
+          title: 'インポート',
+          kind: 'warning',
+        },
+      );
       if (!ok) return;
 
       setSyncStatus('インポートファイルを選択しています…');
-      const selected = await dialog.open({
+      const selected = await tauriDialog.open({
         title: 'インポートファイルを選択',
         multiple: false,
         directory: false,
@@ -87,8 +89,7 @@ export default function useSettingsDataManagement({
       if (typeof selectedPath !== 'string' || !selectedPath.trim()) return;
 
       setSyncStatus('インポートファイルを読み込み中…');
-      const fs = await import('@tauri-apps/plugin-fs');
-      const raw = await fs.readTextFile(selectedPath);
+      const raw = await tauriFs.readTextFile(selectedPath);
 
       let parsed: unknown;
       try {
@@ -180,7 +181,7 @@ export default function useSettingsDataManagement({
         failedInstall.length > 0 ||
         failedRemove.length > 0;
       try {
-        await dialog.message(summary.join('\n'), {
+        await tauriDialog.message(summary.join('\n'), {
           title: 'インポート結果',
           kind: hasIssues ? 'warning' : 'info',
         });

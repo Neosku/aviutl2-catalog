@@ -1,3 +1,5 @@
+import * as tauriShell from '@tauri-apps/plugin-shell';
+
 export function resolveExternalHref(rawHref: unknown): string {
   const trimmed = String(rawHref ?? '').trim();
   if (!trimmed) return '';
@@ -21,11 +23,8 @@ export async function openExternalLink(rawHref: unknown): Promise<void> {
   const href = resolveExternalHref(rawHref);
   if (!href) return;
   try {
-    const shell = await import('@tauri-apps/plugin-shell');
-    if (typeof shell.open === 'function') {
-      await shell.open(href);
-      return;
-    }
+    await tauriShell.open(href);
+    return;
   } catch (error: unknown) {
     console.warn('Failed to open link via Tauri shell plugin, falling back to window.open', error);
   }

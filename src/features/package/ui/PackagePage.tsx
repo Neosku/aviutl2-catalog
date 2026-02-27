@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { open } from '@tauri-apps/plugin-shell';
+import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import ErrorDialog from '../../../components/ErrorDialog';
 import { latestVersionOf } from '../../../utils/catalog';
@@ -101,7 +101,7 @@ export default function PackagePage() {
   const handleOpenDescriptionLink = useCallback(async (href: string) => {
     if (!shouldOpenExternalLink(href)) return;
     try {
-      await open(href);
+      await tauriShell.open(href);
     } catch {}
   }, []);
 

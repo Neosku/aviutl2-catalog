@@ -1,4 +1,4 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import * as tauriWindow from '@tauri-apps/api/window';
 import { formatUnknownError } from '../utils/errors';
 import { logError } from '../utils/logging';
 
@@ -12,7 +12,7 @@ export function applyBootThemeInitClass(): void {
 }
 
 async function showMainWindow(): Promise<void> {
-  const win = getCurrentWindow();
+  const win = tauriWindow.getCurrentWindow();
   await win.show();
   await win.setFocus();
 }
@@ -33,16 +33,8 @@ export function scheduleMainWindowReveal(): void {
 
 export async function detectWindowLabel(): Promise<string> {
   try {
-    const win = getCurrentWindow() as { label?: unknown };
+    const win = tauriWindow.getCurrentWindow();
     if (typeof win.label === 'string' && win.label) return win.label;
-    if (typeof win.label === 'function') {
-      try {
-        const value = await win.label();
-        return typeof value === 'string' && value ? value : 'main';
-      } catch {
-        return 'main';
-      }
-    }
   } catch (error: unknown) {
     try {
       await logError(`[bootstrap] detectWindowLabel failed: ${formatUnknownError(error)}`);

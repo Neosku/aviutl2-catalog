@@ -3,7 +3,7 @@
  */
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { open } from '@tauri-apps/plugin-shell';
+import * as tauriShell from '@tauri-apps/plugin-shell';
 import type { RegisterDescriptionSectionProps } from '../types';
 
 export default function RegisterDescriptionSection({
@@ -143,7 +143,7 @@ export default function RegisterDescriptionSection({
                 const link = target?.closest('a');
                 if (link && link.href) {
                   e.preventDefault();
-                  await open(link.href);
+                  await tauriShell.open(link.href);
                 }
               }}
               onKeyDown={async (e) => {
@@ -152,7 +152,7 @@ export default function RegisterDescriptionSection({
                 const link = target?.closest('a');
                 if (link && link.href) {
                   e.preventDefault();
-                  await open(link.href);
+                  await tauriShell.open(link.href);
                 }
               }}
             />

@@ -1,3 +1,4 @@
+import * as tauriApp from '@tauri-apps/api/app';
 import { formatUnknownError } from '../errors';
 import { logError } from '../logging';
 
@@ -38,8 +39,7 @@ export function generateUuidV4(): string {
 export async function getClientVersionCached(): Promise<string> {
   if (typeof packageStateClientVersion === 'string') return packageStateClientVersion;
   try {
-    const app = await import('@tauri-apps/api/app');
-    const v = app?.getVersion ? await app.getVersion() : '';
+    const v = await tauriApp.getVersion();
     packageStateClientVersion = String(v || '');
   } catch (e: unknown) {
     packageStateClientVersion = '';

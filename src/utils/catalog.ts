@@ -1,3 +1,4 @@
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import { catalogIndexSchema, type CatalogEntry } from './catalogSchema';
 import { formatUnknownError } from './errors';
 import { logError } from './logging';
@@ -6,8 +7,7 @@ const CATALOG_CACHE_DIR = 'catalog';
 const CATALOG_CACHE_FILE = `${CATALOG_CACHE_DIR}/index.json`;
 
 export async function readCatalogCache(): Promise<CatalogEntry[]> {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const raw = await fs.readTextFile(CATALOG_CACHE_FILE, { baseDir: fs.BaseDirectory.AppConfig });
+  const raw = await tauriFs.readTextFile(CATALOG_CACHE_FILE, { baseDir: tauriFs.BaseDirectory.AppConfig });
   const trimmed = typeof raw === 'string' ? raw.trim() : '';
   if (!trimmed) {
     throw new Error('catalog cache is empty');
@@ -86,10 +86,11 @@ function applyCatalogAssetBase(items: CatalogEntry[], baseUrl: string | null): C
 }
 
 export async function writeCatalogCache(data: unknown): Promise<void> {
-  const fs = await import('@tauri-apps/plugin-fs');
   const payload = normalizeCatalogData(data);
-  await fs.mkdir(CATALOG_CACHE_DIR, { baseDir: fs.BaseDirectory.AppConfig, recursive: true });
-  await fs.writeTextFile(CATALOG_CACHE_FILE, JSON.stringify(payload, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
+  await tauriFs.mkdir(CATALOG_CACHE_DIR, { baseDir: tauriFs.BaseDirectory.AppConfig, recursive: true });
+  await tauriFs.writeTextFile(CATALOG_CACHE_FILE, JSON.stringify(payload, null, 2), {
+    baseDir: tauriFs.BaseDirectory.AppConfig,
+  });
 }
 
 export async function loadCatalogData(

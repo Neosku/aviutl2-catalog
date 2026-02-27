@@ -1,11 +1,11 @@
+import * as tauriCore from '@tauri-apps/api/core';
 import { formatUnknownError } from '../errors';
 import { logError } from '../logging';
 
 export async function ensureAviutlClosed(): Promise<void> {
   let running = false;
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    running = !!(await invoke('is_aviutl_running'));
+    running = !!(await tauriCore.invoke('is_aviutl_running'));
   } catch (e: unknown) {
     const detail = formatUnknownError(e) || '不明なエラー';
     try {

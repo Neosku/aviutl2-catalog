@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import * as deepLink from '@tauri-apps/plugin-deep-link';
 import type { NavigateFunction } from 'react-router-dom';
 import { logError } from '../../../../utils/logging';
 import { bringWindowToFront } from './bringWindowToFront';
@@ -6,11 +7,6 @@ import { isAllowedInternalPath, parseDeepLink } from '../../model/deepLinkParser
 
 const DUPLICATE_IGNORE_MS = 1200;
 const HISTORY_TTL_MS = 10000;
-
-interface DeepLinkModule {
-  getCurrent?: () => Promise<string[] | string>;
-  onOpenUrl?: (handler: (urls: string[] | string) => void) => Promise<() => void>;
-}
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -76,15 +72,13 @@ export default function useDeepLinkHandler(navigate: NavigateFunction) {
 
     (async () => {
       try {
-        const mod = (await import('@tauri-apps/plugin-deep-link')) as DeepLinkModule;
-
-        if (typeof mod.getCurrent === 'function') {
-          const current = await mod.getCurrent();
+        if (typeof deepLink.getCurrent === 'function') {
+          const current = await deepLink.getCurrent();
           if (!cancelled) handleUrls(current);
         }
 
-        if (typeof mod.onOpenUrl === 'function') {
-          unlisten = await mod.onOpenUrl((urls) => {
+        if (typeof deepLink.onOpenUrl === 'function') {
+          unlisten = await deepLink.onOpenUrl((urls) => {
             if (cancelled) return;
             handleUrls(urls);
           });
