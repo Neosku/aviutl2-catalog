@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 static APP_DIR: OnceCell<ArcSwap<AppDirs>> = OnceCell::new();
 
-fn pathbuf_to_string(path: &PathBuf) -> String {
+fn pathbuf_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
@@ -19,12 +19,12 @@ fn pathbuf_to_string(path: &PathBuf) -> String {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Settings {
-    pub aviutl2_root: PathBuf,     // AviUtl2 のルートディレクトリ
-    pub is_portable_mode: bool,    // ポータブルモードかどうか
-    pub theme: String,             // テーマ
+    pub aviutl2_root: PathBuf,       // AviUtl2 のルートディレクトリ
+    pub is_portable_mode: bool,      // ポータブルモードかどうか
+    pub theme: String,               // テーマ
     pub package_state_opt_out: bool, // 匿名統計の送信を無効化する
-    pub app_version: String,       // 本アプリのバージョン(UpdateCheckerの更新で使用)
-    pub catalog_exe_path: PathBuf, // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
+    pub app_version: String,         // 本アプリのバージョン(UpdateCheckerの更新で使用)
+    pub catalog_exe_path: PathBuf,   // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
 }
 
 // アプリケーションで使用するディレクトリ一覧
@@ -77,7 +77,7 @@ pub fn init_settings(app: &AppHandle) -> std::io::Result<()> {
         return Ok(());
     }
     finalize_settings(app, &mut settings, &settings_path, &catalog_config_dir)?;
-    open_main_window(app).map_err(|e| Error::new(ErrorKind::Other, e))?;
+    open_main_window(app).map_err(Error::other)?;
     Ok(())
 }
 
@@ -145,7 +145,7 @@ fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &P
     set_appdirs(appdirs)?; // APP_DIR を作成・更新
     let current_ver = app.package_info().version.to_string();
     // UpdateCheckerプラグインを移動 (バージョンが異なるなら強制)
-    crate::install_update_checker_plugin(app, &aviutl2_data.join("Plugin"), settings.app_version != current_ver);
+    install_update_checker_plugin(app, &aviutl2_data.join("Plugin"), settings.app_version != current_ver, &catalog_exe_dir);
     // 設定を更新して保存
     settings.app_version = current_ver;
     settings.catalog_exe_path = catalog_exe_path;
@@ -179,7 +179,7 @@ fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
             );
         }
 
-        builder.build().map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        builder.build().map_err(|e| Error::other(e.to_string()))?;
     } else if let Some(window) = app.get_webview_window("init-setup") {
         let _ = window.show();
         let _ = window.set_focus();
@@ -197,12 +197,8 @@ fn open_main_window(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
-        .title("AviUtl2 カタログ")
-        .inner_size(950.0, 760.0)
-        .resizable(true)
-        .decorations(false)
-        .visible(false);
+    let mut builder =
+        WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into())).title("AviUtl2 カタログ").inner_size(950.0, 760.0).resizable(true).decorations(false).visible(false);
 
     #[cfg(target_os = "windows")]
     {
@@ -223,6 +219,25 @@ fn open_main_window(app: &AppHandle) -> Result<(), String> {
     let _ = window.maximize();
     let _ = window.set_focus();
     Ok(())
+}
+
+fn install_update_checker_plugin(app: &AppHandle, plugin_dir: &Path, force_copy: bool, catalog_exe_dir: &Path) {
+    let dst = plugin_dir.join("UpdateChecker.aui2");
+    if !force_copy && dst.exists() {
+        return;
+    }
+    let src = catalog_exe_dir.join("resources").join("updateChecker.aui2");
+    if src.exists() {
+        if let Some(parent) = dst.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        match fs::copy(&src, &dst) {
+            Ok(_) => crate::log_info(app, &format!("Placed UpdateChecker.aui2 to {}", dst.display())),
+            Err(e) => crate::log_error(app, &format!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)),
+        }
+    } else {
+        crate::log_error(app, &format!("Source file not found: {}", src.display()));
+    }
 }
 
 // 初期設定完了後にメインウィンドウを開き、初期設定ウィンドウを閉じる
