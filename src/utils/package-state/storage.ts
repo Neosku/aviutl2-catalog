@@ -1,3 +1,4 @@
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import type { ZodTypeAny } from 'zod';
 import { formatUnknownError } from '../errors';
 import { logError } from '../logging';
@@ -11,11 +12,10 @@ import {
 } from './types';
 
 async function readAppConfigJson<T>(relPath: string, fallback: T, schema: ZodTypeAny | null = null): Promise<T> {
-  const fs = await import('@tauri-apps/plugin-fs');
   try {
-    const exists = await fs.exists(relPath, { baseDir: fs.BaseDirectory.AppConfig });
-    if (!exists) return fallback;
-    const raw = await fs.readTextFile(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+    const hasFile = await tauriFs.exists(relPath, { baseDir: tauriFs.BaseDirectory.AppConfig });
+    if (!hasFile) return fallback;
+    const raw = await tauriFs.readTextFile(relPath, { baseDir: tauriFs.BaseDirectory.AppConfig });
     const trimmed = typeof raw === 'string' ? raw.trim() : '';
     if (!trimmed) return fallback;
     const parsed = JSON.parse(raw);
@@ -39,9 +39,8 @@ async function readAppConfigJson<T>(relPath: string, fallback: T, schema: ZodTyp
 }
 
 async function writeAppConfigJson(relPath: string, data: unknown): Promise<void> {
-  const fs = await import('@tauri-apps/plugin-fs');
   try {
-    await fs.writeTextFile(relPath, JSON.stringify(data, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
+    await tauriFs.writeTextFile(relPath, JSON.stringify(data, null, 2), { baseDir: tauriFs.BaseDirectory.AppConfig });
   } catch (e: unknown) {
     try {
       await logError(`[package-state] write ${relPath} failed: ${formatUnknownError(e)}`);
@@ -50,11 +49,10 @@ async function writeAppConfigJson(relPath: string, data: unknown): Promise<void>
 }
 
 export async function removeAppConfigFile(relPath: string): Promise<void> {
-  const fs = await import('@tauri-apps/plugin-fs');
   try {
-    const exists = await fs.exists(relPath, { baseDir: fs.BaseDirectory.AppConfig });
-    if (!exists) return;
-    await fs.remove(relPath, { baseDir: fs.BaseDirectory.AppConfig });
+    const hasFile = await tauriFs.exists(relPath, { baseDir: tauriFs.BaseDirectory.AppConfig });
+    if (!hasFile) return;
+    await tauriFs.remove(relPath, { baseDir: tauriFs.BaseDirectory.AppConfig });
   } catch (e: unknown) {
     try {
       await logError(`[package-state] remove ${relPath} failed: ${formatUnknownError(e)}`);

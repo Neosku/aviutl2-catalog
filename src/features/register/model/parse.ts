@@ -20,76 +20,210 @@ import type {
   RegisterVersion,
 } from './types';
 
-export function parseInstallerSource(installer: any = {}) {
-  if (!installer || typeof installer !== 'object') return createEmptyInstaller();
+type UnknownRecord = Record<string, unknown>;
+
+interface ParsedInstallerStepInput {
+  action: string;
+  path: string;
+  args: string[];
+  from: string;
+  to: string;
+  elevate: boolean;
+}
+
+interface ParsedInstallerSourceInput {
+  booth: string;
+  direct: string;
+  githubOwner: string;
+  githubRepo: string;
+  githubPattern: string;
+  googleDriveId: string;
+}
+
+interface ParsedInstallerInput {
+  source: ParsedInstallerSourceInput;
+  install: ParsedInstallerStepInput[];
+  uninstall: ParsedInstallerStepInput[];
+}
+
+interface ParsedVersionFileInput {
+  path: string;
+  hash: string;
+}
+
+interface ParsedVersionInput {
+  version: string;
+  releaseDate: string;
+  files: ParsedVersionFileInput[];
+}
+
+interface ParsedLicenseCopyrightInput {
+  years: string;
+  holder: string;
+}
+
+interface ParsedLicenseInput {
+  type: string;
+  isCustom: boolean;
+  licenseBody: string;
+  copyrights: ParsedLicenseCopyrightInput[];
+}
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value && typeof value === 'object' ? (value as UnknownRecord) : null;
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function toStringArray(value: unknown): string[] {
+  return asArray(value)
+    .map((item) => String(item || ''))
+    .filter(Boolean);
+}
+
+function parseInstallerStepInput(value: unknown): ParsedInstallerStepInput {
+  const row = asRecord(value);
+  return {
+    action: asString(row?.action),
+    path: asString(row?.path),
+    args: toStringArray(row?.args),
+    from: asString(row?.from),
+    to: asString(row?.to),
+    elevate: asBoolean(row?.elevate),
+  };
+}
+
+function parseInstallerInput(raw: unknown): ParsedInstallerInput {
+  const installer = asRecord(raw);
+  const sourceRaw = asRecord(installer?.source);
+  const github = asRecord(sourceRaw?.github);
+  const googleDrive = asRecord(sourceRaw?.GoogleDrive);
+
+  return {
+    source: {
+      booth: asString(sourceRaw?.booth),
+      direct: asString(sourceRaw?.direct),
+      githubOwner: asString(github?.owner),
+      githubRepo: asString(github?.repo),
+      githubPattern: asString(github?.pattern),
+      googleDriveId: asString(googleDrive?.id),
+    },
+    install: asArray(installer?.install).map(parseInstallerStepInput),
+    uninstall: asArray(installer?.uninstall).map(parseInstallerStepInput),
+  };
+}
+
+function parseVersionInput(value: unknown): ParsedVersionInput {
+  const version = asRecord(value);
+  const files = asArray(version?.file).map((item) => {
+    const file = asRecord(item);
+    return {
+      path: asString(file?.path),
+      hash: asString(file?.XXH3_128) || asString(file?.xxh3_128),
+    };
+  });
+
+  return {
+    version: asString(version?.version),
+    releaseDate: asString(version?.release_date),
+    files,
+  };
+}
+
+function parseLicenseInput(value: unknown): ParsedLicenseInput | null {
+  const target = asRecord(value);
+  if (!target) return null;
+  const copyrights = asArray(target.copyrights).map((item) => {
+    const row = asRecord(item);
+    return {
+      years: asString(row?.years),
+      holder: asString(row?.holder),
+    };
+  });
+
+  return {
+    type: asString(target.type),
+    isCustom: asBoolean(target.isCustom),
+    licenseBody: asString(target.licenseBody),
+    copyrights,
+  };
+}
+
+function parseImagesInput(raw: unknown): { thumbnail: string; info: string[] } {
+  const first = asRecord(asArray(raw)[0]);
+  return {
+    thumbnail: asString(first?.thumbnail),
+    info: toStringArray(first?.infoImg),
+  };
+}
+
+export function parseInstallerSource(installer: unknown = {}) {
+  const parsed = parseInstallerInput(installer);
   const next = createEmptyInstaller();
-  const source = installer.source || {};
-  if (source.booth) {
+  if (parsed.source.booth) {
     next.sourceType = 'booth';
-    next.boothUrl = String(source.booth || '');
-  } else if (source.direct) {
+    next.boothUrl = parsed.source.booth;
+  } else if (parsed.source.direct) {
     next.sourceType = 'direct';
-    next.directUrl = String(source.direct || '');
-  } else if (source.github) {
+    next.directUrl = parsed.source.direct;
+  } else if (parsed.source.githubOwner || parsed.source.githubRepo || parsed.source.githubPattern) {
     next.sourceType = 'github';
-    next.githubOwner = String(source.github?.owner || '');
-    next.githubRepo = String(source.github?.repo || '');
-    next.githubPattern = String(source.github?.pattern || '');
-  } else if (source.GoogleDrive) {
+    next.githubOwner = parsed.source.githubOwner;
+    next.githubRepo = parsed.source.githubRepo;
+    next.githubPattern = parsed.source.githubPattern;
+  } else if (parsed.source.googleDriveId) {
     next.sourceType = 'GoogleDrive';
-    next.googleDriveId = String(source.GoogleDrive?.id || '');
+    next.googleDriveId = parsed.source.googleDriveId;
   }
   // 不正値が来ても UI が壊れないよう、未知 action は安全側の既定値へ寄せる。
-  const installSteps = Array.isArray(installer.install) ? installer.install : [];
-  next.installSteps = installSteps.map((step: any) => {
-    const action = step?.action;
+  next.installSteps = parsed.install.map((step) => {
+    const action = step.action;
     const normalizedAction =
       INSTALL_ACTIONS.includes(action) || SPECIAL_INSTALL_ACTIONS.includes(action) ? action : 'download';
     return {
       key: generateKey(),
       action: normalizedAction,
-      path: String(step?.path || ''),
-      argsText: Array.isArray(step?.args)
-        ? step.args
-            .map((arg: unknown) => String(arg || ''))
-            .filter(Boolean)
-            .join(', ')
-        : '',
-      from: String(step?.from || ''),
-      to: String(step?.to || ''),
-      elevate: !!step?.elevate,
+      path: step.path,
+      argsText: step.args.join(', '),
+      from: step.from,
+      to: step.to,
+      elevate: step.elevate,
     };
   });
-  const uninstallSteps = Array.isArray(installer.uninstall) ? installer.uninstall : [];
-  next.uninstallSteps = uninstallSteps.map((step: any) => ({
+  next.uninstallSteps = parsed.uninstall.map((step) => ({
     key: generateKey(),
-    action: UNINSTALL_ACTIONS.includes(step?.action) ? step.action : 'delete',
-    path: String(step?.path || ''),
-    argsText: Array.isArray(step?.args)
-      ? step.args
-          .map((arg: unknown) => String(arg || ''))
-          .filter(Boolean)
-          .join(', ')
-      : '',
-    elevate: !!step?.elevate,
+    action: UNINSTALL_ACTIONS.includes(step.action) ? step.action : 'delete',
+    path: step.path,
+    argsText: step.args.join(', '),
+    elevate: step.elevate,
   }));
   return next;
 }
 
-export function parseVersions(rawVersions: any): RegisterVersion[] {
-  const arr = Array.isArray(rawVersions) ? rawVersions : [];
+export function parseVersions(rawVersions: unknown): RegisterVersion[] {
+  const arr = asArray(rawVersions).map(parseVersionInput);
   if (!arr.length) return [];
   return arr.map((ver) => {
-    const files = Array.isArray(ver?.file) ? ver.file : [];
+    const files = ver.files;
     return {
       key: generateKey(),
-      version: String(ver?.version || ''),
-      release_date: String(ver?.release_date || ''),
+      version: ver.version,
+      release_date: ver.releaseDate,
       files: files.length
-        ? files.map((f: any) => ({
+        ? files.map((f) => ({
             key: generateKey(),
-            path: String(f?.path || ''),
-            hash: String(f?.XXH3_128 || f?.xxh3_128 || ''),
+            path: f.path,
+            hash: f.hash,
             fileName: '',
           }))
         : [createEmptyVersionFile()],
@@ -97,12 +231,12 @@ export function parseVersions(rawVersions: any): RegisterVersion[] {
   });
 }
 
-export function parseImages(rawImages: any, baseUrl = ''): RegisterImageState {
-  if (!Array.isArray(rawImages) || !rawImages.length) {
+export function parseImages(rawImages: unknown, baseUrl = ''): RegisterImageState {
+  const parsed = parseImagesInput(rawImages);
+  if (!parsed.thumbnail && !parsed.info.length) {
     return { thumbnail: null, info: [] };
   }
-  const first = rawImages[0] || {};
-  const thumbnailPath = typeof first.thumbnail === 'string' ? first.thumbnail : '';
+  const thumbnailPath = parsed.thumbnail;
   const thumbnail = thumbnailPath
     ? {
         existingPath: thumbnailPath,
@@ -112,37 +246,34 @@ export function parseImages(rawImages: any, baseUrl = ''): RegisterImageState {
         key: generateKey(),
       }
     : null;
-  const infoImg = Array.isArray(first.infoImg) ? first.infoImg : [];
-  const info: RegisterImageEntry[] = infoImg.map((src: unknown) => ({
-    existingPath: String(src || ''),
+  const info: RegisterImageEntry[] = parsed.info.map((src) => ({
+    existingPath: src,
     sourcePath: '',
     file: null,
-    previewUrl: buildPreviewUrl(String(src || ''), baseUrl),
+    previewUrl: buildPreviewUrl(src, baseUrl),
     key: generateKey(),
   }));
   return { thumbnail, info };
 }
 
-export function parseLicenses(rawLicenses: any, legacyLicense = ''): RegisterLicense[] {
-  const list = Array.isArray(rawLicenses) ? rawLicenses : [];
-  const target = list[0];
+export function parseLicenses(rawLicenses: unknown, legacyLicense = ''): RegisterLicense[] {
+  const target = parseLicenseInput(asArray(rawLicenses)[0]);
   if (target) {
     // 旧スキーマ／新スキーマの両方を吸収し、UI では一貫した編集モデルに正規化する。
-    const rawType = String(target?.type || '');
+    const rawType = target.type;
     const isUnknown = rawType === '不明';
     const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
     const type = isUnknown || isTemplateType ? rawType : 'その他';
     const licenseName = !isUnknown && !isTemplateType ? rawType : '';
-    const licenseBody = typeof target?.licenseBody === 'string' ? target.licenseBody : '';
-    const isCustom = !!target?.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
-    const copyrights =
-      Array.isArray(target?.copyrights) && target.copyrights.length
-        ? target.copyrights.slice(0, 1).map((c: any) => ({
-            key: generateKey(),
-            years: String(c?.years || ''),
-            holder: String(c?.holder || ''),
-          }))
-        : [createEmptyCopyright()];
+    const licenseBody = target.licenseBody;
+    const isCustom = target.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
+    const copyrights = target.copyrights.length
+      ? target.copyrights.slice(0, 1).map((c) => ({
+          key: generateKey(),
+          years: c.years,
+          holder: c.holder,
+        }))
+      : [createEmptyCopyright()];
     return [
       {
         key: generateKey(),

@@ -1,3 +1,4 @@
+import * as tauriWindow from '@tauri-apps/api/window';
 import { formatUnknownError } from '../errors';
 import { logError, logInfo } from '../logging';
 import { getSettings } from '../settings';
@@ -18,26 +19,8 @@ import {
 } from './types';
 
 async function getCurrentWindowLabel(): Promise<string> {
-  type WindowLike = {
-    label?: string | (() => string | Promise<string>);
-  };
-  type WindowModuleLike = {
-    getCurrent?: () => WindowLike;
-    getCurrentWindow?: () => WindowLike;
-    appWindow?: WindowLike;
-  };
   try {
-    const mod = (await import('@tauri-apps/api/window')) as WindowModuleLike;
-    const getCurrent =
-      typeof mod.getCurrent === 'function'
-        ? mod.getCurrent
-        : typeof mod.getCurrentWindow === 'function'
-          ? mod.getCurrentWindow
-          : null;
-    const win = getCurrent ? getCurrent() : mod.appWindow || null;
-    if (!win) return '';
-    if (typeof win.label === 'string') return win.label;
-    if (typeof win.label === 'function') return await win.label();
+    return tauriWindow.getCurrentWindow().label;
   } catch (e: unknown) {
     try {
       await logError(`[package-state] getCurrentWindowLabel failed: ${formatUnknownError(e)}`);

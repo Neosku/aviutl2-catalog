@@ -4,6 +4,7 @@
 import { basename, generateKey, normalizeArrayText } from './helpers';
 import { getFileExtension } from './parse';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as z from 'zod';
 
 const DRAFT_STORAGE_PREFIX = 'register-draft:';
@@ -289,8 +290,7 @@ function inferMimeType(path: string): string {
 }
 
 async function readFileFromPath(path: string): Promise<File> {
-  const { readFile } = await import('@tauri-apps/plugin-fs');
-  const bytes = await readFile(path);
+  const bytes = await tauriFs.readFile(path);
   const filename = basename(path) || 'image';
   return new File([bytes], filename, { type: inferMimeType(path) });
 }

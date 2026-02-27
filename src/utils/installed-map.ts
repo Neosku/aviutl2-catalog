@@ -1,6 +1,9 @@
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as z from 'zod';
 import { formatUnknownError } from './errors';
+import { ipc } from './invokeIpc';
 import { logError } from './logging';
+import { InstallerRunnableItem } from './installer/types';
 
 const INSTALLED_FILE = 'installed.json';
 const stringMapSchema = z.record(z.string(), z.unknown()).transform((value): Record<string, string> => {
@@ -13,8 +16,7 @@ const stringMapSchema = z.record(z.string(), z.unknown()).transform((value): Rec
 
 export async function loadInstalledMap(): Promise<Record<string, string>> {
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const raw = await invoke('get_installed_map_cmd');
+    const raw = await ipc.getInstalledMapCmd();
     const parsed = stringMapSchema.safeParse(raw);
     if (parsed.success) {
       return parsed.data;
@@ -30,9 +32,10 @@ export async function loadInstalledMap(): Promise<Record<string, string>> {
 }
 
 async function writeInstalledMap(map: Record<string, string>): Promise<Record<string, string>> {
-  const fs = await import('@tauri-apps/plugin-fs');
   try {
-    await fs.writeTextFile(INSTALLED_FILE, JSON.stringify(map, null, 2), { baseDir: fs.BaseDirectory.AppConfig });
+    await tauriFs.writeTextFile(INSTALLED_FILE, JSON.stringify(map, null, 2), {
+      baseDir: tauriFs.BaseDirectory.AppConfig,
+    });
   } catch (e: unknown) {
     try {
       await logError(`[writeInstalledMap] failed: ${formatUnknownError(e)}`);
@@ -43,8 +46,7 @@ async function writeInstalledMap(map: Record<string, string>): Promise<Record<st
 
 export async function addInstalledId(id: string, version: string = ''): Promise<void> {
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('add_installed_id_cmd', { id, version: String(version || '') });
+    await ipc.addInstalledIdCmd({ id, version: String(version || '') });
   } catch (e: unknown) {
     try {
       await logError(`[addInstalledId] invoke failed: ${formatUnknownError(e)}`);
@@ -54,8 +56,7 @@ export async function addInstalledId(id: string, version: string = ''): Promise<
 
 export async function removeInstalledId(id: string): Promise<void> {
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('remove_installed_id_cmd', { id });
+    await ipc.removeInstalledIdCmd({ id });
   } catch (e: unknown) {
     try {
       await logError(`[removeInstalledId] invoke failed: ${formatUnknownError(e)}`);
@@ -71,10 +72,9 @@ export async function saveInstalledSnapshot(detectedMap: Record<string, string>)
   return await writeInstalledMap(snapshot);
 }
 
-export async function detectInstalledVersionsMap(items: unknown[]): Promise<Record<string, string>> {
+export async function detectInstalledVersionsMap(items: InstallerRunnableItem[]): Promise<Record<string, string>> {
   const list = Array.isArray(items) ? items : [];
-  const { invoke } = await import('@tauri-apps/api/core');
-  const res = await invoke('detect_versions_map', { items: list });
+  const res = await ipc.detectVersionsMap({ items: list });
   const parsed = stringMapSchema.safeParse(res);
   if (parsed.success) {
     return parsed.data;

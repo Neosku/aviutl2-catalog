@@ -1,4 +1,6 @@
+import * as tauriShell from '@tauri-apps/plugin-shell';
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { logError } from '../logging';
 
 declare const Buffer: {
@@ -26,7 +28,6 @@ export async function runInstallerExecutable(
   args: string[] = [],
   elevate: boolean = false,
 ): Promise<void> {
-  const shell = await import('@tauri-apps/plugin-shell');
   const argList = args.map((a) => `'${psEscape(a)}'`).join(', ');
   const argClause = args.length > 0 ? ` -ArgumentList @(${argList})` : '';
   const body = [
@@ -45,7 +46,7 @@ export async function runInstallerExecutable(
     '-EncodedCommand',
     encodedCommand,
   ];
-  const cmd = shell.Command.create('powershell', argsPs, { encoding: 'utf-8' });
+  const cmd = tauriShell.Command.create('powershell', argsPs, { encoding: 'utf-8' });
   const res = await cmd.execute();
   if (res.code !== 0) {
     throw new Error(
@@ -56,8 +57,7 @@ export async function runInstallerExecutable(
 
 export async function runAuoSetup(exeAbsPath: string): Promise<void> {
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('run_auo_setup', { exePath: exeAbsPath });
+    await ipc.runAuoSetup({ exePath: exeAbsPath });
   } catch (e: unknown) {
     await logError(`[runAuoSetup] failed exe=${exeAbsPath}: ${formatUnknownError(e)}`);
     throw e;

@@ -1,3 +1,4 @@
+import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as z from 'zod';
 import { formatUnknownError } from './errors';
 import { logError } from './logging';
@@ -13,11 +14,10 @@ const settingsFileSchema = z.object({
 export type AppSettings = z.infer<typeof settingsFileSchema>;
 
 export async function getSettings(): Promise<AppSettings> {
-  const fs = await import('@tauri-apps/plugin-fs');
   try {
-    const exists = await fs.exists(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
-    if (!exists) return {};
-    const raw = await fs.readTextFile(SETTINGS_FILE, { baseDir: fs.BaseDirectory.AppConfig });
+    const hasSettings = await tauriFs.exists(SETTINGS_FILE, { baseDir: tauriFs.BaseDirectory.AppConfig });
+    if (!hasSettings) return {};
+    const raw = await tauriFs.readTextFile(SETTINGS_FILE, { baseDir: tauriFs.BaseDirectory.AppConfig });
     const data = JSON.parse(raw || '{}');
     const parsed = settingsFileSchema.safeParse(data);
     if (parsed.success) {

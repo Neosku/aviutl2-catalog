@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as tauriApp from '@tauri-apps/api/app';
 import { toInstalledPackages } from '../../model/helpers';
 import type { DeviceInfo, FeedbackDiagnosticsState, FeedbackMode } from '../../model/types';
 import { collectDeviceInfo, readAppLog } from '../../../../utils/diagnostics';
@@ -6,9 +7,7 @@ import { loadInstalledMap } from '../../../../utils/installed-map';
 
 async function loadAppVersion() {
   try {
-    const app = await import('@tauri-apps/api/app');
-    const version = app?.getVersion ? await app.getVersion() : '';
-    return String(version || '');
+    return String((await tauriApp.getVersion()) || '');
   } catch {
     return '';
   }

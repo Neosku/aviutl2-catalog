@@ -18,6 +18,7 @@ import type {
   License,
   Version,
 } from '../../../utils/catalogSchema';
+import { ipc } from '../../../utils/invokeIpc';
 
 function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
   if (form.installer.sourceType === 'direct') {
@@ -196,14 +197,9 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(num) ? num : fallback;
 }
 
-export async function computeHashFromFile(fileOrPath: any): Promise<string> {
-  if (!fileOrPath) return '';
-  const path = typeof fileOrPath === 'string' ? fileOrPath : fileOrPath.path || '';
-  if (!path) {
-    throw new Error('XXH3_128 を計算するにはローカルファイルのパスが必要です。');
-  }
-  const { invoke } = await import('@tauri-apps/api/core');
-  const hex = await invoke('calc_xxh3_hex', { path });
+export async function computeHashFromFile(filePath: string): Promise<string> {
+  if (!filePath) return '';
+  const hex = await ipc.calcXxh3Hex({ path: filePath });
   if (!hex || typeof hex !== 'string') {
     throw new Error('XXH3_128 を計算できませんでした。');
   }

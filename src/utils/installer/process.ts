@@ -1,11 +1,11 @@
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { logError } from '../logging';
 
 export async function ensureAviutlClosed(): Promise<void> {
   let running = false;
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    running = !!(await invoke('is_aviutl_running'));
+    running = !!(await ipc.isAviutlRunning());
   } catch (e: unknown) {
     const detail = formatUnknownError(e) || '不明なエラー';
     try {

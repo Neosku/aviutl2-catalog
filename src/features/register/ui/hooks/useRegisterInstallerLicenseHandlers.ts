@@ -21,7 +21,7 @@ export default function useRegisterInstallerLicenseHandlers({
   }, [onUserEdit]);
 
   const updatePackageField = useCallback(
-    (field: keyof RegisterPackageForm, value: any) => {
+    <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => {
       notifyUserEdit();
       setPackageForm((prev) => ({ ...prev, [field]: value }));
     },

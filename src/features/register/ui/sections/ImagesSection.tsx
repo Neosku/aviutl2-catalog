@@ -1,10 +1,11 @@
 /**
  * サムネイル／説明画像のコンポーネント
  */
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
+import * as tauriFs from '@tauri-apps/plugin-fs';
+import * as tauriWindow from '@tauri-apps/api/window';
 import Button from '@/components/ui/Button';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { readFile } from '@tauri-apps/plugin-fs';
 import { Download, Image, ImagePlus, Images, Trash2 } from 'lucide-react';
 import { getFileExtension } from '../../model/form';
 import { basename, isInsideRect } from '../../model/helpers';
@@ -19,6 +20,30 @@ type InfoImageCardProps = {
   preview: string;
   onRemove: (key: string) => void;
 };
+
+type DragPayload = {
+  paths: string[];
+  position: {
+    x: number;
+    y: number;
+  };
+};
+
+function parseDragPayload(event: unknown): DragPayload | null {
+  if (!event || typeof event !== 'object' || !('payload' in event)) return null;
+  const payload = (event as { payload?: unknown }).payload;
+  if (!payload || typeof payload !== 'object') return null;
+  const pos = (payload as { position?: unknown }).position;
+  if (!pos || typeof pos !== 'object') return null;
+  const x = (pos as { x?: unknown }).x;
+  const y = (pos as { y?: unknown }).y;
+  if (typeof x !== 'number' || typeof y !== 'number') return null;
+  const rawPaths = (payload as { paths?: unknown }).paths;
+  const paths = Array.isArray(rawPaths)
+    ? rawPaths.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    : [];
+  return { paths, position: { x, y } };
+}
 
 type ImagePreviewLayerProps = {
   preview: string;
@@ -102,7 +127,7 @@ const PackageImagesSection = memo(
       const files: RegisterSelectedImageInput[] = [];
       for (const p of paths) {
         try {
-          const bytes = await readFile(p);
+          const bytes = await tauriFs.readFile(p);
           const name = basename(p);
           const ext = getFileExtension(name) || 'bin';
           let type = 'application/octet-stream';
@@ -121,8 +146,7 @@ const PackageImagesSection = memo(
     const openImageDialog = useCallback(
       async (multiple: boolean): Promise<RegisterSelectedImageInput[]> => {
         try {
-          const { open } = await import('@tauri-apps/plugin-dialog');
-          const selection = await open({
+          const selection = await tauriDialog.open({
             title: multiple ? '説明画像を選択' : 'サムネイル画像を選択',
             multiple,
             filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'] }],
@@ -149,15 +173,17 @@ const PackageImagesSection = memo(
 
       const setupDragDrop = async () => {
         try {
-          const appWindow = getCurrentWindow();
+          const appWindow = tauriWindow.getCurrentWindow();
           let scaleFactor = 1;
           try {
             scaleFactor = await appWindow.scaleFactor();
           } catch {
             scaleFactor = 1;
           }
-          const handleDragEvent = async (event: any, type: 'drop' | 'enter' | 'over' | 'leave') => {
-            const { position } = event.payload;
+          const handleDragEvent = async (event: unknown, type: 'drop' | 'enter' | 'over' | 'leave') => {
+            const payload = parseDragPayload(event);
+            if (!payload) return;
+            const { position } = payload;
             const thumbRect = thumbnailRef.current?.getBoundingClientRect() ?? null;
             const infoRect = infoRef.current?.getBoundingClientRect() ?? null;
 
@@ -167,7 +193,7 @@ const PackageImagesSection = memo(
             const overInfo = isInsideRect(infoRect, clientX, clientY);
 
             if (type === 'drop') {
-              const { paths } = event.payload;
+              const { paths } = payload;
               if (overThumbnail && paths.length > 0) {
                 const files = await loadFilesFromPaths([paths[0]]);
                 if (files.length > 0) onThumbnailChange(files[0]);

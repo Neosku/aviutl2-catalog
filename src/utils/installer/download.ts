@@ -1,4 +1,6 @@
+import * as tauriEvent from '@tauri-apps/api/event';
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { bestEffortLogError } from '../logging';
 import type { DownloadEventPayload, DownloadOptions } from './types';
 
@@ -22,8 +24,7 @@ async function withDownloadProgressListener<T>(
   if (typeof onProgress !== 'function') {
     return await executor();
   }
-  const { listen } = await import('@tauri-apps/api/event');
-  const unlisten = await listen<DownloadEventPayload>(DOWNLOAD_PROGRESS_EVENT, (evt) => {
+  const unlisten = await tauriEvent.listen<DownloadEventPayload>(DOWNLOAD_PROGRESS_EVENT, (evt) => {
     const payload = evt?.payload;
     if (!payload || payload.taskId !== taskId) return;
     const read = typeof payload.read === 'number' ? payload.read : 0;
@@ -48,11 +49,10 @@ export async function downloadFileFromUrl(
 ): Promise<string> {
   if (!/^https:\/\//i.test(url)) throw new Error(`Only https:// is allowed (got: ${url})`);
   if (typeof destPath !== 'string' || !destPath.trim()) throw new Error('destPath must be an existing directory');
-  const { invoke } = await import('@tauri-apps/api/core');
   const taskId = createDownloadTaskId(options.taskId);
   return await withDownloadProgressListener(taskId, options.onProgress, async () => {
     try {
-      const finalPath = await invoke<string>('download_file_to_path', { url, destPath, taskId });
+      const finalPath = await ipc.downloadFileToPath({ url, destPath, taskId });
       return String(finalPath || '');
     } catch (e: unknown) {
       const detail = formatUnknownError(e) || 'unknown error';
@@ -68,8 +68,7 @@ export async function downloadFileFromGoogleDrive(
 ): Promise<string> {
   const unlisteners: Array<() => void> = [];
   if (typeof onProgress === 'function') {
-    const { listen } = await import('@tauri-apps/api/event');
-    const unlisten = await listen<DownloadEventPayload>('drive:progress', (evt) => {
+    const unlisten = await tauriEvent.listen<DownloadEventPayload>('drive:progress', (evt) => {
       const payload = evt?.payload;
       if (!payload || payload.fileId !== fileId) return;
       const read = typeof payload.read === 'number' ? payload.read : 0;
@@ -79,8 +78,7 @@ export async function downloadFileFromGoogleDrive(
     unlisteners.push(unlisten);
   }
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('drive_download_to_file', { fileId, destPath });
+    await ipc.driveDownloadToFile({ fileId, destPath });
     return String(destPath || '');
   } finally {
     for (const unlisten of unlisteners) {
@@ -97,17 +95,15 @@ const BOOTH_AUTH_WINDOW_LABEL = 'booth-auth';
 const BOOTH_LOGIN_COMPLETE_EVENT = 'booth-auth:login-complete';
 
 async function ensureBoothAuthWindow(): Promise<void> {
-  const { invoke } = await import('@tauri-apps/api/core');
-  await invoke('ensure_booth_auth_window');
+  await ipc.ensureBoothAuthWindow();
 }
 
 async function prepareBoothLoginWait(): Promise<unknown> {
-  const { listen } = await import('@tauri-apps/api/event');
   let resolveFn: (value: unknown) => void = NOOP_RESOLVER;
   const done = new Promise<unknown>((resolve) => {
     resolveFn = resolve;
   });
-  const unlisten = await listen<unknown>(BOOTH_LOGIN_COMPLETE_EVENT, (evt) => {
+  const unlisten = await tauriEvent.listen<unknown>(BOOTH_LOGIN_COMPLETE_EVENT, (evt) => {
     try {
       unlisten();
     } catch (e: unknown) {
@@ -120,8 +116,7 @@ async function prepareBoothLoginWait(): Promise<unknown> {
 
 export async function closeBoothAuthWindow(): Promise<void> {
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('close_booth_auth_window');
+    await ipc.closeBoothAuthWindow();
   } catch (e: unknown) {
     await bestEffortLogError(`[booth-auth] close window failed: ${formatUnknownError(e)}`);
   }
@@ -132,10 +127,9 @@ export async function downloadFileFromBoothUrl(
   destPath: string,
   options: DownloadOptions = {},
 ): Promise<string> {
-  const { invoke } = await import('@tauri-apps/api/core');
   const taskId = createDownloadTaskId(options.taskId);
   const invokeDownload = (): Promise<string> =>
-    invoke<string>('download_file_to_path_booth', {
+    ipc.downloadFileToPathBooth({
       url,
       destPath,
       taskId,

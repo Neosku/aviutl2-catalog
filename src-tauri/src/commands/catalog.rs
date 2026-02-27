@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use serde::Deserialize;
 use std::sync::RwLock;
 
 #[derive(Clone)]
@@ -13,6 +14,30 @@ struct IndexItem {
 }
 
 static CATALOG: Lazy<RwLock<Vec<IndexItem>>> = Lazy::new(|| RwLock::new(Vec::new()));
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CatalogVersionInput {
+    #[serde(default)]
+    release_date: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CatalogIndexInput {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    author: String,
+    #[serde(default)]
+    summary: String,
+    #[serde(rename = "type", default)]
+    item_type: String,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default, alias = "version")]
+    versions: Vec<CatalogVersionInput>,
+}
 
 fn normalize(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -37,20 +62,12 @@ fn normalize(s: &str) -> String {
     out
 }
 
-fn parse_updated_at(value: &serde_json::Value) -> Option<i64> {
-    let arr_opt = if let Some(v) = value.get("versions") {
-        v.as_array()
-    } else if let Some(v) = value.get("version") {
-        v.as_array()
-    } else {
-        None
-    };
-    let arr = arr_opt?;
-    if arr.is_empty() {
+fn parse_updated_at(versions: &[CatalogVersionInput]) -> Option<i64> {
+    if versions.is_empty() {
         return None;
     }
-    let last = &arr[arr.len() - 1];
-    let s = last.get("release_date").and_then(|v| v.as_str()).unwrap_or("");
+    let last = versions.last()?;
+    let s = &last.release_date;
     let s = s.replace('/', "-");
     let parts: Vec<&str> = s.split('-').collect();
     if parts.len() < 3 {
@@ -67,20 +84,19 @@ fn parse_updated_at(value: &serde_json::Value) -> Option<i64> {
 }
 
 #[tauri::command]
-pub fn set_catalog_index(items: Vec<serde_json::Value>) -> Result<usize, String> {
+pub fn set_catalog_index(items: Vec<CatalogIndexInput>) -> Result<usize, String> {
     let mut v: Vec<IndexItem> = Vec::with_capacity(items.len());
     for it in items {
-        let id = it.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let id = it.id;
         if id.is_empty() {
             continue;
         }
-        let name = it.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let item_type = it.get("type").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let tags: Vec<String> =
-            it.get("tags").and_then(|v| v.as_array()).map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect::<Vec<_>>()).unwrap_or_default();
-        let author = it.get("author").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let summary = it.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let updated_at = parse_updated_at(&it);
+        let name = it.name;
+        let item_type = it.item_type;
+        let tags = it.tags;
+        let author = it.author;
+        let summary = it.summary;
+        let updated_at = parse_updated_at(&it.versions);
         let item = IndexItem {
             id,
             name_key: normalize(&name),
@@ -118,11 +134,7 @@ pub fn query_catalog_index(q: Option<String>, tags: Option<Vec<String>>, types: 
             if !tag_ok {
                 return false;
             }
-            if type_filter.is_empty() {
-                true
-            } else {
-                type_filter.iter().any(|x| x == &it.item_type)
-            }
+            if type_filter.is_empty() { true } else { type_filter.iter().any(|x| x == &it.item_type) }
         })
         .collect();
 

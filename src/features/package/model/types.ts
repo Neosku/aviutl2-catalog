@@ -1,3 +1,5 @@
+import { CatalogAction } from '../../../utils/catalogStore';
+
 export interface PackageImageGroup {
   thumbnail?: string;
   infoImg?: string[];
@@ -70,4 +72,4 @@ export interface PackageLicenseEntry extends PackageLicense {
   body: string;
 }
 
-export type CatalogDispatch = (action: { type: string; payload?: unknown }) => void;
+export type CatalogDispatch = (action: CatalogAction) => void;

@@ -3,7 +3,7 @@ name = "aviutl2-catalog"
 version = "0.3.2"
 description = "AviUtl2 Catalog"
 authors = ["Neosku"]
-edition = "2021"
+edition = "2024"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -48,8 +48,9 @@ windows = { version = "0.62", features = [
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["tracing-log"] }
+tracing-subscriber = { version = "0.3.22", features = ["local-time", "tracing-log"] }
 strip-ansi-escapes = "0.2.1"
+tauri-plugin-window-state = "2.4.1"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

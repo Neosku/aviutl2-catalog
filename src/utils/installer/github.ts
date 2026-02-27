@@ -1,3 +1,4 @@
+import * as tauriHttp from '@tauri-apps/plugin-http';
 import type { GithubSource } from '../catalogSchema';
 import { formatUnknownError } from '../errors';
 import { logError } from '../logging';
@@ -49,12 +50,11 @@ function findLatestUpdatedAsset(releases: unknown, regex: RegExp | null): GitHub
 }
 
 export async function fetchGitHubURL(github: GithubSource): Promise<string> {
-  const http = await import('@tauri-apps/plugin-http');
   const { owner, repo, pattern } = github;
   const regex = pattern ? new RegExp(pattern) : null;
 
   try {
-    const res = await http.fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
+    const res = await tauriHttp.fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
     const data = await res.json().catch(() => ({}));
     const asset = pickAssetFromRelease(data, regex);
     if (asset?.browser_download_url) {
@@ -67,7 +67,7 @@ export async function fetchGitHubURL(github: GithubSource): Promise<string> {
   }
 
   try {
-    const res = await http.fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=30`);
+    const res = await tauriHttp.fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=30`);
     const list = await res.json().catch(() => []);
     const asset = findLatestUpdatedAsset(list, regex);
     return asset?.browser_download_url || '';

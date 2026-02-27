@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentTauriWindow, reportTitleBarActionError } from './windowApi';
-import type { TauriWindowLike } from './windowApi';
+import type { TauriWindow } from './windowApi';
 
 export interface UseTitleBarWindowResult {
   max: boolean;
@@ -12,18 +12,18 @@ export interface UseTitleBarWindowResult {
 
 export default function useTitleBarWindow(): UseTitleBarWindowResult {
   const [max, setMax] = useState(false);
-  const windowRef = useRef<TauriWindowLike | null>(null);
+  const windowRef = useRef<TauriWindow | null>(null);
   const disposedRef = useRef(false);
 
-  const ensureWindow = useCallback(async (): Promise<TauriWindowLike | null> => {
+  const ensureWindow = useCallback(async (): Promise<TauriWindow | null> => {
     if (windowRef.current) return windowRef.current;
     windowRef.current = await getCurrentTauriWindow();
     return windowRef.current;
   }, []);
 
   const syncMax = useCallback(
-    async (windowLike?: TauriWindowLike | null): Promise<void> => {
-      const windowObject = windowLike ?? (await ensureWindow());
+    async (tauriWindow?: TauriWindow | null): Promise<void> => {
+      const windowObject = tauriWindow ?? (await ensureWindow());
       if (!windowObject?.isMaximized || disposedRef.current) return;
 
       try {
@@ -41,7 +41,7 @@ export default function useTitleBarWindow(): UseTitleBarWindowResult {
     disposedRef.current = false;
 
     const subscribe = async (
-      windowObject: TauriWindowLike,
+      windowObject: TauriWindow,
       listener: ((handler: () => void | Promise<void>) => Promise<(() => void) | void>) | undefined,
     ): Promise<void> => {
       if (typeof listener !== 'function') return;

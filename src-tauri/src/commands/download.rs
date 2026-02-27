@@ -1,6 +1,6 @@
 use percent_encoding::percent_decode_str;
 use std::path::PathBuf;
-use tauri::{webview::PageLoadEvent, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder, webview::PageLoadEvent};
 use url::Url;
 
 #[derive(thiserror::Error, Debug, serde::Serialize)]
@@ -19,11 +19,7 @@ fn is_abs(p: &str) -> bool {
 }
 
 fn resolve_rel_to_app_config(app: &tauri::AppHandle, p: &str) -> PathBuf {
-    if is_abs(p) {
-        PathBuf::from(p)
-    } else {
-        app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir()).join(p)
-    }
+    if is_abs(p) { PathBuf::from(p) } else { app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir()).join(p) }
 }
 
 fn sanitize_filename(name: &str) -> String {
@@ -36,11 +32,7 @@ fn sanitize_filename(name: &str) -> String {
         }
     }
     let trimmed = out.trim();
-    if trimmed.is_empty() {
-        String::from("download.bin")
-    } else {
-        trimmed.to_string()
-    }
+    if trimmed.is_empty() { String::from("download.bin") } else { trimmed.to_string() }
 }
 
 fn drive_filename_from_headers(headers: &reqwest::header::HeaderMap) -> Option<String> {
@@ -104,7 +96,7 @@ fn is_booth_logged_in_url(url: &Url) -> bool {
 
 #[tauri::command]
 pub async fn drive_download_to_file(window: tauri::Window, file_id: String, dest_path: String) -> Result<(), DriveError> {
-    use std::fs::{create_dir_all, OpenOptions};
+    use std::fs::{OpenOptions, create_dir_all};
     use std::io::Write;
 
     let app = window.app_handle();
@@ -123,11 +115,7 @@ pub async fn drive_download_to_file(window: tauri::Window, file_id: String, dest
 
     let final_dest = if looks_dir || is_placeholder {
         let drive_name = drive_name.ok_or_else(|| DriveError::Http("missing filename in Google Drive response".to_string()))?;
-        if looks_dir {
-            dest_abs.join(drive_name)
-        } else {
-            dest_abs.parent().map(|p| p.join(drive_name)).unwrap_or(dest_abs.clone())
-        }
+        if looks_dir { dest_abs.join(drive_name) } else { dest_abs.parent().map(|p| p.join(drive_name)).unwrap_or(dest_abs.clone()) }
     } else {
         dest_abs.clone()
     };
@@ -151,7 +139,7 @@ pub async fn drive_download_to_file(window: tauri::Window, file_id: String, dest
 
 #[tauri::command]
 pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path: String, task_id: Option<String>) -> Result<String, String> {
-    use std::fs::{create_dir_all, OpenOptions};
+    use std::fs::{OpenOptions, create_dir_all};
     use std::io::Write;
 
     if !url.trim_start().to_ascii_lowercase().starts_with("https://") {
@@ -345,7 +333,7 @@ pub async fn download_file_to_path_booth(
     session_window_label: Option<String>,
 ) -> Result<String, String> {
     use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE, COOKIE};
-    use std::fs::{create_dir_all, OpenOptions};
+    use std::fs::{OpenOptions, create_dir_all};
     use std::io::Write;
 
     if !url.trim_start().to_ascii_lowercase().starts_with("https://") {

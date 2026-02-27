@@ -6,6 +6,7 @@ import { computeHashFromFile, createEmptyVersion, createEmptyVersionFile } from 
 import { basename } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RefCell } from '../types';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
 
 interface UseRegisterVersionHandlersArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -131,8 +132,7 @@ export default function useRegisterVersionHandlers({
     async (versionKey: string, fileKey: string) => {
       try {
         setError('');
-        const { open } = await import('@tauri-apps/plugin-dialog');
-        const selection = await open({
+        const selection = await tauriDialog.open({
           multiple: false,
           title: 'XXH3_128 を計算するファイルを選択',
         });

@@ -36,29 +36,16 @@ fn installed_file_path(app: &tauri::AppHandle) -> std::path::PathBuf {
 }
 
 fn read_installed_map(app: &tauri::AppHandle) -> std::collections::HashMap<String, String> {
-    use std::fs::File;
-    use std::io::Read;
-    let mut map = std::collections::HashMap::new();
     let p = installed_file_path(app);
-    if let Ok(mut f) = File::open(&p) {
-        let mut s = String::new();
-        if f.read_to_string(&mut s).is_ok() {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                if let Some(obj) = v.as_object() {
-                    for (k, vv) in obj {
-                        if let Some(val) = vv.as_str() {
-                            map.insert(k.clone(), val.to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    map
+    let text = match std::fs::read_to_string(&p) {
+        Ok(v) => v,
+        Err(_) => return std::collections::HashMap::new(),
+    };
+    serde_json::from_str::<std::collections::HashMap<String, String>>(&text).unwrap_or_default()
 }
 
 fn write_installed_map(app: &tauri::AppHandle, map: &std::collections::HashMap<String, String>) -> Result<(), String> {
-    use std::fs::{create_dir_all, File};
+    use std::fs::{File, create_dir_all};
     use std::io::Write;
     let base = app_config_dir(app);
     let _ = create_dir_all(&base);
@@ -107,14 +94,15 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
             }
-            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
-                if let Some(booth) = window.app_handle().get_webview_window("booth-auth") {
-                    let _ = booth.close();
-                }
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. })
+                && let Some(booth) = window.app_handle().get_webview_window("booth-auth")
+            {
+                let _ = booth.close();
             }
         })
         .setup(|app| {

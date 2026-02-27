@@ -6,12 +6,12 @@ use std::{
 
 use tauri::{AppHandle, Manager};
 use windows::{
-    core::{w, PCWSTR},
     Win32::Foundation::{HWND, LPARAM, WPARAM},
     Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, GetClassNameW, GetDlgItem, GetTopWindow, GetWindow, GetWindowThreadProcessId, PostMessageW, SendMessageW, GW_HWNDNEXT, WM_CLOSE, WM_GETTEXT,
+        FindWindowExW, GW_HWNDNEXT, GetClassNameW, GetDlgItem, GetTopWindow, GetWindow, GetWindowThreadProcessId, PostMessageW, SendMessageW, WM_CLOSE, WM_GETTEXT,
         WM_GETTEXTLENGTH,
     },
+    core::{PCWSTR, w},
 };
 
 fn wait_find_window_by_class_and_pid(class_name: &str, pid: u32, timeout: Duration) -> Option<HWND> {

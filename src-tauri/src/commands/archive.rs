@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use memchr::memmem::Finder;
 use memmap2::MmapOptions;
-use sevenz_rust2::{decompress_with_extract_fn_and_password, default_entry_extract_fn, Password};
+use sevenz_rust2::{Password, decompress_with_extract_fn_and_password, default_entry_extract_fn};
 use walkdir::WalkDir;
 use zip::read::ZipArchive;
 

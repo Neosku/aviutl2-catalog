@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
+import * as tauriProcess from '@tauri-apps/plugin-process';
+import * as tauriUpdater from '@tauri-apps/plugin-updater';
 import { logError } from '../../utils/logging';
 
 export interface UseUpdatePromptOptions {
@@ -88,14 +91,9 @@ export function useUpdatePrompt(options: UseUpdatePromptOptions = {}): UseUpdate
 
     (async () => {
       try {
-        const mod = (await import('@tauri-apps/plugin-updater')) as {
-          check?: () => Promise<UpdateCheckResult | null>;
-        };
-        if (typeof mod.check !== 'function') return;
-
-        const update = await mod.check();
+        const update = await tauriUpdater.check();
         if (!cancelled && update && (update.available ?? true) && typeof update.downloadAndInstall === 'function') {
-          const notes = toCleanString(update.body) || toCleanString(update.notes);
+          const notes = toCleanString(update.body);
           const pubDate = resolvePubDate(update);
 
           setUpdateError('');
@@ -129,12 +127,10 @@ export function useUpdatePrompt(options: UseUpdatePromptOptions = {}): UseUpdate
     try {
       await updateInfo.update.downloadAndInstall();
       try {
-        const { relaunch } = await import('@tauri-apps/plugin-process');
-        await relaunch();
+        await tauriProcess.relaunch();
       } catch {
         try {
-          const { message } = await import('@tauri-apps/plugin-dialog');
-          await message('アップデートを適用しました。アプリを再起動してください。', {
+          await tauriDialog.message('アップデートを適用しました。アプリを再起動してください。', {
             title: 'アップデート',
             kind: 'info',
           });

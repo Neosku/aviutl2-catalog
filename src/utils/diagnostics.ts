@@ -1,3 +1,5 @@
+import * as tauriFs from '@tauri-apps/plugin-fs';
+import * as tauriShell from '@tauri-apps/plugin-shell';
 import { formatUnknownError } from './errors';
 import { logError } from './logging';
 
@@ -83,8 +85,7 @@ function defaultDeviceInfo(): DeviceInfo {
 }
 
 async function executePowerShell(command: string): Promise<string> {
-  const shell = await import('@tauri-apps/plugin-shell');
-  const ps = shell.Command.create('powershell', [...POWERSHELL_BASE_ARGS, command]);
+  const ps = tauriShell.Command.create('powershell', [...POWERSHELL_BASE_ARGS, command]);
   const out = await ps.execute();
   if (out.code !== 0) {
     throw new Error(`PowerShell exited with code ${out.code}`);
@@ -159,10 +160,9 @@ export async function collectDeviceInfo(): Promise<DeviceInfo> {
 
 export async function readAppLog(): Promise<string> {
   try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    const exists = await fs.exists(LOG_FILE, { baseDir: fs.BaseDirectory.AppConfig });
-    if (!exists) return '';
-    const text = await fs.readTextFile(LOG_FILE, { baseDir: fs.BaseDirectory.AppConfig });
+    const hasLog = await tauriFs.exists(LOG_FILE, { baseDir: tauriFs.BaseDirectory.AppConfig });
+    if (!hasLog) return '';
+    const text = await tauriFs.readTextFile(LOG_FILE, { baseDir: tauriFs.BaseDirectory.AppConfig });
     return text || '';
   } catch (e: unknown) {
     try {

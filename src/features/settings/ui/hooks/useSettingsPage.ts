@@ -1,6 +1,7 @@
 import { type ChangeEvent, useCallback, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import { useCatalog, useCatalogDispatch } from '../../../../utils/catalogStore';
+import { ipc } from '../../../../utils/invokeIpc';
 import { detectInstalledVersionsMap } from '../../../../utils/installed-map';
 import { logError } from '../../../../utils/logging';
 import { resetPackageStateLocalState } from '../../../../utils/package-state';
@@ -61,8 +62,7 @@ export default function useSettingsPage() {
 
   const onPickAviutl2Root = useCallback(async () => {
     try {
-      const dialog = await import('@tauri-apps/plugin-dialog');
-      const selected = await dialog.open({
+      const selected = await tauriDialog.open({
         directory: true,
         multiple: false,
         title: 'AviUtl2 のルートフォルダ',
@@ -80,11 +80,11 @@ export default function useSettingsPage() {
     setError('');
     setSuccess('');
     try {
-      const resolved = await invoke<string>('resolve_aviutl2_root', { raw: String(form.aviutl2Root || '') });
+      const resolved = await ipc.resolveAviutl2Root({ raw: String(form.aviutl2Root || '') });
       const aviutl2Root = String(resolved || '').trim();
       if (!aviutl2Root) throw new Error('AviUtl2 のフォルダを指定してください。');
 
-      await invoke('update_settings', {
+      await ipc.updateSettings({
         aviutl2Root,
         isPortableMode: Boolean(form.isPortableMode),
         theme: String(form.theme || 'darkmode').trim(),

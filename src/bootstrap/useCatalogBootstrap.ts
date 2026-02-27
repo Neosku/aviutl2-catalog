@@ -4,6 +4,7 @@ import type { CatalogAction } from '../utils/catalogStore';
 import { loadCatalogData } from '../utils/catalog';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '../utils/installed-map';
 import { formatUnknownError } from '../utils/errors';
+import { ipc } from '../utils/invokeIpc';
 import { logError } from '../utils/logging';
 import { flushPackageStateQueue, maybeSendPackageStateSnapshot } from '../utils/package-state';
 import { getSettings } from '../utils/settings';
@@ -57,8 +58,7 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
           const items = catalogItems;
           if (!cancelled) dispatch({ type: 'SET_ITEMS', payload: items });
           try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('set_catalog_index', { items });
+            await ipc.setCatalogIndex({ items });
           } catch (error: unknown) {
             await logBootstrapError('set_catalog_index failed', error);
           }

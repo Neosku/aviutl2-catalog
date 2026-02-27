@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import * as tauriApp from '@tauri-apps/api/app';
 import type { Dispatch, SetStateAction } from 'react';
 import { logError } from '../../../../utils/logging';
 import { getSettings } from '../../../../utils/settings';
@@ -36,8 +37,7 @@ export default function useSettingsInitialization({
       }
 
       try {
-        const app = await import('@tauri-apps/api/app');
-        const version = app?.getVersion ? await app.getVersion() : '';
+        const version = await tauriApp.getVersion();
         if (mounted) setAppVersion(String(version || ''));
       } catch (versionError) {
         try {

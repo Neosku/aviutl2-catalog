@@ -1,8 +1,8 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import * as windowApi from '@tauri-apps/api/window';
 import { logError } from '../../../utils/logging';
 
 async function showMainWindow() {
-  const win = getCurrentWindow();
+  const win = windowApi.getCurrentWindow();
   await win.show();
   await win.setFocus();
 }
@@ -47,27 +47,8 @@ export async function safeLog(prefix: string, error: unknown) {
 
 export async function fetchWindowLabel() {
   try {
-    const mod = (await import('@tauri-apps/api/window')) as {
-      getCurrent?: () => unknown;
-      getCurrentWindow?: () => unknown;
-      appWindow?: unknown;
-    };
-    const getCurrent =
-      typeof mod.getCurrent === 'function'
-        ? mod.getCurrent
-        : typeof mod.getCurrentWindow === 'function'
-          ? mod.getCurrentWindow
-          : null;
-    const win = (getCurrent ? getCurrent() : mod.appWindow || null) as {
-      label?: string | (() => Promise<unknown>) | (() => unknown);
-    } | null;
-    if (!win) return '';
-    if (typeof win.label === 'string') return win.label;
-    if (typeof win.label === 'function') {
-      const value = await win.label();
-      return typeof value === 'string' ? value : String(value ?? '');
-    }
-    return '';
+    const win = windowApi.getCurrentWindow();
+    return String(win.label || '');
   } catch (error) {
     await safeLog('[init-window] get label failed', error);
     return '';
