@@ -1,7 +1,7 @@
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as z from 'zod';
-import * as tauriCore from '@tauri-apps/api/core';
 import { formatUnknownError } from './errors';
+import { ipc } from './invokeIpc';
 import { logError } from './logging';
 import { InstallerRunnableItem } from './installer/types';
 
@@ -16,7 +16,7 @@ const stringMapSchema = z.record(z.string(), z.unknown()).transform((value): Rec
 
 export async function loadInstalledMap(): Promise<Record<string, string>> {
   try {
-    const raw = await tauriCore.invoke('get_installed_map_cmd');
+    const raw = await ipc.getInstalledMapCmd();
     const parsed = stringMapSchema.safeParse(raw);
     if (parsed.success) {
       return parsed.data;
@@ -46,7 +46,7 @@ async function writeInstalledMap(map: Record<string, string>): Promise<Record<st
 
 export async function addInstalledId(id: string, version: string = ''): Promise<void> {
   try {
-    await tauriCore.invoke('add_installed_id_cmd', { id, version: String(version || '') });
+    await ipc.addInstalledIdCmd({ id, version: String(version || '') });
   } catch (e: unknown) {
     try {
       await logError(`[addInstalledId] invoke failed: ${formatUnknownError(e)}`);
@@ -56,7 +56,7 @@ export async function addInstalledId(id: string, version: string = ''): Promise<
 
 export async function removeInstalledId(id: string): Promise<void> {
   try {
-    await tauriCore.invoke('remove_installed_id_cmd', { id });
+    await ipc.removeInstalledIdCmd({ id });
   } catch (e: unknown) {
     try {
       await logError(`[removeInstalledId] invoke failed: ${formatUnknownError(e)}`);
@@ -74,7 +74,7 @@ export async function saveInstalledSnapshot(detectedMap: Record<string, string>)
 
 export async function detectInstalledVersionsMap(items: InstallerRunnableItem[]): Promise<Record<string, string>> {
   const list = Array.isArray(items) ? items : [];
-  const res = await tauriCore.invoke('detect_versions_map', { items: list });
+  const res = await ipc.detectVersionsMap({ items: list });
   const parsed = stringMapSchema.safeParse(res);
   if (parsed.success) {
     return parsed.data;

@@ -1,4 +1,4 @@
-import * as tauriCore from '@tauri-apps/api/core';
+import { ipc } from './invokeIpc';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
@@ -20,6 +20,6 @@ export async function bestEffortLogError(message: string): Promise<void> {
 
 async function logLine(level: LogLevel, msg: unknown): Promise<void> {
   try {
-    await tauriCore.invoke('log_cmd', { level: String(level), msg: String(msg) });
+    await ipc.logCmd({ level: String(level), msg: String(msg) });
   } catch {}
 }

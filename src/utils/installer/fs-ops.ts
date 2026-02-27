@@ -1,6 +1,6 @@
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { bestEffortLogError } from '../logging';
 
 function isAbsPath(p: unknown): boolean {
@@ -49,7 +49,7 @@ export async function deletePath(absPath: string): Promise<boolean> {
 
 export async function extractZip(zipPath: string, destPath: string): Promise<void> {
   try {
-    await tauriCore.invoke('extract_zip', { zipPath, destPath });
+    await ipc.extractZip({ zipPath, destPath });
     return;
   } catch (e: unknown) {
     await bestEffortLogError(`[extractZip] failed: ${formatUnknownError(e)}`);
@@ -58,7 +58,7 @@ export async function extractZip(zipPath: string, destPath: string): Promise<voi
 
 export async function extractSevenZipSfx(sfxPath: string, destPath: string): Promise<void> {
   try {
-    await tauriCore.invoke('extract_7z_sfx', { sfxPath, destPath });
+    await ipc.extract7zSfx({ sfxPath, destPath });
     return;
   } catch (e: unknown) {
     await bestEffortLogError(`[extractSevenZipSfx] failed: ${formatUnknownError(e)}`);
@@ -66,6 +66,6 @@ export async function extractSevenZipSfx(sfxPath: string, destPath: string): Pro
 }
 
 export async function copyPattern(fromPattern: string, toDirRel: string): Promise<number> {
-  const result = await tauriCore.invoke('copy_item_js', { srcStr: fromPattern, dstStr: toDirRel });
+  const result = await ipc.copyItemJs({ srcStr: fromPattern, dstStr: toDirRel });
   return typeof result === 'number' ? result : Number(result) || 0;
 }

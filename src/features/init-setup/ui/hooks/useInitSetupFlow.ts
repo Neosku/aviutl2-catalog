@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
+import { ipc } from '../../../../utils/invokeIpc';
 import { fetchWindowLabel, getErrorMessage, safeLog } from '../../model/helpers';
 import type { InitSetupStep, InstalledChoice, PickDirKind } from '../../model/types';
 
@@ -19,7 +19,7 @@ export default function useInitSetupFlow() {
     let cancelled = false;
     (async () => {
       try {
-        const suggested = await tauriCore.invoke<string | null>('default_aviutl2_root');
+        const suggested = await ipc.defaultAviutl2Root();
         if (cancelled) return;
         const value = typeof suggested === 'string' ? suggested.trim() : '';
         if (value) {
@@ -64,13 +64,13 @@ export default function useInitSetupFlow() {
     if (!normalized) throw new Error('AviUtl2 のフォルダを入力してください。');
     let resolved = normalized;
     try {
-      const candidate = await tauriCore.invoke<string | null>('resolve_aviutl2_root', { raw: normalized });
+      const candidate = await ipc.resolveAviutl2Root({ raw: normalized });
       if (candidate) resolved = String(candidate);
     } catch (resolveError) {
       await safeLog('[init-window] resolve aviutl2 root failed', resolveError);
     }
     try {
-      await tauriCore.invoke('update_settings', {
+      await ipc.updateSettings({
         aviutl2Root: resolved,
         isPortableMode: Boolean(portableMode),
         theme: 'dark',
@@ -114,7 +114,7 @@ export default function useInitSetupFlow() {
     setBusy(true);
     setError('');
     try {
-      await tauriCore.invoke('complete_initial_setup');
+      await ipc.completeInitialSetup();
     } catch (finalizeError) {
       setError(getErrorMessage(finalizeError) || '初期設定に失敗しました。');
     } finally {

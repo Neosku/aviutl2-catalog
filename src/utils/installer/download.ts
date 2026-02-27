@@ -1,6 +1,6 @@
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriEvent from '@tauri-apps/api/event';
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { bestEffortLogError } from '../logging';
 import type { DownloadEventPayload, DownloadOptions } from './types';
 
@@ -52,7 +52,7 @@ export async function downloadFileFromUrl(
   const taskId = createDownloadTaskId(options.taskId);
   return await withDownloadProgressListener(taskId, options.onProgress, async () => {
     try {
-      const finalPath = await tauriCore.invoke<string>('download_file_to_path', { url, destPath, taskId });
+      const finalPath = await ipc.downloadFileToPath({ url, destPath, taskId });
       return String(finalPath || '');
     } catch (e: unknown) {
       const detail = formatUnknownError(e) || 'unknown error';
@@ -78,7 +78,7 @@ export async function downloadFileFromGoogleDrive(
     unlisteners.push(unlisten);
   }
   try {
-    await tauriCore.invoke('drive_download_to_file', { fileId, destPath });
+    await ipc.driveDownloadToFile({ fileId, destPath });
     return String(destPath || '');
   } finally {
     for (const unlisten of unlisteners) {
@@ -95,7 +95,7 @@ const BOOTH_AUTH_WINDOW_LABEL = 'booth-auth';
 const BOOTH_LOGIN_COMPLETE_EVENT = 'booth-auth:login-complete';
 
 async function ensureBoothAuthWindow(): Promise<void> {
-  await tauriCore.invoke('ensure_booth_auth_window');
+  await ipc.ensureBoothAuthWindow();
 }
 
 async function prepareBoothLoginWait(): Promise<unknown> {
@@ -116,7 +116,7 @@ async function prepareBoothLoginWait(): Promise<unknown> {
 
 export async function closeBoothAuthWindow(): Promise<void> {
   try {
-    await tauriCore.invoke('close_booth_auth_window');
+    await ipc.closeBoothAuthWindow();
   } catch (e: unknown) {
     await bestEffortLogError(`[booth-auth] close window failed: ${formatUnknownError(e)}`);
   }
@@ -129,7 +129,7 @@ export async function downloadFileFromBoothUrl(
 ): Promise<string> {
   const taskId = createDownloadTaskId(options.taskId);
   const invokeDownload = (): Promise<string> =>
-    tauriCore.invoke<string>('download_file_to_path_booth', {
+    ipc.downloadFileToPathBooth({
       url,
       destPath,
       taskId,

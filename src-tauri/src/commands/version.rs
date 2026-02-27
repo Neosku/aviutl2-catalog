@@ -31,11 +31,11 @@ struct HashCacheV0Entry {
     size: u64,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 enum HashCacheFile {
-    V1(HashCacheRoot),
-    V0(HashMap<std::path::PathBuf, HashCacheV0Entry>),
+    Versioned(HashCacheRoot),
+    Unversioned(HashMap<std::path::PathBuf, HashCacheV0Entry>),
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -85,8 +85,8 @@ fn read_hash_cache(app: &tauri::AppHandle) -> HashMap<std::path::PathBuf, HashCa
         let f = File::open(&path)?;
         let cache_file: HashCacheFile = serde_json::from_reader(f)?;
         match cache_file {
-            HashCacheFile::V1(HashCacheRoot::V1(map)) => Ok(map),
-            HashCacheFile::V0(v0_map) => Ok(v0_map.into_iter().map(|(k, v)| (k, HashCacheEntry { xxh3_128: v.xxh3_128, mtime_ms: v.mtime_ms, size: v.size })).collect()),
+            HashCacheFile::Versioned(HashCacheRoot::V1(map)) => Ok(map),
+            HashCacheFile::Unversioned(v0_map) => Ok(v0_map.into_iter().map(|(k, v)| (k, HashCacheEntry { xxh3_128: v.xxh3_128, mtime_ms: v.mtime_ms, size: v.size })).collect()),
         }
     }
 }
@@ -98,7 +98,14 @@ fn write_hash_cache(app: &tauri::AppHandle, cache: &HashMap<std::path::PathBuf, 
     let _ = create_dir_all(&base);
     let path = base.join("hash-cache.json");
     if let Ok(mut f) = File::create(&path) {
-        let _ = f.write_all(serde_json::to_string_pretty(cache).unwrap_or_else(|_| "{}".into()).as_bytes());
+        let cache_file = HashCacheFile::Versioned(HashCacheRoot::V1(cache.clone()));
+        if let Ok(json) = serde_json::to_string_pretty(&cache_file) {
+            if let Err(e) = f.write_all(json.as_bytes()) {
+                tracing::error!("Failed to write hash cache: {}", e);
+            }
+        } else {
+            tracing::error!("Failed to serialize hash cache");
+        }
     }
 }
 
@@ -233,7 +240,7 @@ fn determine_versions(_app: &tauri::AppHandle, list: &[VersionItemInput], file_h
         }
         out.insert(id, detected);
     }
-    tracing::info!("detect all done count={},files={:?}", list.len(), out);
+    tracing::info!("detect all done count={}", list.len());
     out
 }
 

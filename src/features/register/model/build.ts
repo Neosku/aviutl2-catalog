@@ -18,7 +18,7 @@ import type {
   License,
   Version,
 } from '../../../utils/catalogSchema';
-import * as tauriCore from '@tauri-apps/api/core';
+import { ipc } from '../../../utils/invokeIpc';
 
 function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
   if (form.installer.sourceType === 'direct') {
@@ -199,7 +199,7 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 
 export async function computeHashFromFile(filePath: string): Promise<string> {
   if (!filePath) return '';
-  const hex = await tauriCore.invoke('calc_xxh3_hex', { path: filePath });
+  const hex = await ipc.calcXxh3Hex({ path: filePath });
   if (!hex || typeof hex !== 'string') {
     throw new Error('XXH3_128 を計算できませんでした。');
   }

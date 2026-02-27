@@ -1,6 +1,6 @@
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriShell from '@tauri-apps/plugin-shell';
 import { formatUnknownError } from '../errors';
+import { ipc } from '../invokeIpc';
 import { logError } from '../logging';
 
 declare const Buffer: {
@@ -57,7 +57,7 @@ export async function runInstallerExecutable(
 
 export async function runAuoSetup(exeAbsPath: string): Promise<void> {
   try {
-    await tauriCore.invoke('run_auo_setup', { exePath: exeAbsPath });
+    await ipc.runAuoSetup({ exePath: exeAbsPath });
   } catch (e: unknown) {
     await logError(`[runAuoSetup] failed exe=${exeAbsPath}: ${formatUnknownError(e)}`);
     throw e;

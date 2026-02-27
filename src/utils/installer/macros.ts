@@ -1,10 +1,10 @@
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriPath from '@tauri-apps/api/path';
 import * as tauriFs from '@tauri-apps/plugin-fs';
+import { ipc } from '../invokeIpc';
 import type { InstallerMacroContext } from './types';
 
 export async function expandMacros(s: unknown, ctx: InstallerMacroContext): Promise<unknown> {
-  const rawDirs = await tauriCore.invoke('get_app_dirs');
+  const rawDirs = await ipc.getAppDirs();
   const dirs = rawDirs && typeof rawDirs === 'object' ? (rawDirs as Record<string, unknown>) : {};
   if (typeof s !== 'string') return s;
   return s

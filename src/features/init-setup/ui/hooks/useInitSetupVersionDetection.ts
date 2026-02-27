@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as tauriCore from '@tauri-apps/api/core';
+import { ipc } from '../../../../utils/invokeIpc';
 import { safeLog } from '../../model/helpers';
 import type { CatalogItem, InitSetupStep, PackageItemsMap, PackageVersionsMap } from '../../model/types';
 
@@ -37,7 +37,7 @@ export default function useInitSetupVersionDetection({
       try {
         const itemsForDetect = requiredPluginIds.map((id) => packageItems[id]).filter(Boolean) as CatalogItem[];
         if (itemsForDetect.length === 0) return;
-        const result = await tauriCore.invoke<Record<string, string> | null>('detect_versions_map', {
+        const result = await ipc.detectVersionsMap({
           items: itemsForDetect,
         });
         if (cancelled) return;

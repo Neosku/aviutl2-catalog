@@ -26,7 +26,7 @@ async function syncRemovedPackageState(item: PackageItem, dispatch: CatalogDispa
 }
 
 export default function usePackageCardActions(item: PackageItem): UsePackageCardActionsResult {
-  const dispatch = useCatalogDispatch() as CatalogDispatch;
+  const dispatch = useCatalogDispatch();
 
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);

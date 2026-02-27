@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useHomeContext } from '../../../../layouts/app-shell/AppShell';
 import { SORT_OPTIONS } from '../../../../layouts/app-shell/constants';
-import type { HomeContextValue, HomeSortOrder } from '../types';
+import type { HomeSortOrder } from '../types';
 
 const HOME_CATEGORY_ALL = 'すべて';
 
@@ -24,7 +24,7 @@ export default function useHomePage() {
     filterInstalled,
     sortOrder,
     setSortOrder,
-  } = useHomeContext() as HomeContextValue;
+  } = useHomeContext();
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);

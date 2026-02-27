@@ -1,19 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import * as tauriCore from '@tauri-apps/api/core';
 import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../../../utils/catalogStore';
+import { ipc } from '../../../utils/invokeIpc';
 import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../../../utils/query';
 import { sortOrderFromQuery, sortParamsFromOrder } from '../constants';
-import type {
-  ActivePage,
-  AppDirsPayload,
-  HomeContextValue,
-  HomeSortOrder,
-  ParsedHomeQuery,
-  SortKey,
-  UrlOverrideValue,
-} from '../types';
+import type { ActivePage, HomeContextValue, HomeSortOrder, ParsedHomeQuery, SortKey, UrlOverrideValue } from '../types';
 import useDebouncedValue from './useDebouncedValue';
 
 function toSortKey(rawSortKey: string | null): SortKey {
@@ -164,7 +156,7 @@ export default function useAppShellState() {
 
   const openDataDir = useCallback(async () => {
     try {
-      const dirs = await tauriCore.invoke<AppDirsPayload>('get_app_dirs');
+      const dirs = await ipc.getAppDirs();
       const target = dirs && typeof dirs.aviutl2_data === 'string' ? dirs.aviutl2_data.trim() : '';
       if (!target) {
         setError('データフォルダの場所を取得できませんでした。設定画面で AviUtl2 のフォルダを確認してください。');
@@ -180,7 +172,7 @@ export default function useAppShellState() {
 
   const launchAviUtl2 = useCallback(async () => {
     try {
-      await tauriCore.invoke('launch_aviutl2');
+      await ipc.launchAviutl2();
     } catch (launchError) {
       setError(typeof launchError === 'string' ? launchError : 'AviUtl2 の起動に失敗しました。');
     }
