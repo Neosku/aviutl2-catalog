@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { cn } from '@/lib/cn';
+import { layout } from '@/components/ui/_styles';
 
 export interface SidebarIconProps {
   size?: number;
@@ -139,14 +141,19 @@ export default function SidebarButton({
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`${baseClasses} ${variants[variant]}`}
+        className={cn(baseClasses, variants[variant])}
         type="button"
       >
-        <div className="w-14 shrink-0 flex items-center justify-center">{iconElement}</div>
+        <div className={cn(layout.center, 'w-14 shrink-0')}>{iconElement}</div>
         {!isCollapsed ? <span className="truncate flex-1 pr-2">{label}</span> : null}
         {!isCollapsed && RightIcon ? <RightIcon size={18} className="opacity-50 shrink-0 mr-3" /> : null}
         {!isCollapsed && badgeCount > 0 ? (
-          <span className="bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 flex items-center justify-center rounded-full shadow-sm dark:shadow-red-900/20 px-1 mr-3">
+          <span
+            className={cn(
+              layout.center,
+              'bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 rounded-full shadow-sm dark:shadow-red-900/20 px-1 mr-3',
+            )}
+          >
             {badgeCount}
           </span>
         ) : null}

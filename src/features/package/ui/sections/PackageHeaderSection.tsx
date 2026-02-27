@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Badge from '@/components/ui/Badge';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 import type { PackageHeaderSectionProps } from '../types';
 
 export default function PackageHeaderSection({ item, listLink, heroImage }: PackageHeaderSectionProps) {
@@ -8,7 +11,7 @@ export default function PackageHeaderSection({ item, listLink, heroImage }: Pack
 
   return (
     <>
-      <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+      <nav className={cn(text.mutedSm, 'flex items-center')}>
         <Link to={listLink} className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
           パッケージ一覧
         </Link>
@@ -16,36 +19,34 @@ export default function PackageHeaderSection({ item, listLink, heroImage }: Pack
         <span className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.name}</span>
       </nav>
 
-      <section
-        className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 ${heroImage ? 'min-h-[160px]' : ''}`}
-      >
+      <section className={cn(surface.cardOverflow, 'relative', heroImage ? 'min-h-[160px]' : '')}>
         {heroImage ? (
           <div className="absolute inset-0 bg-cover bg-center opacity-25" style={heroImageStyle} aria-hidden />
         ) : null}
         <div className="relative p-6 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className={layout.rowBetweenWrapStartGap4}>
             <div className="space-y-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              <Badge variant="primary" shape="pill" size="sm" className="gap-2 normal-case">
                 {item.type || '未分類'}
-              </span>
+              </Badge>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{item.name}</h1>
               {item.summary ? (
                 <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">{item.summary}</p>
               ) : null}
             </div>
             {item.installed ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+              <Badge variant="success" shape="pill" size="sm" className={cn(layout.inlineGap1, 'font-bold')}>
                 <CheckCircle2 size={14} /> 導入済
-              </span>
+              </Badge>
             ) : null}
           </div>
 
           {item.tags?.length ? (
-            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className={cn(layout.wrapGap2, text.mutedXs)}>
               {item.tags.map((tag) => (
-                <span key={tag} className="rounded-full border border-slate-200 px-2 py-1 dark:border-slate-700">
+                <Badge key={tag} variant="outlineNeutral" shape="pill" size="sm" className="px-2 py-1 normal-case">
                   #{tag}
-                </span>
+                </Badge>
               ))}
             </div>
           ) : null}

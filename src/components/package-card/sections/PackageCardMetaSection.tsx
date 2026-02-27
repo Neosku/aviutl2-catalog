@@ -1,5 +1,8 @@
 import { Calendar, User } from 'lucide-react';
+import Badge from '@/components/ui/Badge';
 import type { PackageItem } from '../../../features/package/model/types';
+import { cn } from '@/lib/cn';
+import { text } from '@/components/ui/_styles';
 
 interface PackageCardMetaSectionProps {
   item: PackageItem;
@@ -18,7 +21,7 @@ export default function PackageCardMetaSection({ item, lastUpdated, tags }: Pack
           {item.name}
         </h3>
 
-        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-0.5 mb-1 font-medium">
+        <div className={cn(text.mutedSm, 'flex items-center gap-3 mt-0.5 mb-1 font-medium')}>
           <div className="flex items-center gap-1 min-w-0">
             <User size={14} className="text-slate-400" />
             <span className="truncate">{item.author || '?'}</span>
@@ -36,17 +39,25 @@ export default function PackageCardMetaSection({ item, lastUpdated, tags }: Pack
 
       <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
         {tags.slice(0, 3).map((tag, index) => (
-          <span
+          <Badge
             key={`${tag}-${index}`}
-            className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700"
+            variant="neutral"
+            shape="rounded"
+            size="xxs"
+            className="px-1.5 py-0.5 text-[10px] font-medium"
           >
             {tag}
-          </span>
+          </Badge>
         ))}
         {tags.length > 3 ? (
-          <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-medium border border-slate-200 dark:border-slate-700">
+          <Badge
+            variant="neutral"
+            shape="rounded"
+            size="xxs"
+            className="px-1.5 py-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500"
+          >
             +{tags.length - 3}
-          </span>
+          </Badge>
         ) : null}
       </div>
     </>

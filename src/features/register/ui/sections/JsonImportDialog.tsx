@@ -2,7 +2,11 @@
  * カタログ JSON の部分上書き入力ダイアログ
  */
 import React from 'react';
+import { Alert } from '@/components/ui/Alert';
+import Button from '@/components/ui/Button';
 import { FileBraces } from 'lucide-react';
+import { layout, state, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface RegisterJsonImportDialogProps {
   open: boolean;
@@ -25,26 +29,24 @@ export default function RegisterJsonImportDialog({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-    >
-      <button
+    <div className={layout.fixedCenterBlur} role="dialog" aria-modal="true">
+      <Button
+        variant="plain"
+        size="none"
         type="button"
         aria-label="閉じる"
-        className="absolute inset-0 bg-black/50 transition-opacity"
+        className={surface.overlayFade}
         onClick={onClose}
       />
-      <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-          <h3 className="inline-flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+      <div className={cn(surface.modal, 'relative w-full max-w-3xl')}>
+        <div className={surface.modalHeaderMuted}>
+          <h3 className={cn(layout.inlineGap2, text.titleLg)}>
             <FileBraces size={18} />
             JSON 入力
           </h3>
         </div>
         <div className="space-y-3 px-6 py-5">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+          <p className={text.bodySmMutedAlt}>
             <a
               href={templateJsonUrl}
               target="_blank"
@@ -60,29 +62,24 @@ export default function RegisterJsonImportDialog({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder={`[\n  {\n    "id": "author.pluginName",\n    "name": "Example Plugin",\n    "type": "入力プラグイン",\n    "summary": "プラグインの概要がここに入ります。"\n  },\n  {\n    "id": "author.scriptName",\n    "name": "Example Script",\n    "type": "スクリプト",\n    "summary": "スクリプトの概要がここに入ります。"\n  }\n]`}
-            className="h-80 w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-xs leading-5 text-slate-800 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={cn(
+              state.focusRing,
+              'h-80 w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-xs leading-5 text-slate-800 shadow-inner dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100',
+            )}
           />
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+            <Alert variant="danger" className="px-3 py-2">
               {error}
-            </div>
+            </Alert>
           )}
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-          <button
-            type="button"
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={onClose}
-          >
+          <Button variant="secondary" size="actionSm" type="button" className="border-slate-300" onClick={onClose}>
             キャンセル
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            onClick={onApply}
-          >
+          </Button>
+          <Button variant="primary" size="actionSm" type="button" className="shadow-sm" onClick={onApply}>
             適用
-          </button>
+          </Button>
         </div>
       </div>
     </div>

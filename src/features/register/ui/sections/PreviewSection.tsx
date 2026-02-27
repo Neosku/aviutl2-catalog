@@ -2,9 +2,12 @@
  * プレビューセクションのコンポーネント
  */
 import React, { useMemo, useRef } from 'react';
+import Button from '@/components/ui/Button';
 import { Moon, Sun } from 'lucide-react';
 import PackageCard from '../../../../components/package-card/PackageCard';
 import type { RegisterPreviewSectionProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function RegisterPreviewSection({
   packageForm,
@@ -55,22 +58,20 @@ export default function RegisterPreviewSection({
     ],
   );
   return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">プレビュー</h2>
-        <button
-          type="button"
-          onClick={onTogglePreviewDarkMode}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-        >
+    <section className={surface.cardSectionStack}>
+      <div className={layout.rowBetweenGap2}>
+        <h2 className={text.titleLg}>プレビュー</h2>
+        <Button variant="muted" size="compact" type="button" onClick={onTogglePreviewDarkMode} className="font-medium">
           {previewDarkMode ? <Sun size={14} /> : <Moon size={14} />}
           <span>{previewDarkMode ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}</span>
-        </button>
+        </Button>
       </div>
       <div
-        className={`overflow-x-auto rounded-xl border border-slate-200 p-8 transition-colors ${
-          previewDarkMode ? 'bg-slate-950 border-slate-800 dark' : 'bg-slate-50 light'
-        }`}
+        className={cn(
+          'overflow-x-auto p-8 transition-colors',
+          surface.panel,
+          previewDarkMode ? 'bg-slate-950 border-slate-800 dark' : 'bg-slate-50 light',
+        )}
       >
         <div className="flex justify-center pointer-events-none opacity-90 grayscale-[10%]">
           <div className="w-[500px]">

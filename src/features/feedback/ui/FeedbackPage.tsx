@@ -11,6 +11,8 @@ import FeedbackHeaderSection from './sections/FeedbackHeaderSection';
 import FeedbackModeTabs from './sections/FeedbackModeTabs';
 import FeedbackSubmitBar from './sections/FeedbackSubmitBar';
 import InquiryFormSection from './sections/InquiryFormSection';
+import { page, surface } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function FeedbackPage() {
   const submitEndpoint = (import.meta.env.VITE_SUBMIT_ENDPOINT || '').trim();
@@ -40,7 +42,7 @@ export default function FeedbackPage() {
   const successPrimaryText = submit.successDialog.message || '送信が完了しました。';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 animate-in slide-in-from-bottom-2 duration-300 select-none">
+    <div className={cn(page.container3xl, page.selectNone, page.enterFromBottom, 'space-y-8')}>
       <FeedbackSuccessDialog
         dialog={submit.successDialog}
         primaryText={successPrimaryText}
@@ -49,7 +51,7 @@ export default function FeedbackPage() {
       <FeedbackHeaderSection />
       <FeedbackErrorSection message={submit.error} />
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <section className={surface.panelOverflow}>
         <FeedbackModeTabs mode={mode} onModeChange={onModeChange} />
         <div className="p-6 pt-2">
           <form className="space-y-6" onSubmit={submit.onSubmit}>
