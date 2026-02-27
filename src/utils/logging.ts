@@ -1,9 +1,11 @@
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
+
 export function logInfo(msg: unknown): Promise<void> {
-  return logLine('INFO', msg);
+  return logLine('info', msg);
 }
 
 export function logError(msg: unknown): Promise<void> {
-  return logLine('ERROR', msg);
+  return logLine('error', msg);
 }
 
 export async function bestEffortLogError(message: string): Promise<void> {
@@ -14,7 +16,7 @@ export async function bestEffortLogError(message: string): Promise<void> {
   }
 }
 
-async function logLine(level: string, msg: unknown): Promise<void> {
+async function logLine(level: LogLevel, msg: unknown): Promise<void> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('log_cmd', { level: String(level), msg: String(msg) });

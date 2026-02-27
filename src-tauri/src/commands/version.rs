@@ -76,8 +76,8 @@ pub fn expand_macros(raw_path: &str) -> String {
     out
 }
 
-fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> Result<HashSet<String>, String> {
-    crate::log_info(app, "Collecting unique paths for version check...");
+fn collect_unique_paths(_app: &tauri::AppHandle, list: &[serde_json::Value]) -> Result<HashSet<String>, String> {
+    tracing::info!("Collecting unique paths for version check...");
     let mut unique_paths = HashSet::new();
     for it in list {
         let arr_opt = it.get("versions").and_then(|v| v.as_array()).or_else(|| it.get("version").and_then(|v| v.as_array()));
@@ -96,12 +96,12 @@ fn collect_unique_paths(app: &tauri::AppHandle, list: &[serde_json::Value]) -> R
             }
         }
     }
-    crate::log_info(app, &format!("Collected {} unique paths for version check.", unique_paths.len()));
+    tracing::info!("Collected {} unique paths for version check.", unique_paths.len());
     Ok(unique_paths)
 }
 
 fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &HashSet<String>) -> HashMap<String, String> {
-    crate::log_info(app, "Building file hash cache...");
+    tracing::info!("Building file hash cache...");
     let mut disk_cache = read_hash_cache(app);
     let mut file_hash_cache = HashMap::new();
     let mut to_hash = Vec::new();
@@ -127,7 +127,7 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &HashSet<String>)
                 file_hash_cache.insert(path_str.clone(), hex);
             }
             Err(e) => {
-                crate::log_error(app, &format!("hash error path=\"{}\": {}", path_str, e));
+                tracing::error!("hash error path=\"{}\": {}", path_str, e);
             }
         }
     }
@@ -138,13 +138,13 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &HashSet<String>)
         }
     }
     write_hash_cache(app, &disk_cache);
-    crate::log_info(app, &format!("Built file hash cache with {} entries.", file_hash_cache.len()));
+    tracing::info!("Built file hash cache with {} entries.", file_hash_cache.len());
     file_hash_cache
 }
 
-fn determine_versions(app: &tauri::AppHandle, list: &[serde_json::Value], file_hash_cache: &HashMap<String, String>) -> HashMap<String, String> {
+fn determine_versions(_app: &tauri::AppHandle, list: &[serde_json::Value], file_hash_cache: &HashMap<String, String>) -> HashMap<String, String> {
     let mut out = HashMap::new();
-    crate::log_info(app, "Detecting installed versions...");
+    tracing::info!("Detecting installed versions...");
     for it in list {
         let id = it.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
         if id.is_empty() {
@@ -192,14 +192,14 @@ fn determine_versions(app: &tauri::AppHandle, list: &[serde_json::Value], file_h
         }
         out.insert(id, detected);
     }
-    crate::log_info(app, &format!("detect all done count={},files={:?}", list.len(), out));
+    tracing::info!("detect all done count={},files={:?}", list.len(), out);
     out
 }
 
 #[tauri::command]
 pub fn detect_versions_map(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<HashMap<String, String>, String> {
     let list = items;
-    crate::log_info(&app, &format!("detect map start count={}", list.len()));
+    tracing::info!("detect map start count={}", list.len());
     let unique_paths = collect_unique_paths(&app, &list)?;
     let file_hash_cache = build_file_hash_cache(&app, &unique_paths);
     let out = determine_versions(&app, &list, &file_hash_cache);

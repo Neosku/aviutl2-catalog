@@ -102,7 +102,7 @@ pub fn is_aviutl_running() -> bool {
 }
 
 #[tauri::command]
-pub fn launch_aviutl2(app: tauri::AppHandle) -> Result<(), String> {
+pub fn launch_aviutl2(_app: tauri::AppHandle) -> Result<(), String> {
     let dirs = crate::paths::dirs();
     let exe_path = dirs.aviutl2_root.join("aviutl2.exe");
     if !exe_path.exists() {
@@ -111,7 +111,7 @@ pub fn launch_aviutl2(app: tauri::AppHandle) -> Result<(), String> {
 
     std::process::Command::new(&exe_path).current_dir(&dirs.aviutl2_root).spawn().map_err(|e| format!("起動に失敗しました: {}", e))?;
 
-    crate::log_info(&app, &format!("Launched AviUtl2: {}", exe_path.display()));
+    tracing::info!("Launched AviUtl2: {}", exe_path.display());
     Ok(())
 }
 
@@ -126,23 +126,23 @@ pub async fn run_auo_setup(app: AppHandle, exe_path: String) -> Result<i32, Stri
     };
     let mut args_vec = Vec::new();
     if settings.is_portable_mode {
-        crate::log_info(&app, "Running in portable mode");
+        tracing::info!("Running in portable mode");
         let core_installed = crate::read_installed_map(&app).get("Kenkun.AviUtlExEdit2").map(|s| !s.trim().is_empty()).unwrap_or(false);
         if !core_installed {
             let msg = String::from("Kenkun.AviUtlExEdit2 がインストールされていません。インストール後に再度実行してください。");
-            crate::log_error(&app, &msg);
+            tracing::error!("{}", msg);
             return Err(msg);
         }
         if settings.aviutl2_root.as_os_str().is_empty() {
             let msg = String::from("settings.json に AviUtl2 のルートフォルダが設定されていません。");
-            crate::log_error(&app, &msg);
+            tracing::error!("{}", msg);
             return Err(msg);
         }
         let root_arg = settings.aviutl2_root.to_string_lossy().to_string();
         args_vec.push("-aviutldir".to_string());
         args_vec.push(root_arg);
     } else {
-        crate::log_info(&app, "Running in standard mode");
+        tracing::info!("Running in standard mode");
         args_vec.push("-aviutldir-default".to_string());
     }
     let args = if args_vec.is_empty() { None } else { Some(args_vec) };

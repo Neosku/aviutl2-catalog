@@ -62,17 +62,17 @@ pub fn init_settings(app: &AppHandle) -> std::io::Result<()> {
     use std::path::PathBuf;
 
     let catalog_config_dir: PathBuf = app.path().app_config_dir().unwrap_or_else(|err| {
-        crate::log_error(app, &format!("Failed to get catalog_config_dir: {err}"));
+        tracing::error!("Failed to get catalog_config_dir: {err}");
         std::process::exit(1);
     });
     let _ = create_dir_all(&catalog_config_dir);
     let settings_path = catalog_config_dir.join("settings.json");
 
     let mut settings: Settings = Settings::load_from_file(&settings_path);
-    crate::log_info(app, &format!("Loaded settings: {:?}", settings));
+    tracing::info!("Loaded settings: {:?}", settings);
 
     if settings.aviutl2_root.as_os_str().is_empty() {
-        crate::log_info(app, "settings.json not found — opening setup window.");
+        tracing::info!("settings.json not found - opening setup window.");
         open_init_setup_window(app)?;
         return Ok(());
     }
@@ -119,7 +119,7 @@ fn set_appdirs(appdirs: AppDirs) -> std::io::Result<()> {
 // APP_DIRの作成、UpdateCheckerの移動、settings.jsonの更新
 fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &Path, catalog_config_dir: &Path) -> std::io::Result<()> {
     if settings.aviutl2_root.as_os_str().is_empty() {
-        crate::log_error(app, "aviutl2_root is empty in finalize_settings");
+        tracing::error!("aviutl2_root is empty in finalize_settings");
         std::process::exit(1);
     }
     // AviUtl2 の data ディレクトリを取得
@@ -141,7 +141,7 @@ fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &P
         catalog_config_dir: catalog_config_dir.to_path_buf(),
         log_path: catalog_config_dir.join("logs").join("app.log"),
     };
-    crate::log_info(app, &format!("AppDirs: {:?}", appdirs)); // 確認用ログ
+    tracing::info!("AppDirs: {:?}", appdirs); // 確認用ログ
     set_appdirs(appdirs)?; // APP_DIR を作成・更新
     let current_ver = app.package_info().version.to_string();
     // UpdateCheckerプラグインを移動 (バージョンが異なるなら強制)
@@ -221,7 +221,7 @@ fn open_main_window(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn install_update_checker_plugin(app: &AppHandle, plugin_dir: &Path, force_copy: bool, catalog_exe_dir: &Path) {
+fn install_update_checker_plugin(_app: &AppHandle, plugin_dir: &Path, force_copy: bool, catalog_exe_dir: &Path) {
     let dst = plugin_dir.join("UpdateChecker.aui2");
     if !force_copy && dst.exists() {
         return;
@@ -232,11 +232,11 @@ fn install_update_checker_plugin(app: &AppHandle, plugin_dir: &Path, force_copy:
             let _ = fs::create_dir_all(parent);
         }
         match fs::copy(&src, &dst) {
-            Ok(_) => crate::log_info(app, &format!("Placed UpdateChecker.aui2 to {}", dst.display())),
-            Err(e) => crate::log_error(app, &format!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)),
+            Ok(_) => tracing::info!("Placed UpdateChecker.aui2 to {}", dst.display()),
+            Err(e) => tracing::error!("Failed to copy {} to {}: {}", src.display(), dst.display(), e),
         }
     } else {
-        crate::log_error(app, &format!("Source file not found: {}", src.display()));
+        tracing::error!("Source file not found: {}", src.display());
     }
 }
 
