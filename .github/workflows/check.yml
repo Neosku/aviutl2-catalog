@@ -17,26 +17,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
-          cache: 'pnpm'
+          cache: 'npm'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Check Formatting
         run: |
-          pnpm run fmt:check
+          npm run fmt:check
 
       - name: Lint Code
         run: |
-          pnpm run lint
+          npm run lint
 
       - name: Check Types
         run: |
-          pnpm run typecheck
+          npm run typecheck
