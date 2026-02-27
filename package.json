@@ -14,7 +14,7 @@
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "verify": "npm run typecheck && npm run lint && npm run fmt"
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm run fmt"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
@@ -47,5 +47,6 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
-  }
+  },
+  "packageManager": "pnpm@10.30.3"
 }
