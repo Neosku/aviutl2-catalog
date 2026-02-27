@@ -1,14 +1,9 @@
 import * as windowApi from '@tauri-apps/api/window';
 import { logError } from '../../../../utils/logging';
 
-interface AppWindow {
-  show?: () => void | Promise<void>;
-  setFocus?: () => void | Promise<void>;
-}
-
 export async function bringWindowToFront(): Promise<void> {
   try {
-    const win: AppWindow = windowApi.getCurrentWindow();
+    const win = windowApi.getCurrentWindow();
     if (!win) return;
 
     if (typeof win.show === 'function') await win.show();
