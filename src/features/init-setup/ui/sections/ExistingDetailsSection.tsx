@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import DetailsSectionBase from '../components/DetailsSectionBase';
 import type { ExistingDetailsSectionProps } from '../types';
+import { action, layout } from '@/components/ui/_styles';
 
 export default function ExistingDetailsSection({
   aviutlRoot,
@@ -50,8 +51,8 @@ export default function ExistingDetailsSection({
       onBack,
       onNext,
       savingContent: (
-        <span className="flex items-center gap-2">
-          <div className="spinner border-white/30 border-t-white" /> 処理中…
+        <span className={layout.inlineGap2}>
+          <div className={action.spinnerWhite} /> 処理中…
         </span>
       ),
       idleContent: '次へ',

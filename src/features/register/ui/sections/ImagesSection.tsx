@@ -1,7 +1,8 @@
 /**
  * サムネイル／説明画像のコンポーネント
  */
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import Button from '@/components/ui/Button';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { Download, Image, ImagePlus, Images, Trash2 } from 'lucide-react';
@@ -9,6 +10,8 @@ import { getFileExtension } from '../../model/form';
 import { basename, isInsideRect } from '../../model/helpers';
 import type { PackageImagesSectionProps, RegisterSelectedImageInput } from '../types';
 import DeleteButton from '../components/DeleteButton';
+import { cn } from '@/lib/cn';
+import { layout, surface, text } from '@/components/ui/_styles';
 
 type InfoImageCardProps = {
   entryKey: string;
@@ -17,6 +20,36 @@ type InfoImageCardProps = {
   onRemove: (key: string) => void;
 };
 
+type ImagePreviewLayerProps = {
+  preview: string;
+  emptyLabel: string;
+  style?: CSSProperties;
+};
+
+const imageCardClass =
+  'group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50';
+const imageHoverOverlayClass = 'absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10';
+const imagePickerButtonClass = 'relative cursor-pointer';
+const bounceIconClass = 'mx-auto mb-2 animate-bounce';
+const dragDropActivePanelClass = 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20';
+const dragDropInactivePanelClass = 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900';
+const dragDropZoneClass =
+  'flex items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
+
+const ImagePreviewLayer = memo(function ImagePreviewLayer({ preview, emptyLabel, style }: ImagePreviewLayerProps) {
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent',
+        !preview && 'text-slate-400',
+      )}
+      style={style}
+    >
+      {!preview && <span>{emptyLabel}</span>}
+    </div>
+  );
+});
+
 const InfoImageCard = memo(function InfoImageCard({ entryKey, filename, preview, onRemove }: InfoImageCardProps) {
   const previewStyle = useMemo(() => (preview ? { backgroundImage: `url(${preview})` } : undefined), [preview]);
   const handleRemove = useCallback(() => {
@@ -24,28 +57,26 @@ const InfoImageCard = memo(function InfoImageCard({ entryKey, filename, preview,
   }, [onRemove, entryKey]);
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+    <div className={imageCardClass}>
       <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-900">
-        <div
-          className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${preview ? '' : 'text-slate-400'}`}
-          style={previewStyle}
-        >
-          {!preview && <span>No Preview</span>}
-        </div>
-        <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+        <ImagePreviewLayer preview={preview} emptyLabel="No Preview" style={previewStyle} />
+        <div className={imageHoverOverlayClass} />
         <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
+          <Button
+            variant="floatingDanger"
+            size="iconSm"
+            radius="full"
             type="button"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm backdrop-blur-sm transition hover:bg-red-50 hover:text-red-700 dark:bg-slate-900/90 dark:text-red-400 dark:hover:bg-red-900/40"
+            className="shadow-sm backdrop-blur-sm"
             onClick={handleRemove}
             aria-label="削除"
           >
             <Trash2 size={14} />
-          </button>
+          </Button>
         </div>
       </div>
       <div className="border-t border-slate-100 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
-        <p className="truncate text-[10px] font-medium text-slate-700 dark:text-slate-300" title={filename}>
+        <p className={cn('truncate text-[10px]', text.mediumSlate)} title={filename}>
           {filename}
         </p>
       </div>
@@ -188,32 +219,33 @@ const PackageImagesSection = memo(
       [thumbnailPreview],
     );
     return (
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">画像</h2>
+      <section className={surface.cardSectionStack}>
+        <div className={layout.rowBetweenWrapGap2}>
+          <h2 className={text.titleLg}>画像</h2>
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
           <div
             ref={thumbnailRef}
-            className={`space-y-3 rounded-xl border p-5 shadow-sm transition-colors ${
-              isDraggingOverThumbnail
-                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
-                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-            }`}
+            className={cn(
+              'space-y-3 rounded-xl border p-5 shadow-sm transition-colors',
+              isDraggingOverThumbnail ? dragDropActivePanelClass : dragDropInactivePanelClass,
+            )}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className={layout.rowBetweenWrapGap3}>
               <div>
-                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">サムネイル</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">パッケージ一覧に表示します (1枚)</p>
+                <h3 className={text.imageHeader}>サムネイル</h3>
+                <p className={text.mutedXs}>パッケージ一覧に表示します (1枚)</p>
                 <p className="text-[11px] text-blue-500 dark:text-blue-400">
                   ※推奨：縦横比1:1 (206×206px前後)
                   <br />
                   一覧を見やすくするため、可能であればご登録ください
                 </p>
               </div>
-              <button
+              <Button
+                variant="muted"
+                size="xs"
                 type="button"
-                className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className={imagePickerButtonClass}
                 onClick={async () => {
                   const files = await openImageDialog(false);
                   if (files[0]) onThumbnailChange(files[0]);
@@ -221,29 +253,33 @@ const PackageImagesSection = memo(
               >
                 <ImagePlus size={16} />
                 <span>画像を選択</span>
-              </button>
+              </Button>
             </div>
             {isDraggingOverThumbnail ? (
-              <div className="flex h-52 items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+              <div className={cn(dragDropZoneClass, 'h-52')}>
                 <div className="text-center">
-                  <Download size={32} className="mx-auto mb-2 animate-bounce" />
+                  <Download size={32} className={bounceIconClass} />
                   <span className="text-sm font-bold">ここにドロップして追加</span>
                 </div>
               </div>
             ) : images.thumbnail ? (
-              <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+              <div className={imageCardClass}>
                 <div className="relative aspect-square w-full bg-slate-100 dark:bg-slate-900">
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent ${thumbnailPreview ? '' : 'text-slate-400'}`}
+                  <ImagePreviewLayer
+                    preview={thumbnailPreview}
+                    emptyLabel="プレビューなし"
                     style={thumbnailPreviewStyle}
-                  >
-                    {!thumbnailPreview && <span>プレビューなし</span>}
-                  </div>
-                  <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                  />
+                  <div className={imageHoverOverlayClass} />
                 </div>
-                <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                <div
+                  className={cn(
+                    layout.rowBetweenGap2,
+                    'border-t border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900',
+                  )}
+                >
                   <span
-                    className="truncate text-xs font-medium text-slate-700 dark:text-slate-300"
+                    className={text.truncateLabelXs}
                     title={images.thumbnail.file?.name || images.thumbnail.sourcePath || images.thumbnail.existingPath}
                   >
                     {images.thumbnail.file?.name ||
@@ -255,33 +291,32 @@ const PackageImagesSection = memo(
                 </div>
               </div>
             ) : (
-              <div className="flex h-52 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
+              <div className={cn(surface.dashedPlaceholder, 'h-52 dark:border-slate-700 dark:bg-slate-900/50')}>
                 <Image size={32} className="mb-2 opacity-50" />
                 <span className="text-xs font-medium">サムネイルが未設定です</span>
-                <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
+                <span className={text.tinyMutedMt1}>画像をドラッグ＆ドロップ</span>
               </div>
             )}
           </div>
 
           <div
             ref={infoRef}
-            className={`flex flex-col space-y-3 rounded-xl border p-5 shadow-sm transition-colors lg:col-span-2 ${
-              isDraggingOverInfo
-                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20'
-                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-            }`}
+            className={cn(
+              'flex flex-col space-y-3 rounded-xl border p-5 shadow-sm transition-colors lg:col-span-2',
+              isDraggingOverInfo ? dragDropActivePanelClass : dragDropInactivePanelClass,
+            )}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className={layout.rowBetweenWrapGap3}>
               <div>
-                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">説明画像</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  パッケージ詳細ページに表示する説明画像 (複数可)
-                </p>
+                <h3 className={text.imageHeader}>説明画像</h3>
+                <p className={text.mutedXs}>パッケージ詳細ページに表示する説明画像 (複数可)</p>
                 <p className="text-[10px] text-blue-500 dark:text-blue-400">※縦横比は16:9を推奨します</p>
               </div>
-              <button
+              <Button
+                variant="muted"
+                size="xs"
                 type="button"
-                className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className={imagePickerButtonClass}
                 onClick={async () => {
                   const files = await openImageDialog(true);
                   if (files.length > 0) onAddInfoImages(files);
@@ -289,12 +324,12 @@ const PackageImagesSection = memo(
               >
                 <Images size={16} />
                 <span>画像を追加</span>
-              </button>
+              </Button>
             </div>
             {isDraggingOverInfo ? (
-              <div className="flex flex-1 min-h-[13rem] items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+              <div className={cn(dragDropZoneClass, 'flex-1 min-h-[13rem]')}>
                 <div className="text-center">
-                  <Download size={32} className="mx-auto mb-2 animate-bounce" />
+                  <Download size={32} className={bounceIconClass} />
                   <span className="text-sm font-bold">ここにドロップして追加</span>
                 </div>
               </div>
@@ -319,10 +354,15 @@ const PackageImagesSection = memo(
                 })}
               </div>
             ) : (
-              <div className="flex flex-1 min-h-[13rem] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-900/50">
+              <div
+                className={cn(
+                  surface.dashedPlaceholder,
+                  'min-h-[13rem] flex-1 dark:border-slate-700 dark:bg-slate-900/50',
+                )}
+              >
                 <Image size={32} className="mb-2 opacity-50" />
                 <span className="text-xs font-medium">説明画像が未設定です</span>
-                <span className="text-[10px] opacity-70 mt-1">画像をドラッグ＆ドロップ</span>
+                <span className={text.tinyMutedMt1}>画像をドラッグ＆ドロップ</span>
               </div>
             )}
           </div>

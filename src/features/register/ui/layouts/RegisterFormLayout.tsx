@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 import {
   PackageImagesSection,
   PackageInstallerSection,
@@ -16,6 +17,8 @@ import {
   RegisterTestSection,
 } from '../sections';
 import type { RegisterFormLayoutProps } from '../types';
+import { layout } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function RegisterFormLayout({
   error,
@@ -34,13 +37,16 @@ export default function RegisterFormLayout({
   return (
     <main className="space-y-8">
       {error && (
-        <div
-          className="sticky top-4 z-30 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
-          role="alert"
+        <Alert
+          variant="danger"
+          className={cn(
+            layout.inlineStartGap3,
+            'sticky top-4 z-30 rounded-xl p-4 text-red-800 shadow-sm backdrop-blur-sm dark:text-red-300',
+          )}
         >
           <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
           <div className="text-sm font-medium">{error}</div>
-        </div>
+        </Alert>
       )}
 
       <form className="space-y-8" onSubmit={onSubmit}>

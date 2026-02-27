@@ -4,6 +4,8 @@ import FeedbackVisibilityBadge from '../components/FeedbackVisibilityBadge';
 import FeedbackAttachmentSection from './FeedbackAttachmentSection';
 import FeedbackBasicFieldsSection from './FeedbackBasicFieldsSection';
 import type { InquiryFormSectionProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function InquiryFormSection({
   inquiry,
@@ -14,12 +16,17 @@ export default function InquiryFormSection({
 }: InquiryFormSectionProps) {
   return (
     <>
-      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-        <div className="mb-1 flex items-center gap-2 font-semibold">
+      <div
+        className={cn(
+          surface.infoBox,
+          'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300',
+        )}
+      >
+        <div className={layout.headerInlineStrong}>
           <FeedbackVisibilityBadge type="private" />
           <span>非公開設定</span>
         </div>
-        <div className="text-xs leading-relaxed opacity-90">
+        <div className={text.mutedXsRelaxedFaded}>
           ご意見・お問い合わせの内容は公開されません。開発者のみが確認します
         </div>
       </div>
@@ -34,7 +41,7 @@ export default function InquiryFormSection({
         contactPlaceholder="メールアドレスやXアカウント（必要に応じて開発者から連絡します）"
       />
 
-      <div className="space-y-6 border-t border-slate-100 pt-6 dark:border-slate-800">
+      <div className={surface.sectionTopBorder}>
         <FeedbackAttachmentSection
           attachments={attachments}
           onFilesChange={onFilesChange}
