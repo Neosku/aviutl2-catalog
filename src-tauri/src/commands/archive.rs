@@ -35,7 +35,7 @@ fn copy_item(src: &Path, dst: &Path) -> io::Result<usize> {
     let mut count = 0;
     if src.is_file() {
         fs::create_dir_all(dst)?;
-        let file_name = src.file_name().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get file name"))?;
+        let file_name = src.file_name().ok_or_else(|| io::Error::other("Failed to get file name"))?;
         let dest_path = dst.join(file_name);
         fs::copy(src, dest_path)?;
         count += 1;
@@ -46,7 +46,7 @@ fn copy_item(src: &Path, dst: &Path) -> io::Result<usize> {
         for entry in WalkDir::new(src) {
             let entry = entry?;
             let path = entry.path();
-            let rel = path.strip_prefix(src).map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to calculate relative path"))?;
+            let rel = path.strip_prefix(src).map_err(|_| io::Error::other("Failed to calculate relative path"))?;
             let dest_path: PathBuf = dst.join(rel);
             if entry.file_type().is_dir() {
                 fs::create_dir_all(&dest_path)?;
@@ -61,7 +61,7 @@ fn copy_item(src: &Path, dst: &Path) -> io::Result<usize> {
         return Ok(count);
     }
 
-    Err(io::Error::new(io::ErrorKind::Other, "Source is neither a file nor a directory"))
+    Err(io::Error::other("Source is neither a file nor a directory"))
 }
 
 #[tauri::command]

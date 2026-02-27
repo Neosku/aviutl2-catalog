@@ -118,11 +118,11 @@ pub fn run() {
             #[cfg(all(debug_assertions, target_os = "windows"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                app.deep_link().register_all().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                app.deep_link().register_all().map_err(|e| std::io::Error::other(e.to_string()))?;
             }
 
-            paths::init_settings(&app.handle())?;
-            let _ = init_app(&app.handle());
+            paths::init_settings(app.handle())?;
+            let _ = init_app(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
