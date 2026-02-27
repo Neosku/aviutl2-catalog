@@ -111,7 +111,7 @@ pub async fn drive_download_to_file(window: tauri::Window, file_id: String, dest
     let mut res = match drive_fetch_response(&file_id).await {
         Ok(v) => v,
         Err(e) => {
-            crate::log_error(app, &format!("failed to fetch drive file (id={}): {}", file_id, e));
+            tracing::error!("failed to fetch drive file (id={}): {}", file_id, e);
             return Err(e);
         }
     };
@@ -175,11 +175,7 @@ pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
         msg
     })?;
-    let file_name_raw = parsed_url
-        .path_segments()
-        .and_then(|mut segments| segments.rfind(|s| !s.is_empty()))
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "download.bin".to_string());
+    let file_name_raw = parsed_url.path_segments().and_then(|mut segments| segments.rfind(|s| !s.is_empty())).map(|s| s.to_string()).unwrap_or_else(|| "download.bin".to_string());
     let file_name = percent_decode_str(&file_name_raw).decode_utf8_lossy().to_string();
     let final_name = sanitize_filename(&file_name);
     let final_path = dest_dir.join(final_name);
@@ -193,7 +189,7 @@ pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path
     let mut response = client.get(&url).send().await.map_err(|e| {
         let msg = format!("network error: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("download failed (url={}): {}", url, e));
+        tracing::error!("download failed (url={}): {}", url, e);
         msg
     })?;
 
@@ -203,7 +199,7 @@ pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path
         let body_snippet: String = if text.len() > 500 { text[..500].to_string() } else { text };
         let msg = if body_snippet.is_empty() { format!("HTTP error: {}", status) } else { format!("HTTP error: {}: {}", status, body_snippet) };
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("download failed (url={}): {}", url, msg));
+        tracing::error!("download failed (url={}): {}", url, msg);
         return Err(msg);
     }
 
@@ -211,7 +207,7 @@ pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path
     let mut file = OpenOptions::new().create(true).truncate(true).write(true).open(&final_path).map_err(|e| {
         let msg = format!("failed to open destination file: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("download failed (url={}): {}", url, msg));
+        tracing::error!("download failed (url={}): {}", url, msg);
         msg
     })?;
 
@@ -219,13 +215,13 @@ pub async fn download_file_to_path(window: tauri::Window, url: String, dest_path
     while let Some(chunk) = response.chunk().await.map_err(|e| {
         let msg = format!("read error: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("download failed (url={}): {}", url, msg));
+        tracing::error!("download failed (url={}): {}", url, msg);
         msg
     })? {
         file.write_all(&chunk).map_err(|e| {
             let msg = format!("write error: {}", e);
             let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-            crate::log_error(app, &format!("download failed (url={}): {}", url, msg));
+            tracing::error!("download failed (url={}): {}", url, msg);
             msg
         })?;
         written += chunk.len() as u64;
@@ -392,11 +388,7 @@ pub async fn download_file_to_path_booth(
     })?;
     let cookie_header = cookies.iter().map(|c| format!("{}={}", c.name(), c.value())).collect::<Vec<_>>().join("; ");
 
-    let file_name_raw = parsed_url
-        .path_segments()
-        .and_then(|mut segments| segments.rfind(|s| !s.is_empty()))
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "download.bin".to_string());
+    let file_name_raw = parsed_url.path_segments().and_then(|mut segments| segments.rfind(|s| !s.is_empty())).map(|s| s.to_string()).unwrap_or_else(|| "download.bin".to_string());
     let file_name = percent_decode_str(&file_name_raw).decode_utf8_lossy().to_string();
     let final_name = sanitize_filename(&file_name);
     let final_path = dest_dir.join(final_name);
@@ -415,7 +407,7 @@ pub async fn download_file_to_path_booth(
     let mut response = req.send().await.map_err(|e| {
         let msg = format!("network error: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("booth download failed (url={}): {}", url, e));
+        tracing::error!("booth download failed (url={}): {}", url, e);
         msg
     })?;
 
@@ -423,7 +415,7 @@ pub async fn download_file_to_path_booth(
     if !status.is_success() {
         let msg = format!("HTTP_ERROR:{} {}", status.as_u16(), status);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("booth download failed (url={}): {}", url, msg));
+        tracing::error!("booth download failed (url={}): {}", url, msg);
         return Err(msg);
     }
 
@@ -446,7 +438,7 @@ pub async fn download_file_to_path_booth(
     let mut file = OpenOptions::new().create(true).truncate(true).write(true).open(&final_path).map_err(|e| {
         let msg = format!("failed to open destination file: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("booth download failed (url={}): {}", url, msg));
+        tracing::error!("booth download failed (url={}): {}", url, msg);
         msg
     })?;
 
@@ -454,13 +446,13 @@ pub async fn download_file_to_path_booth(
     while let Some(chunk) = response.chunk().await.map_err(|e| {
         let msg = format!("read error: {}", e);
         let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-        crate::log_error(app, &format!("booth download failed (url={}): {}", url, msg));
+        tracing::error!("booth download failed (url={}): {}", url, msg);
         msg
     })? {
         file.write_all(&chunk).map_err(|e| {
             let msg = format!("write error: {}", e);
             let _ = window.emit("download:error", serde_json::json!({ "taskId": task_id, "message": msg }));
-            crate::log_error(app, &format!("booth download failed (url={}): {}", url, msg));
+            tracing::error!("booth download failed (url={}): {}", url, msg);
             msg
         })?;
         written += chunk.len() as u64;

@@ -1,31 +1,11 @@
 use tauri::Manager;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 mod commands;
 mod paths;
 
 fn app_config_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
-    app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir())
-}
-
-fn log_line(app: &tauri::AppHandle, level: &str, msg: &str) {
-    use chrono::Local;
-    use std::fs::{create_dir_all, OpenOptions};
-    use std::io::Write;
-    let file = app_config_dir(app).join("logs/app.log");
-    let _ = create_dir_all(file.parent().unwrap());
-    let ts = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-    let line = format!("[{}] [{}] {}\n", ts, level, msg);
-    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(file) {
-        let _ = f.write_all(line.as_bytes());
-    }
-}
-
-fn log_info(app: &tauri::AppHandle, msg: &str) {
-    log_line(app, "INFO", msg);
-}
-
-fn log_error(app: &tauri::AppHandle, msg: &str) {
-    log_line(app, "ERROR", msg);
+    app.path().app_config_dir().expect("Failed to get app config directory")
 }
 
 fn prune_log_file(app: &tauri::AppHandle, max_lines: usize) -> Result<(), String> {
@@ -88,6 +68,29 @@ fn write_installed_map(app: &tauri::AppHandle, map: &std::collections::HashMap<S
     Ok(())
 }
 
+fn init_logger(app: &tauri::AppHandle) {
+    // TODO: もっといい書き方がありそう
+    static LOG_FILE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    let log_file = app_config_dir(app).join("logs/app.log");
+    if let Some(parent) = log_file.parent() {
+        std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create log directory {}: {}", parent.display(), e));
+    }
+    LOG_FILE.get_or_init(|| log_file.clone());
+
+    let stdout = std::io::stdout.with_max_level(tracing::Level::INFO);
+
+    let file = tracing_subscriber::fmt::writer::BoxMakeWriter::new(|| {
+        let log_file = LOG_FILE.get().expect("LOG_FILE should be initialized");
+        let file = std::fs::OpenOptions::new().create(true).append(true).open(log_file).unwrap_or_else(|e| panic!("Failed to open log file {}: {}", log_file.display(), e));
+        strip_ansi_escapes::Writer::new(file)
+    })
+    .with_max_level(tracing::Level::INFO);
+
+    let writer = stdout.and(file);
+
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).with_writer(writer).init();
+}
+
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
@@ -115,6 +118,8 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            init_logger(app.handle());
+
             #[cfg(all(debug_assertions, target_os = "windows"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
