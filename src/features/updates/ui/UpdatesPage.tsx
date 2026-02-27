@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import ErrorDialog from '../../../components/ErrorDialog';
 import useUpdatesPage from './hooks/useUpdatesPage';
 import { BulkProgressSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
+import { page } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function UpdatesPage() {
   const {
@@ -21,7 +23,7 @@ export default function UpdatesPage() {
 
   return (
     <>
-      <div className="max-w-3xl mx-auto select-none">
+      <div className={cn(page.container3xl, page.selectNone)}>
         <UpdatesHeaderSection
           bulkUpdating={bulkUpdating}
           hasAnyItemUpdating={hasAnyItemUpdating}

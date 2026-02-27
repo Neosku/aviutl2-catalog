@@ -2,8 +2,11 @@
  * インストーラーのソースコンポーネント
  */
 import React from 'react';
+import Button from '@/components/ui/Button';
 import { INSTALLER_SOURCES } from '../../model/form';
 import type { PackageInstallerSectionProps } from '../types';
+import { grid, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 type InstallerSourceSectionProps = Pick<PackageInstallerSectionProps, 'installer' | 'updateInstallerField'>;
 
@@ -11,31 +14,34 @@ export default function InstallerSourceSection({ installer, updateInstallerField
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="text-sm font-medium text-slate-700 dark:text-slate-300">ダウンロード元</div>
-        <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/50">
+        <div className={text.labelSm}>ダウンロード元</div>
+        <div className={cn(surface.panelSubtle, 'flex flex-wrap gap-1 p-1')}>
           {INSTALLER_SOURCES.map((option) => {
             const isActive = installer.sourceType === option.value;
             return (
-              <button
+              <Button
+                variant="plain"
+                size="xs"
                 key={option.value}
                 type="button"
-                className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={cn(
+                  'flex-1 transition-all',
                   isActive
                     ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400'
-                    : 'text-slate-600 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50'
-                }`}
+                    : 'text-slate-600 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50',
+                )}
                 onClick={() => updateInstallerField('sourceType', option.value)}
               >
                 {option.label}
-              </button>
+              </Button>
             );
           })}
         </div>
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className={cn(surface.panel, 'p-4')}>
         {installer.sourceType === 'direct' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="installer-direct-url">
+            <label className={text.labelSm} htmlFor="installer-direct-url">
               ダウンロードURL
             </label>
             <input
@@ -48,7 +54,7 @@ export default function InstallerSourceSection({ installer, updateInstallerField
         )}
         {installer.sourceType === 'booth' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="installer-booth-url">
+            <label className={text.labelSm} htmlFor="installer-booth-url">
               BOOTH URL
             </label>
             <input
@@ -60,12 +66,9 @@ export default function InstallerSourceSection({ installer, updateInstallerField
           </div>
         )}
         {installer.sourceType === 'github' && (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className={grid.twoCol}>
             <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                htmlFor="installer-github-owner"
-              >
+              <label className={text.labelSm} htmlFor="installer-github-owner">
                 GitHub ID (Owner)
               </label>
               <input
@@ -76,7 +79,7 @@ export default function InstallerSourceSection({ installer, updateInstallerField
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="installer-github-repo">
+              <label className={text.labelSm} htmlFor="installer-github-repo">
                 レポジトリ名 (Repo)
               </label>
               <input
@@ -87,10 +90,7 @@ export default function InstallerSourceSection({ installer, updateInstallerField
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label
-                className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                htmlFor="installer-github-pattern"
-              >
+              <label className={text.labelSm} htmlFor="installer-github-pattern">
                 正規表現パターン
               </label>
               <input
@@ -99,18 +99,13 @@ export default function InstallerSourceSection({ installer, updateInstallerField
                 onChange={(e) => updateInstallerField('githubPattern', e.target.value)}
                 placeholder="^aviutl_plugin_.*\.zip$"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                リリースファイル名に一致する正規表現を指定してください。
-              </p>
+              <p className={text.mutedXs}>リリースファイル名に一致する正規表現を指定してください。</p>
             </div>
           </div>
         )}
         {installer.sourceType === 'GoogleDrive' && (
           <div className="space-y-2">
-            <label
-              className="text-sm font-medium text-slate-700 dark:text-slate-300"
-              htmlFor="installer-google-drive-id"
-            >
+            <label className={text.labelSm} htmlFor="installer-google-drive-id">
               ファイルID
             </label>
             <input

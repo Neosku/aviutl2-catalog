@@ -1,7 +1,11 @@
 import type { CSSProperties } from 'react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import { Check, FolderOpen, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { AppSettingsSectionProps } from '../types';
 import SettingToggleRow from './SettingToggleRow';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 const iconBlockStyle: CSSProperties = { display: 'block' };
 
@@ -18,44 +22,43 @@ export default function AppSettingsSection({
   onSave,
 }: AppSettingsSectionProps) {
   return (
-    <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center gap-2">
+    <section className={surface.panelOverflow}>
+      <div className={surface.sectionHeader}>
         <SettingsIcon size={18} className="text-slate-500 dark:text-slate-400" />
-        <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">アプリ設定</h3>
+        <h3 className={text.headingSmBold}>アプリ設定</h3>
       </div>
       <div className="p-6 space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="settings-aviutl2-root">
             AviUtl2 フォルダ
           </label>
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            aviutl2.exeを含むフォルダを指定してください。
-          </div>
+          <div className={text.mutedXs}>aviutl2.exeを含むフォルダを指定してください。</div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
+            <Input
               id="settings-aviutl2-root"
               name="aviutl2Root"
               value={form.aviutl2Root}
               onChange={onAviutl2RootChange}
-              className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm cursor-text select-text"
+              className="flex-1 cursor-text select-text"
               placeholder="aviutl2.exe のあるフォルダ"
             />
-            <button
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            <Button
+              variant="secondary"
+              size="default"
               type="button"
+              className="cursor-pointer"
               onClick={onPickAviutl2Root}
             >
               <FolderOpen size={16} />
               参照
-            </button>
+            </Button>
           </div>
         </div>
 
         <SettingToggleRow
           title={
             <>
-              ポータブルモード{' '}
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">（オフ推奨）</span>
+              ポータブルモード <span className={cn(text.mutedXs, 'font-normal')}>（オフ推奨）</span>
             </>
           }
           description="プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに保存します"
@@ -83,18 +86,18 @@ export default function AppSettingsSection({
           onToggle={() => onPackageStateEnabledToggle(!packageStateEnabled)}
         />
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-slate-100 dark:border-slate-800">
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 disabled:opacity-60 cursor-pointer ${
-              success ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+        <div className={cn(layout.inlineGap2, 'flex-wrap justify-end border-slate-100 dark:border-slate-800')}>
+          <Button
+            variant={success ? 'success' : 'primary'}
+            size="actionSm"
             onClick={onSave}
             disabled={saving || Boolean(success)}
             type="button"
+            className="cursor-pointer"
           >
             {success && <Check size={16} />}
             {success ? '保存しました' : '設定を保存'}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

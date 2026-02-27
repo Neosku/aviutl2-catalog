@@ -59,6 +59,9 @@ fn init_logger(app: &tauri::AppHandle) {
     // TODO: もっといい書き方がありそう
     static LOG_FILE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
     let log_file = app_config_dir(app).join("logs/app.log");
+    if let Some(parent) = log_file.parent() {
+        std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create log directory {}: {}", parent.display(), e));
+    }
     LOG_FILE.get_or_init(|| log_file.clone());
 
     let stdout = std::io::stdout.with_max_level(tracing::Level::INFO);

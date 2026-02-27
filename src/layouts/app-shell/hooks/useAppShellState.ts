@@ -79,8 +79,8 @@ export default function useAppShellState() {
 
   useEffect(() => {
     if (!isHome) return;
-    if (parseQuery.q !== searchQuery) setSearchQuery(parseQuery.q);
-  }, [isHome, parseQuery.q, searchQuery]);
+    setSearchQuery((prev) => (prev === parseQuery.q ? prev : parseQuery.q));
+  }, [isHome, parseQuery.q]);
 
   useEffect(() => {
     const isPackageDetail = location.pathname.startsWith('/package/');

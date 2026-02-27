@@ -1,13 +1,16 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
+import Button, { buttonVariants } from '@/components/ui/Button';
 import type { FeedbackSuccessDialogProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function FeedbackSuccessDialog({ dialog, primaryText, onClose }: FeedbackSuccessDialogProps) {
   if (!dialog.open) return null;
   return createPortal(
     <div
-      className="fixed top-8 inset-x-0 bottom-0 z-50 flex items-center justify-center p-4"
+      className={cn(layout.center, 'fixed top-8 inset-x-0 bottom-0 z-50 p-4')}
       role="dialog"
       aria-modal="true"
       aria-labelledby="submit-success-title"
@@ -18,12 +21,17 @@ export default function FeedbackSuccessDialog({ dialog, primaryText, onClose }: 
         className="absolute inset-0 cursor-pointer bg-black/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+      <div className={cn(surface.modal, layout.modalWidthLg, 'animate-in zoom-in-95 duration-200')}>
+        <div className={cn(surface.modalHeaderMuted, 'flex items-center gap-3')}>
+          <div
+            className={cn(
+              layout.center,
+              'h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+            )}
+          >
             <CheckCircle2 size={18} />
           </div>
-          <h3 id="submit-success-title" className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          <h3 id="submit-success-title" className={text.titleLg}>
             送信完了
           </h3>
         </div>
@@ -32,10 +40,10 @@ export default function FeedbackSuccessDialog({ dialog, primaryText, onClose }: 
           <p className="select-text font-medium text-slate-700 dark:text-slate-200">{primaryText}</p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+        <div className={layout.footerWrapEndMuted}>
           {dialog.url ? (
             <a
-              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className={cn(buttonVariants({ variant: 'secondary', size: 'actionSm' }), 'cursor-pointer')}
               href={dialog.url}
               target="_blank"
               rel="noreferrer noopener"
@@ -44,13 +52,15 @@ export default function FeedbackSuccessDialog({ dialog, primaryText, onClose }: 
               公開ページを開く
             </a>
           ) : null}
-          <button
+          <Button
             type="button"
-            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-500"
+            variant="primary"
+            size="actionSm"
+            className="cursor-pointer shadow-sm"
             onClick={onClose}
           >
             閉じる
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

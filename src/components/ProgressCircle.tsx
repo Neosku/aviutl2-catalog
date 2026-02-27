@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { cn } from '@/lib/cn';
 
 // 円形の進捗リングを表示するシンプルなコンポーネント
 interface ProgressCircleProps {
@@ -52,7 +53,7 @@ export default function ProgressCircle({
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center ${className}`}
+      className={cn('relative inline-flex items-center justify-center', className)}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}

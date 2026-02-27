@@ -2,6 +2,7 @@
  * ライセンス情報入力コンポーネント
  */
 import React, { memo, useEffect, useState } from 'react';
+import Button from '@/components/ui/Button';
 import { Check, ChevronDown, Copy } from 'lucide-react';
 import {
   LICENSE_TYPE_OPTIONS,
@@ -11,6 +12,8 @@ import {
 import { createEmptyLicense } from '../../model/form';
 import type { PackageLicenseSectionProps } from '../types';
 import ActionDropdown from '../components/ActionDropdown';
+import { cn } from '@/lib/cn';
+import { grid, layout, surface, text } from '@/components/ui/_styles';
 
 const LICENSE_TYPE_SELECT_OPTIONS = [{ value: '', label: '選択してください' }, ...LICENSE_TYPE_OPTIONS];
 
@@ -47,21 +50,15 @@ const PackageLicenseSection = memo(
       } catch {}
     }
     return (
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">ライセンス</h2>
+      <section className={surface.cardSectionStack}>
+        <div className={layout.rowBetweenWrapGap2}>
+          <h2 className={text.titleLg}>ライセンス</h2>
         </div>
         <div className="space-y-4">
-          <div
-            key={activeLicense.key}
-            className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-          >
+          <div key={activeLicense.key} className={cn(surface.panel, 'space-y-5 p-5 shadow-sm')}>
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <label
-                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                  htmlFor={`license-type-${activeLicense.key}`}
-                >
+                <label className={text.labelSm} htmlFor={`license-type-${activeLicense.key}`}>
                   種類<span className="text-red-500">*</span>
                 </label>
                 <ActionDropdown
@@ -74,10 +71,7 @@ const PackageLicenseSection = memo(
               </div>
               {isOtherType && (
                 <div className="space-y-2">
-                  <label
-                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                    htmlFor={`license-name-${activeLicense.key}`}
-                  >
+                  <label className={text.labelSm} htmlFor={`license-name-${activeLicense.key}`}>
                     ライセンス名<span className="text-red-500">*</span>
                   </label>
                   <input
@@ -87,14 +81,12 @@ const PackageLicenseSection = memo(
                     placeholder="ライセンス名を入力してください"
                     required
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    カスタムライセンスの場合は「カスタムライセンス」と入力してください。
-                  </p>
+                  <p className={text.mutedXs}>カスタムライセンスの場合は「カスタムライセンス」と入力してください。</p>
                 </div>
               )}
               {!isUnknown && !isOtherType && (
                 <div className="relative flex items-end pb-1">
-                  <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label className={cn(layout.clickableInline, text.labelSm, 'gap-3')}>
                     <input
                       type="checkbox"
                       className="peer sr-only"
@@ -104,7 +96,10 @@ const PackageLicenseSection = memo(
                     />
                     <div className="relative inline-flex h-6 w-11 flex-none items-center rounded-full bg-slate-200 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-checked:bg-blue-600 dark:bg-slate-700">
                       <span
-                        className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${useTemplate ? 'translate-x-5' : ''}`}
+                        className={cn(
+                          'absolute left-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                          useTemplate && 'translate-x-5',
+                        )}
                       />
                     </div>
                     <span>テンプレートを使用する</span>
@@ -114,10 +109,7 @@ const PackageLicenseSection = memo(
             </div>
             {showBodyInput ? (
               <div className="space-y-2">
-                <label
-                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
-                  htmlFor={`license-body-${activeLicense.key}`}
-                >
+                <label className={text.labelSm} htmlFor={`license-body-${activeLicense.key}`}>
                   ライセンス本文{forceBodyInput ? <span className="text-red-500">*</span> : ''}
                 </label>
                 <textarea
@@ -138,10 +130,10 @@ const PackageLicenseSection = memo(
               <div className="space-y-4">
                 {needsCopyrightInput &&
                   activeLicense.copyrights.map((copyright) => (
-                    <div key={copyright.key} className="grid gap-4 md:grid-cols-2">
+                    <div key={copyright.key} className={grid.twoCol}>
                       <div className="space-y-2">
                         <label
-                          className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                          className={text.labelSm}
                           htmlFor={`license-${activeLicense.key}-copyright-years-${copyright.key}`}
                         >
                           著作権年
@@ -155,7 +147,7 @@ const PackageLicenseSection = memo(
                       </div>
                       <div className="space-y-2">
                         <label
-                          className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                          className={text.labelSm}
                           htmlFor={`license-${activeLicense.key}-copyright-holder-${copyright.key}`}
                         >
                           著作権者
@@ -171,19 +163,27 @@ const PackageLicenseSection = memo(
                       </div>
                     </div>
                   ))}
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+                <div className={cn(surface.panelSubtle, 'overflow-hidden')}>
                   <details className="group">
-                    <summary className="flex cursor-pointer items-center justify-between bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <summary
+                      className={cn(
+                        layout.sectionPadSm,
+                        layout.clickableInline,
+                        'justify-between bg-white font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800',
+                      )}
+                    >
                       <span>プレビュー</span>
-                      <div className="flex items-center gap-2">
+                      <div className={layout.inlineGap2}>
                         {copied && (
                           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in slide-in-from-right-1">
                             コピーしました
                           </span>
                         )}
-                        <button
+                        <Button
+                          variant="iconSubtle"
+                          size="icon"
                           type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                          className="disabled:opacity-50"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -194,8 +194,8 @@ const PackageLicenseSection = memo(
                           title="クリップボードにコピー"
                         >
                           {copied ? <Check size={16} /> : <Copy size={16} />}
-                        </button>
-                        <span className="text-slate-400 transition-transform group-open:rotate-180">
+                        </Button>
+                        <span className={text.disclosureChevron}>
                           <ChevronDown size={16} />
                         </span>
                       </div>
@@ -206,9 +206,7 @@ const PackageLicenseSection = memo(
                           {templatePreview}
                         </pre>
                       ) : (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          プレビューは種類と著作権者を入力すると表示されます。
-                        </p>
+                        <p className={text.mutedXs}>プレビューは種類と著作権者を入力すると表示されます。</p>
                       )}
                     </div>
                   </details>
