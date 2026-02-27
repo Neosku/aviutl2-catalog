@@ -14,6 +14,8 @@ import usePackageCatalogContext from './hooks/usePackageCatalogContext';
 import usePackageDescription from './hooks/usePackageDescription';
 import usePackageInstallActions from './hooks/usePackageInstallActions';
 import { PackageContentSection, PackageHeaderSection, PackageSidebarSection } from './sections';
+import { page } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 const MARKDOWN_BASE_URL = 'https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/';
 
@@ -108,13 +110,13 @@ export default function PackagePage() {
   if (!item) {
     if (loading || items.length === 0) {
       return (
-        <div className="max-w-3xl mx-auto">
+        <div className={page.container3xl}>
           <div className="p-6 text-slate-500 dark:text-slate-400">読み込み中…</div>
         </div>
       );
     }
     return (
-      <div className="max-w-3xl mx-auto">
+      <div className={page.container3xl}>
         <div className="error">パッケージが見つかりませんでした。</div>
       </div>
     );
@@ -124,7 +126,7 @@ export default function PackagePage() {
   const latest = latestVersionOf(item) || '?';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto min-h-[calc(100vh-6rem)] flex flex-col">
+    <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col')}>
       <PackageHeaderSection item={item} listLink={listLink} heroImage={heroImage} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] flex-1">

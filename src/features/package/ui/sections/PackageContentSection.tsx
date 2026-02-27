@@ -2,6 +2,9 @@ import React, { useMemo } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import ImageCarousel from '../components/ImageCarousel';
 import type { PackageContentSectionProps } from '../types';
+import { surface, text } from '@/components/ui/_styles';
+
+const sectionTitleClass = 'text-lg font-bold mb-2';
 
 function resolveAnchorHref(target: EventTarget | null): string {
   if (!(target instanceof Element)) return '';
@@ -44,16 +47,16 @@ export default function PackageContentSection({
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-lg font-bold mb-2">概要</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">{item.summary || '?'}</p>
+      <section className={surface.cardSection}>
+        <h2 className={sectionTitleClass}>概要</h2>
+        <p className={text.bodySmMuted}>{item.summary || '?'}</p>
       </section>
 
       {item.description ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <section className={surface.cardSection}>
           <h2 className="text-lg font-bold mb-3">詳細説明</h2>
           {descriptionLoading ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">詳細説明を読み込み中です…</p>
+            <p className={text.mutedSm}>詳細説明を読み込み中です…</p>
           ) : (
             <div
               className="prose prose-slate max-w-none dark:prose-invert"
@@ -71,9 +74,9 @@ export default function PackageContentSection({
       ) : null}
 
       {item.dependencies?.length ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-lg font-bold mb-2">依存関係</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{item.dependencies.join(', ')}</p>
+        <section className={surface.cardSection}>
+          <h2 className={sectionTitleClass}>依存関係</h2>
+          <p className={text.bodySmMuted}>{item.dependencies.join(', ')}</p>
         </section>
       ) : null}
     </div>

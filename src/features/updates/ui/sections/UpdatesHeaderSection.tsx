@@ -1,4 +1,7 @@
+import Button from '@/components/ui/Button';
 import type { UpdatesHeaderSectionProps } from '../types';
+import { page, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function UpdatesHeaderSection({
   bulkUpdating,
@@ -7,19 +10,20 @@ export default function UpdatesHeaderSection({
   onBulkUpdate,
 }: UpdatesHeaderSectionProps) {
   return (
-    <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
+    <div className={page.headerRow}>
       <div>
-        <h2 className="text-xl font-bold mb-1">アップデートセンター</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">更新可能なパッケージを確認します</p>
+        <h2 className={cn(text.titleXl, 'mb-1')}>アップデートセンター</h2>
+        <p className={text.mutedSm}>更新可能なパッケージを確認します</p>
       </div>
-      <button
-        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg transition-all text-sm font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      <Button
+        variant="primary"
+        size="lg"
+        className="cursor-pointer px-5 py-2.5 shadow-lg"
         onClick={onBulkUpdate}
         disabled={bulkUpdating || hasAnyItemUpdating || updatableCount === 0}
-        type="button"
       >
         すべて更新
-      </button>
+      </Button>
     </div>
   );
 }

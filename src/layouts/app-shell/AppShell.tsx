@@ -5,6 +5,7 @@ import AppSidebar from './components/AppSidebar';
 import HomeSearchHeader from './components/HomeSearchHeader';
 import useAppShellState from './hooks/useAppShellState';
 import type { HomeContextValue } from './types';
+import { cn } from '@/lib/cn';
 
 export { SORT_OPTIONS };
 
@@ -35,9 +36,10 @@ export default function AppShell() {
 
         <div
           ref={state.scrollContainerRef}
-          className={`flex-1 overflow-y-auto scroll-smooth px-6 [scrollbar-gutter:stable] ${
-            state.activePage === 'home' ? 'pt-0 pb-6' : state.activePage === 'register' ? 'pt-0 pb-0' : 'pt-6 pb-6'
-          }`}
+          className={cn(
+            'flex-1 overflow-y-auto scroll-smooth px-6 [scrollbar-gutter:stable]',
+            state.activePage === 'home' ? 'pt-0 pb-6' : state.activePage === 'register' ? 'pt-0 pb-0' : 'pt-6 pb-6',
+          )}
         >
           <Outlet context={state.outletContext} />
         </div>

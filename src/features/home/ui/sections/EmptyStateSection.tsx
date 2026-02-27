@@ -1,9 +1,11 @@
 import { Package } from 'lucide-react';
+import { surface } from '@/components/ui/_styles';
 import type { EmptyStateSectionProps } from '../types';
+import { cn } from '@/lib/cn';
 
 export default function EmptyStateSection({ onClearConditions }: EmptyStateSectionProps) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl select-none min-h-[300px]">
+    <div className={cn(surface.dashedPlaceholder, 'h-auto min-h-[300px] flex-1 select-none dark:text-slate-600')}>
       <Package size={48} className="mb-4 opacity-50" />
       <p>条件に一致するパッケージはありません</p>
       <button

@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 static APP_DIR: OnceCell<ArcSwap<AppDirs>> = OnceCell::new();
 
-fn pathbuf_to_string(path: &PathBuf) -> String {
+fn pathbuf_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
@@ -77,7 +77,7 @@ pub fn init_settings(app: &AppHandle) -> std::io::Result<()> {
         return Ok(());
     }
     finalize_settings(app, &mut settings, &settings_path, &catalog_config_dir)?;
-    open_main_window(app).map_err(|e| Error::new(ErrorKind::Other, e))?;
+    open_main_window(app).map_err(Error::other)?;
     Ok(())
 }
 
@@ -179,7 +179,7 @@ fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
             );
         }
 
-        builder.build().map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        builder.build().map_err(|e| Error::other(e.to_string()))?;
     } else if let Some(window) = app.get_webview_window("init-setup") {
         let _ = window.show();
         let _ = window.set_focus();

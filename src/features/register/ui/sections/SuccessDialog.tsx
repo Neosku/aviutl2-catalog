@@ -2,8 +2,11 @@
  * 送信完了ダイアログコンポーネント
  */
 import React from 'react';
+import Button, { buttonVariants } from '@/components/ui/Button';
 import { Check, ExternalLink } from 'lucide-react';
 import type { RegisterSuccessDialogProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function RegisterSuccessDialog({
   dialog,
@@ -13,21 +16,18 @@ export default function RegisterSuccessDialog({
 }: RegisterSuccessDialogProps) {
   if (!dialog.open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="submit-success-title"
-    >
-      <button
+    <div className={layout.fixedCenterBlur} role="dialog" aria-modal="true" aria-labelledby="submit-success-title">
+      <Button
+        variant="plain"
+        size="none"
         type="button"
         aria-label="閉じる"
-        className="absolute inset-0 bg-black/50 transition-opacity"
+        className={surface.overlayFade}
         onClick={onClose}
       />
-      <div className="relative w-full max-w-lg transform overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-          <h3 id="submit-success-title" className="text-lg font-bold text-slate-800 dark:text-slate-100">
+      <div className={cn(surface.modal, layout.modalWidthLg, 'transform transition-all')}>
+        <div className={surface.modalHeaderMuted}>
+          <h3 id="submit-success-title" className={text.titleLg}>
             送信が完了しました
           </h3>
         </div>
@@ -41,14 +41,14 @@ export default function RegisterSuccessDialog({
             </div>
             <div className="space-y-1">
               <p className="font-semibold text-slate-800 dark:text-slate-100">{primaryText}</p>
-              {supportText && <p className="text-sm text-slate-500 dark:text-slate-400">{supportText}</p>}
+              {supportText && <p className={text.mutedSm}>{supportText}</p>}
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+        <div className={layout.footerWrapEndMuted}>
           {dialog.url && (
             <a
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className={cn(buttonVariants({ variant: 'secondary', size: 'actionSm' }), 'shadow-sm')}
               href={dialog.url}
               target="_blank"
               rel="noreferrer noopener"
@@ -57,13 +57,9 @@ export default function RegisterSuccessDialog({
               公開ページを開く
             </a>
           )}
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-500"
-            onClick={onClose}
-          >
+          <Button variant="primary" size="actionSm" type="button" className="shadow-sm" onClick={onClose}>
             閉じる
-          </button>
+          </Button>
         </div>
       </div>
     </div>

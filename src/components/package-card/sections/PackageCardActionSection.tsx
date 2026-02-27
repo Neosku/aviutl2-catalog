@@ -2,6 +2,8 @@ import type { MouseEvent } from 'react';
 import { CheckCircle2, Download, RefreshCw, Trash2 } from 'lucide-react';
 import ProgressCircle from '../../ProgressCircle';
 import type { PackageCardActionHandler } from '../types';
+import { layout, surface } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface PackageCardActionSectionProps {
   isInstalled: boolean;
@@ -17,6 +19,8 @@ interface PackageCardActionSectionProps {
   onUpdate: PackageCardActionHandler;
   onRemove: PackageCardActionHandler;
 }
+
+const actionButtonBaseClass = 'text-xs font-bold rounded-lg';
 
 function handleActionClick(action: PackageCardActionHandler) {
   return (event: MouseEvent<HTMLButtonElement>) => {
@@ -43,19 +47,23 @@ export default function PackageCardActionSection({
     <div className="flex items-end justify-between gap-3">
       <div className="flex items-center mb-1">
         {isInstalled ? (
-          <div className="flex items-center gap-1.5 text-xs font-mono text-slate-500 dark:text-slate-400">
+          <div className={cn(layout.inlineGap1_5, 'text-xs font-mono text-slate-500 dark:text-slate-400')}>
             <CheckCircle2 size={14} className={hasUpdate ? 'text-amber-500' : 'text-emerald-500'} />
             <span>{installedVersion}</span>
           </div>
         ) : null}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0 w-[140px] justify-end">
+      <div className={cn(layout.inlineGap2, 'shrink-0 w-[140px] justify-end')}>
         {isInstalled ? (
           <>
             {hasUpdate ? (
               <button
-                className="h-9 flex-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                className={cn(
+                  layout.center,
+                  actionButtonBaseClass,
+                  'h-9 flex-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors gap-1.5 cursor-pointer disabled:cursor-not-allowed',
+                )}
                 onClick={handleActionClick(onUpdate)}
                 disabled={updating || !canInstall}
               >
@@ -72,13 +80,23 @@ export default function PackageCardActionSection({
                 <span>更新</span>
               </button>
             ) : (
-              <div className="h-9 flex-1 bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1 cursor-default border border-slate-200 dark:border-slate-700">
+              <div
+                className={cn(
+                  layout.center,
+                  actionButtonBaseClass,
+                  'h-9 flex-1 bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 gap-1 cursor-default',
+                  surface.baseMuted,
+                )}
+              >
                 <CheckCircle2 size={14} />
                 <span>導入済</span>
               </div>
             )}
             <button
-              className="h-9 w-9 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+              className={cn(
+                layout.center,
+                'h-9 w-9 shrink-0 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed',
+              )}
               title="削除"
               onClick={handleActionClick(onRemove)}
               disabled={removing}
@@ -88,7 +106,11 @@ export default function PackageCardActionSection({
           </>
         ) : (
           <button
-            className="h-9 w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+            className={cn(
+              layout.center,
+              actionButtonBaseClass,
+              'h-9 w-full bg-blue-600 hover:bg-blue-500 text-white transition-all gap-1.5 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-95 cursor-pointer disabled:cursor-not-allowed',
+            )}
             onClick={handleActionClick(onDownload)}
             disabled={downloading || !canInstall}
           >

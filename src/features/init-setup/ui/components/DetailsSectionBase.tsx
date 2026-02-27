@@ -1,5 +1,8 @@
 import React from 'react';
+import Button from '@/components/ui/Button';
 import { FolderOpen } from 'lucide-react';
+import { action, layout, state, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface DetailsSectionHeaderProps {
   title: string;
@@ -42,9 +45,42 @@ interface DetailsSectionBaseProps {
   actions: DetailsSectionActionsProps;
 }
 
+interface PortableOptionCardProps {
+  active: boolean;
+  label: string;
+  description: string;
+  activeClassName: string;
+  onClick: () => void;
+}
+
 const inactivePortableClassName =
   'border-slate-200 hover:border-slate-300 bg-white dark:border-slate-700 dark:hover:border-slate-600 dark:bg-slate-800';
 const standardActiveClassName = 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500';
+
+function PortableOptionCard({ active, label, description, activeClassName, onClick }: PortableOptionCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200',
+        active ? activeClassName : inactivePortableClassName,
+      )}
+    >
+      <div className={cn(layout.inlineGap2, 'mb-2')}>
+        <span
+          className={cn(
+            'font-bold text-sm',
+            active ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300',
+          )}
+        >
+          {label}
+        </span>
+      </div>
+      <p className={text.mutedXsRelaxed}>{description}</p>
+    </button>
+  );
+}
 
 export default function DetailsSectionBase({ header, input, portable, actions }: DetailsSectionBaseProps) {
   const { title, description } = header;
@@ -69,18 +105,23 @@ export default function DetailsSectionBase({ header, input, portable, actions }:
   const { savingInstallDetails, canProceed, onBack, onNext, savingContent, idleContent } = actions;
 
   return (
-    <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-8 duration-500 max-w-2xl mx-auto w-full justify-center">
+    <div className={cn(layout.centerCol, state.enterSlideRight500, 'flex-1 max-w-2xl mx-auto w-full')}>
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{description}</p>
+        <h2 className={text.title2xl}>{title}</h2>
+        <p className={text.mutedSmMt2}>{description}</p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-8">
+      <div className={cn(surface.card, 'p-6 space-y-8')}>
         <div className="space-y-2">
           <label className={inputLabelClassName} htmlFor={inputId}>
             {inputLabel}
           </label>
-          <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+          <div
+            className={cn(
+              surface.baseMuted,
+              'flex rounded-xl bg-slate-50 dark:bg-slate-800 overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all',
+            )}
+          >
             <input
               type="text"
               id={inputId}
@@ -106,57 +147,39 @@ export default function DetailsSectionBase({ header, input, portable, actions }:
             ポータブルモード設定
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
+            <PortableOptionCard
+              active={!portableEnabled}
+              label={standardLabel}
+              description="プラグインやスクリプトを ProgramData に導入します"
+              activeClassName={standardActiveClassName}
               onClick={() => onPortableChange(false)}
-              className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${!portableEnabled ? standardActiveClassName : inactivePortableClassName}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`font-bold text-sm ${!portableEnabled ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}
-                >
-                  {standardLabel}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                プラグインやスクリプトを ProgramData に導入します
-              </p>
-            </button>
+            />
 
-            <button
-              type="button"
+            <PortableOptionCard
+              active={portableEnabled}
+              label="ポータブル"
+              description="プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに導入します"
+              activeClassName={portableActiveClassName}
               onClick={() => onPortableChange(true)}
-              className={`w-full text-left cursor-pointer rounded-xl border p-4 transition-all duration-200 ${portableEnabled ? portableActiveClassName : inactivePortableClassName}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`font-bold text-sm ${portableEnabled ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}
-                >
-                  ポータブル
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                プラグインやスクリプトを aviutl2.exe と同じ階層にある data フォルダに導入します
-              </p>
-            </button>
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-8">
-        <button
-          className="h-11 px-8 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer"
-          onClick={onBack}
-        >
+      <div className={cn(layout.rowBetween, 'mt-8')}>
+        <Button variant="secondary" size="none" radius="xl" className={action.initSecondary} onClick={onBack}>
           戻る
-        </button>
-        <button
-          className="btn btn--primary h-11 px-8 rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+        </Button>
+        <Button
+          variant="primary"
+          size="none"
+          radius="xl"
+          className={action.initPrimary}
           onClick={onNext}
           disabled={savingInstallDetails || !canProceed}
         >
           {savingInstallDetails ? savingContent : idleContent}
-        </button>
+        </Button>
       </div>
     </div>
   );

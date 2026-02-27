@@ -1,5 +1,6 @@
 import { PackageCardActionSection, PackageCardMetaSection, PackageCardThumbnailSection } from './sections';
 import type { PackageCardViewProps } from './types';
+import { cn } from '@/lib/cn';
 
 const cardHeightClass = 'h-52';
 const emptyTags: string[] = [];
@@ -27,7 +28,10 @@ export default function PackageCardView({
 
   return (
     <div
-      className={`group relative flex flex-row ${cardHeightClass} min-w-[480px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-black/40 hover:border-blue-300/50 dark:hover:border-slate-600 transition-all duration-300 ease-out cursor-pointer hover:-translate-y-0.5`}
+      className={cn(
+        'group relative flex flex-row min-w-[480px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-blue-900/5 dark:hover:shadow-black/40 hover:border-blue-300/50 dark:hover:border-slate-600 transition-all duration-300 ease-out cursor-pointer hover:-translate-y-0.5',
+        cardHeightClass,
+      )}
       onClick={onOpenDetail}
       tabIndex={0}
       onKeyDown={onCardKeyDown}

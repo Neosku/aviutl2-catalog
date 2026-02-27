@@ -1,5 +1,8 @@
+import { Alert } from '@/components/ui/Alert';
 import useSettingsPage from './hooks/useSettingsPage';
 import { AppInfoSection, AppSettingsSection, DataManagementSection } from './sections';
+import { page, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function SettingsPage() {
   const {
@@ -22,16 +25,16 @@ export default function SettingsPage() {
   } = useSettingsPage();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-7 animate-in slide-in-from-bottom-2 duration-300 select-none">
+    <div className={cn(page.container3xl, page.selectNone, page.enterFromBottom, 'space-y-7')}>
       <div>
-        <h2 className="text-2xl font-bold mb-2">設定</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">アプリケーションの設定とカスタマイズ</p>
+        <h2 className={cn(text.title2xlStrong, 'mb-2')}>設定</h2>
+        <p className={text.mutedSm}>アプリケーションの設定とカスタマイズ</p>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200 px-4 py-3 text-sm">
+        <Alert variant="danger" className="rounded-xl">
           {error}
-        </div>
+        </Alert>
       ) : null}
 
       <AppSettingsSection
