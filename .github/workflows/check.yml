@@ -27,16 +27,16 @@ jobs:
           cache: 'pnpm'
 
       - name: Install Dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Check Formatting
         run: |
-          npm run fmt:check
+          pnpm run fmt:check
 
       - name: Lint Code
         run: |
-          npm run lint
+          pnpm run lint
 
       - name: Check Types
         run: |
-          npm run typecheck
+          pnpm run typecheck
