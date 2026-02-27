@@ -1,7 +1,7 @@
 /**
  * サムネイル／説明画像のコンポーネント
  */
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as tauriWindow from '@tauri-apps/api/window';
@@ -44,6 +44,36 @@ function parseDragPayload(event: unknown): DragPayload | null {
     : [];
   return { paths, position: { x, y } };
 }
+
+type ImagePreviewLayerProps = {
+  preview: string;
+  emptyLabel: string;
+  style?: CSSProperties;
+};
+
+const imageCardClass =
+  'group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50';
+const imageHoverOverlayClass = 'absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10';
+const imagePickerButtonClass = 'relative cursor-pointer';
+const bounceIconClass = 'mx-auto mb-2 animate-bounce';
+const dragDropActivePanelClass = 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 dark:bg-blue-900/20';
+const dragDropInactivePanelClass = 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900';
+const dragDropZoneClass =
+  'flex items-center justify-center rounded-xl border-2 border-dashed border-blue-500 bg-blue-100/50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
+
+const ImagePreviewLayer = memo(function ImagePreviewLayer({ preview, emptyLabel, style }: ImagePreviewLayerProps) {
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 flex items-center justify-center bg-contain bg-center bg-no-repeat text-xs text-transparent',
+        !preview && 'text-slate-400',
+      )}
+      style={style}
+    >
+      {!preview && <span>{emptyLabel}</span>}
+    </div>
+  );
+});
 
 const InfoImageCard = memo(function InfoImageCard({ entryKey, filename, preview, onRemove }: InfoImageCardProps) {
   const previewStyle = useMemo(() => (preview ? { backgroundImage: `url(${preview})` } : undefined), [preview]);
