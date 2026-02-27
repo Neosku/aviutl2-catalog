@@ -1,4 +1,4 @@
-import {CatalogAction} from "../../../utils/catalogStore";
+import { CatalogAction } from '../../../utils/catalogStore';
 
 export interface PackageImageGroup {
   thumbnail?: string;
