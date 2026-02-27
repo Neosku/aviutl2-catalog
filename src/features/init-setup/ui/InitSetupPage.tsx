@@ -5,6 +5,7 @@ import UpdateDialog from '../../app-update/UpdateDialog';
 import { ensureInitWindowVisible } from '../model/helpers';
 import StepIndicator from './components/StepIndicator';
 import useInitSetupState from './hooks/useInitSetupState';
+import { layout } from '@/components/ui/_styles';
 import {
   DoneSection,
   ExistingDetailsSection,
@@ -13,6 +14,9 @@ import {
   InstallDetailsSection,
   PackagesSection,
 } from './sections';
+
+const setupErrorBannerClass =
+  'mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm';
 
 ensureInitWindowVisible();
 
@@ -38,15 +42,15 @@ export default function InitSetupPage() {
         <main className="flex-1 overflow-hidden relative flex flex-col z-0">
           <div className="flex-1 w-full max-w-3xl mx-auto px-10 pb-8 flex flex-col h-full overflow-y-auto">
             {state.error && (
-              <div className="mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
+              <div className={setupErrorBannerClass}>
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
-                <div className="whitespace-pre-wrap flex-1 font-medium leading-relaxed">{state.error}</div>
+                <div className={layout.preWrapLead}>{state.error}</div>
               </div>
             )}
             {state.setupError && (
-              <div className="mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
+              <div className={setupErrorBannerClass}>
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
-                <div className="whitespace-pre-wrap flex-1 font-medium leading-relaxed">{state.setupError}</div>
+                <div className={layout.preWrapLead}>{state.setupError}</div>
               </div>
             )}
 

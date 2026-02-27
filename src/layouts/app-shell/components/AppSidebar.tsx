@@ -16,6 +16,8 @@ import SidebarButton, { type SidebarIconProps } from './SidebarButton';
 import SidebarSectionLabel from './SidebarSectionLabel';
 import aviutl2Icon from '../../../../src-tauri/icons/aviutl2.png';
 import appIcon from '../../../../src-tauri/icons/icon.svg';
+import { layout } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface AppSidebarProps {
   isSidebarCollapsed: boolean;
@@ -59,10 +61,13 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   return (
     <aside
-      className={`${isSidebarCollapsed ? 'w-20' : 'w-66'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out select-none`}
+      className={cn(
+        'bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out select-none',
+        isSidebarCollapsed ? 'w-20' : 'w-66',
+      )}
     >
       <div className="border-b border-slate-100 dark:border-slate-800 h-16 flex items-center shrink-0 overflow-hidden">
-        <div className="w-20 shrink-0 flex items-center justify-center">
+        <div className={cn(layout.center, 'w-20 shrink-0')}>
           <img src={appIcon} alt="AviUtl2カタログ" className="h-7 w-7 object-contain" />
         </div>
         {!isSidebarCollapsed ? (

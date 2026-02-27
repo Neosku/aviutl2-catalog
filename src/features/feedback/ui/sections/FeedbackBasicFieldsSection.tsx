@@ -1,5 +1,8 @@
 import React from 'react';
-import { INPUT_CLASS, LABEL_CLASS, TEXTAREA_CLASS } from '../constants';
+import Input from '@/components/ui/Input';
+import Label from '@/components/ui/Label';
+import Textarea from '@/components/ui/Textarea';
+import { text } from '@/components/ui/_styles';
 import type { FeedbackFieldChangeHandler } from '../types';
 
 interface FeedbackBasicFieldNames {
@@ -36,46 +39,44 @@ export default function FeedbackBasicFieldsSection({
   return (
     <div className="space-y-4">
       <div>
-        <label className={LABEL_CLASS} htmlFor={`${idPrefix}-title`}>
+        <Label spacing="default" htmlFor={`${idPrefix}-title`}>
           タイトル <span className="text-red-500">*</span>
-        </label>
-        <input
+        </Label>
+        <Input
           id={`${idPrefix}-title`}
           name={names.title}
           value={values.title}
           onChange={onChange}
           required
           placeholder={titlePlaceholder}
-          className={INPUT_CLASS}
         />
       </div>
 
       <div>
-        <label className={LABEL_CLASS} htmlFor={`${idPrefix}-detail`}>
+        <Label spacing="default" htmlFor={`${idPrefix}-detail`}>
           詳細 <span className="text-red-500">*</span>
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id={`${idPrefix}-detail`}
           name={names.detail}
           value={values.detail}
           onChange={onChange}
           required
           placeholder={detailPlaceholder}
-          className={TEXTAREA_CLASS}
+          size="tall"
         />
       </div>
 
       <div>
-        <label className={LABEL_CLASS} htmlFor={`${idPrefix}-contact`}>
-          連絡先 <span className="ml-1 text-xs font-normal text-slate-400">(任意)</span>
-        </label>
-        <input
+        <Label spacing="default" htmlFor={`${idPrefix}-contact`}>
+          連絡先 <span className={`ml-1 ${text.optionalMuted}`}>(任意)</span>
+        </Label>
+        <Input
           id={`${idPrefix}-contact`}
           name={names.contact}
           value={values.contact}
           onChange={onChange}
           placeholder={contactPlaceholder}
-          className={INPUT_CLASS}
         />
       </div>
     </div>

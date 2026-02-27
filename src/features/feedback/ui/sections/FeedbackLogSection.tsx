@@ -3,29 +3,28 @@ import { FileText } from 'lucide-react';
 import { BUG_FIELDS } from '../../model/fieldNames';
 import FeedbackToggleSwitch from '../components/FeedbackToggleSwitch';
 import type { FeedbackLogSectionProps } from '../types';
+import { cn } from '@/lib/cn';
+import { layout, surface, text } from '@/components/ui/_styles';
 
 export default function FeedbackLogSection({ loading, includeLog, appLog, onBugChange }: FeedbackLogSectionProps) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
+      <div className={text.inlineHeadingSm}>
         <FileText size={16} className="text-slate-500" />
         ログファイル
       </div>
       {loading ? (
-        <div className="animate-pulse text-xs text-slate-500">情報を収集中...</div>
+        <div className={layout.pulseXs}>情報を収集中...</div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-800/20">
-          <div className="flex items-center gap-3">
+        <div className={cn(surface.panelLgSubtleSoft, 'p-3')}>
+          <div className={layout.inlineGap3}>
             <FeedbackToggleSwitch
               id="feedback-include-log"
               name={BUG_FIELDS.includeLog}
               checked={includeLog}
               onChange={onBugChange}
             />
-            <label
-              htmlFor="feedback-include-log"
-              className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
+            <label htmlFor="feedback-include-log" className={cn('cursor-pointer', text.labelSm)}>
               app.log を添付
             </label>
           </div>

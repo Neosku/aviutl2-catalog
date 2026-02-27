@@ -3,6 +3,7 @@ import { Download } from 'lucide-react';
 import ProgressCircle from '../../../../components/ProgressCircle';
 import DetailsSectionBase from '../components/DetailsSectionBase';
 import type { InstallDetailsSectionProps } from '../types';
+import { layout } from '@/components/ui/_styles';
 
 export default function InstallDetailsSection({
   installDir,
@@ -53,7 +54,7 @@ export default function InstallDetailsSection({
       onBack,
       onNext,
       savingContent: (
-        <span className="flex items-center gap-2">
+        <span className={layout.inlineGap2}>
           <ProgressCircle
             value={coreProgressRatio}
             size={16}
@@ -65,7 +66,7 @@ export default function InstallDetailsSection({
         </span>
       ),
       idleContent: (
-        <span className="flex items-center gap-2">
+        <span className={layout.inlineGap2}>
           <Download size={18} />
           インストールして次へ
         </span>

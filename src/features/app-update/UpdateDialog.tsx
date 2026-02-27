@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
 import { renderMarkdown } from '../../utils/markdown';
+import { Alert } from '@/components/ui/Alert';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import { layout, overlay, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface UpdateDialogProps {
   open: boolean;
@@ -33,36 +38,46 @@ export default function UpdateDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={handleBackdrop} />
+    <div className={layout.fixedCenter}>
+      <button type="button" aria-label="閉じる" className={overlay.backdrop} onClick={handleBackdrop} />
       <div
-        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        className={cn(
+          surface.cardOverflow,
+          'relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col shadow-xl',
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="update-title"
       >
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+        <div className={cn(layout.rowBetweenWrapStartGap4, surface.sectionDivider)}>
           <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">アップデート</span>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="update-title">
+            <h3 className={text.titleLg} id="update-title">
               新しいバージョンが利用可能です
             </h3>
             {publishedOn && (
-              <p className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className={cn(layout.inlineGap2, 'mt-1', text.mutedXs)}>
                 <Calendar size={14} />
                 <span>公開日 {publishedOn}</span>
               </p>
             )}
           </div>
           {version && (
-            <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">v{version}</span>
+            <Badge
+              variant="primary"
+              shape="pill"
+              size="sm"
+              className="border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
+            >
+              v{version}
+            </Badge>
           )}
         </div>
         <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
           {error && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+            <Alert variant="danger" className="mb-4 rounded-xl">
               {error}
-            </div>
+            </Alert>
           )}
           {markdownHtml ? (
             <div className="min-h-0 overflow-y-auto pr-1">
@@ -72,16 +87,16 @@ export default function UpdateDialog({
               />
             </div>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">更新内容の詳細は取得できませんでした。</p>
+            <p className={text.mutedSm}>更新内容の詳細は取得できませんでした。</p>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button className="btn" onClick={onCancel} disabled={busy} type="button">
+          <Button variant="secondary" onClick={onCancel} disabled={busy} type="button">
             後で
-          </button>
-          <button className="btn btn--primary" onClick={onConfirm} disabled={busy} type="button">
+          </Button>
+          <Button variant="primary" onClick={onConfirm} disabled={busy} type="button">
             {busy ? '更新中…' : '今すぐ更新'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

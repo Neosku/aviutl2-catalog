@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Copy, Check } from 'lucide-react';
 import { logError } from '../utils/logging';
+import Button from '@/components/ui/Button';
+import { layout, overlay, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface ErrorDialogProps {
   open: boolean;
@@ -47,48 +50,49 @@ export default function ErrorDialog({ open, title = 'エラーが発生しまし
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className={layout.fixedCenter}>
+      <button type="button" aria-label="閉じる" className={overlay.backdrop} onClick={onClose} />
       <div
-        className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        className={cn(surface.card, layout.modalWidthLg, 'shadow-xl')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="error-title"
         aria-describedby="error-message"
       >
-        <div className="flex items-start gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+        <div className={cn(surface.sectionDivider, layout.inlineStartGap3)}>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300">
             <AlertTriangle size={20} />
           </div>
           <div className="flex-1">
             <p className="text-xs uppercase tracking-widest text-red-500">Error</p>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100" id="error-title">
+            <h3 className={text.titleLg} id="error-title">
               {title}
             </h3>
           </div>
-          <button
-            className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          <Button
+            variant="iconSubtle"
+            size="icon"
             onClick={onCopy}
             aria-label={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
             title={copied ? 'コピーしました' : 'エラーメッセージをコピー'}
             type="button"
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
-          </button>
+          </Button>
         </div>
         <div className="px-6 py-4">
           <pre
             id="error-message"
-            className="max-h-64 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-200"
+            className={cn(surface.panelSubtle, text.bodyXsStrong, 'max-h-64 overflow-auto p-4')}
             aria-live="polite"
           >
             <code>{message}</code>
           </pre>
         </div>
-        <div className="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button className="btn btn--primary" onClick={onClose} type="button">
+        <div className={layout.footerEnd}>
+          <Button variant="primary" size="default" onClick={onClose} type="button">
             閉じる
-          </button>
+          </Button>
         </div>
       </div>
     </div>

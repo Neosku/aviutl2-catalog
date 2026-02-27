@@ -2,9 +2,22 @@
  * 詳細説明エリアの表示コンポーネント
  */
 import React, { useMemo } from 'react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
 import type { RegisterDescriptionSectionProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
+
+const descriptionModeActiveClass =
+  'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300';
+const descriptionModeInactiveClass =
+  'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100';
+const descriptionTabActiveClass =
+  'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300';
+const descriptionTabInactiveClass =
+  'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100';
 
 export default function RegisterDescriptionSection({
   packageForm,
@@ -21,103 +34,102 @@ export default function RegisterDescriptionSection({
   const previewMarkup = useMemo(() => ({ __html: descriptionPreviewHtml }), [descriptionPreviewHtml]);
 
   return (
-    <section className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label
-          htmlFor={isExternalDescription ? 'description-url' : 'description-textarea'}
-          className="text-sm font-medium text-slate-700 dark:text-slate-300"
-        >
+    <section className={cn(surface.cardSection, 'space-y-2')}>
+      <div className={layout.rowBetweenWrapGap2}>
+        <label htmlFor={isExternalDescription ? 'description-url' : 'description-textarea'} className={text.labelSm}>
           詳細説明 <span className="text-red-500">*</span>
         </label>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <button
+        <div className={layout.wrapItemsGap2}>
+          <div className={cn(surface.panelLg, 'inline-flex text-xs font-medium shadow-sm')}>
+            <Button
+              variant="plain"
+              size="none"
               type="button"
-              className={`rounded-l-lg px-3 py-1.5 transition-colors ${
-                !isExternalDescription
-                  ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
-              }`}
+              className={cn(
+                'rounded-l-lg px-3 py-1.5 transition-colors',
+                !isExternalDescription ? descriptionModeActiveClass : descriptionModeInactiveClass,
+              )}
               onClick={() => onUpdatePackageField('descriptionMode', 'inline')}
             >
               アプリ内入力
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="plain"
+              size="none"
               type="button"
-              className={`rounded-r-lg px-3 py-1.5 transition-colors ${
-                isExternalDescription
-                  ? 'bg-blue-50 text-blue-700 hover:text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:text-blue-300'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
-              }`}
+              className={cn(
+                'rounded-r-lg px-3 py-1.5 transition-colors',
+                isExternalDescription ? descriptionModeActiveClass : descriptionModeInactiveClass,
+              )}
               onClick={() => onUpdatePackageField('descriptionMode', 'external')}
             >
               外部MDリンク
-            </button>
+            </Button>
           </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Markdown形式</span>
+          <span className={text.mutedXs}>Markdown形式</span>
         </div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className={surface.panelOverflow}>
         <div
           className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-2 dark:border-slate-800 dark:bg-slate-900/50"
           role="tablist"
         >
-          <button
+          <Button
+            variant="plain"
+            size="actionSm"
             type="button"
             role="tab"
             aria-selected={descriptionTab === 'edit'}
-            className={`flex-1 rounded-tl-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${
-              descriptionTab === 'edit'
-                ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
-                : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
-            }`}
+            className={cn(
+              'flex-1 rounded-tl-lg transition-colors',
+              descriptionTab === 'edit' ? descriptionTabActiveClass : descriptionTabInactiveClass,
+            )}
             onClick={() => onSetDescriptionTab('edit')}
           >
             {isExternalDescription ? '外部リンク指定' : '編集'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="plain"
+            size="actionSm"
             type="button"
             role="tab"
             aria-selected={descriptionTab === 'preview'}
-            className={`flex-1 rounded-tr-lg px-4 py-2 text-sm font-semibold text-center transition-colors ${
-              descriptionTab === 'preview'
-                ? 'bg-white text-blue-700 hover:text-blue-700 shadow-[0_-1px_2px_rgba(0,0,0,0.05)] dark:bg-slate-800 dark:text-blue-300 dark:hover:text-blue-300'
-                : 'bg-slate-50/50 text-slate-600 hover:text-slate-800 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:text-slate-100'
-            }`}
+            className={cn(
+              'flex-1 rounded-tr-lg transition-colors',
+              descriptionTab === 'preview' ? descriptionTabActiveClass : descriptionTabInactiveClass,
+            )}
             onClick={() => onSetDescriptionTab('preview')}
           >
             プレビュー
-          </button>
+          </Button>
         </div>
         <div className="p-0">
           {descriptionTab === 'edit' ? (
             isExternalDescription ? (
               <div className="space-y-3 p-4">
-                <input
+                <Input
                   id="description-url"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800"
+                  className="focus:border-blue-500 focus:ring-blue-500/20"
                   type="url"
                   value={packageForm.descriptionUrl}
                   onChange={(e) => onUpdatePackageField('descriptionUrl', e.target.value)}
                   placeholder="https://example.com/description.md"
                 />
-                {!hasExternalDescriptionUrl && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">MarkdownのURLを入力してください。</p>
-                )}
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                {!hasExternalDescriptionUrl && <p className={text.mutedXs}>MarkdownのURLを入力してください。</p>}
+                <p className={text.mutedXs}>
                   GitHub上のMDを登録される場合はhttps://raw.githubusercontent.com/から始まるリンクになっているか注意してください。
                 </p>
                 {descriptionLoading && (
                   <p className="text-xs text-slate-400 dark:text-slate-500">リンク先を読み込み中…</p>
                 )}
                 {isExternalDescriptionLoaded && !descriptionLoading && (
-                  <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                  <div className={cn(layout.inlineGap1, 'text-xs text-emerald-600 dark:text-emerald-400')}>
                     <CheckCircle2 size={14} />
                     Markdown読み込み済み
                   </div>
                 )}
                 {hasExternalDescriptionUrl && externalDescriptionStatus === 'error' && !descriptionLoading && (
-                  <div className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+                  <div className={cn(layout.inlineGap1, 'text-xs text-red-500 dark:text-red-400')}>
                     <AlertCircle size={14} />
                     Markdownを読み込めませんでした
                   </div>
