@@ -2,9 +2,12 @@
  * タグ編集コンポーネント
  */
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import Button from '@/components/ui/Button';
 import { Check, X } from 'lucide-react';
 import { normalizeArrayText } from '../../model/helpers';
 import type { TagEditorProps } from '../types';
+import { cn } from '@/lib/cn';
+import { layout, surface, text } from '@/components/ui/_styles';
 const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onChange }: TagEditorProps) {
   const [tags, setTags] = useState(() => normalizeArrayText(initialTags));
   const [inputValue, setInputValue] = useState('');
@@ -76,11 +79,14 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="tags-input">
+      <label className={text.labelSm} htmlFor="tags-input">
         タグ
       </label>
       <div
-        className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+        className={cn(
+          surface.panelLg,
+          'flex min-h-[42px] flex-wrap items-center gap-2 p-1.5 shadow-sm transition focus-within:ring-2 focus-within:ring-blue-500',
+        )}
         onClick={() => inputRef.current?.focus()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -93,12 +99,18 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
         {tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex animate-in fade-in zoom-in duration-200 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+            className={cn(
+              layout.inlineGap1,
+              'animate-in fade-in zoom-in duration-200 rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+            )}
           >
             <span className="max-w-[160px] truncate">{tag}</span>
-            <button
+            <Button
+              variant="plain"
+              size="iconXs"
+              radius="full"
               type="button"
-              className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              className="ml-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemoveTag(tag);
@@ -106,7 +118,7 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
               aria-label={`${tag} を削除`}
             >
               <X size={12} />
-            </button>
+            </Button>
           </span>
         ))}
         <input
@@ -128,19 +140,23 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
             {suggestions.map((tag) => {
               const isSelected = tags.includes(tag);
               return (
-                <button
+                <Button
+                  variant="plain"
+                  size="none"
                   type="button"
                   key={tag}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                  className={cn(
+                    layout.inlineGap1,
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition-all',
                     isSelected
                       ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-500/20 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-500/40'
-                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'
-                  }`}
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700',
+                  )}
                   onClick={() => handleToggleTag(tag)}
                 >
                   <span>{tag}</span>
                   {isSelected && <Check size={12} />}
-                </button>
+                </Button>
               );
             })}
           </div>

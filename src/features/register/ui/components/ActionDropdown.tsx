@@ -2,8 +2,37 @@
  * ドロップダウンリストコンポーネント
  */
 import React, { memo, useEffect, useRef, useState } from 'react';
+import Button from '@/components/ui/Button';
+import { cva } from 'class-variance-authority';
 import { Check, ChevronDown } from 'lucide-react';
+import { surface } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 import type { ActionDropdownProps } from '../types';
+
+const triggerVariants = cva('w-full justify-between border px-3 py-2 shadow-sm transition-all', {
+  variants: {
+    open: {
+      true: 'z-10 border-blue-500 ring-2 ring-blue-500/20',
+      false:
+        'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700',
+    },
+  },
+  defaultVariants: {
+    open: false,
+  },
+});
+
+const optionVariants = cva('w-full justify-between px-3 py-2 text-left transition-colors', {
+  variants: {
+    selected: {
+      true: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      false: 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50',
+    },
+  },
+  defaultVariants: {
+    selected: false,
+  },
+});
 
 const ActionDropdown = memo(
   function ActionDropdown({ value, onChange, options, ariaLabel, buttonId, ariaLabelledby }: ActionDropdownProps) {
@@ -38,14 +67,12 @@ const ActionDropdown = memo(
 
     return (
       <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
-        <button
+        <Button
+          variant="plain"
+          size="none"
           type="button"
           id={buttonId}
-          className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-            open
-              ? 'border-blue-500 ring-2 ring-blue-500/20 z-10'
-              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700'
-          }`}
+          className={triggerVariants({ open })}
           onClick={() => setOpen((prev) => !prev)}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -53,24 +80,28 @@ const ActionDropdown = memo(
           aria-labelledby={ariaLabelledby}
         >
           <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
-          <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden>
+          <span
+            className={cn('text-slate-400 transition-transform duration-200', open ? 'rotate-180' : '')}
+            aria-hidden
+          >
             <ChevronDown size={16} />
           </span>
-        </button>
+        </Button>
         {open && (
           <div
-            className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-900/5 dark:border-slate-700 dark:bg-slate-800 dark:ring-white/10"
+            className={cn(
+              surface.panel,
+              'absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto p-1 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10',
+            )}
             role="listbox"
           >
             {dropdownOptions.map((opt) => (
-              <button
+              <Button
+                variant="plain"
+                size="none"
                 type="button"
                 key={opt.value}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  opt.value === value
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50'
-                }`}
+                className={optionVariants({ selected: opt.value === value })}
                 role="option"
                 aria-selected={opt.value === value}
                 onMouseDown={(e) => {
@@ -80,7 +111,7 @@ const ActionDropdown = memo(
               >
                 <span className="truncate">{opt.label}</span>
                 {opt.value === value && <Check size={14} />}
-              </button>
+              </Button>
             ))}
           </div>
         )}

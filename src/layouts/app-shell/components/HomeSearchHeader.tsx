@@ -1,5 +1,7 @@
 import type { ChangeEvent } from 'react';
 import { Search, X } from 'lucide-react';
+import { layout } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 interface HomeSearchHeaderProps {
   searchQuery: string;
@@ -12,10 +14,15 @@ export default function HomeSearchHeader({ searchQuery, onSearchQueryChange }: H
   };
 
   return (
-    <header className="h-16 bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 gap-4 sticky top-0 z-10 transition-all select-none">
-      <div className="flex items-center gap-3 flex-1 max-w-2xl relative">
+    <header
+      className={cn(
+        layout.rowBetween,
+        'h-16 bg-white/80 px-6 shrink-0 gap-4 border-b border-slate-200 dark:bg-slate-900/80 dark:border-slate-800 sticky top-0 z-10 transition-all select-none',
+      )}
+    >
+      <div className={cn(layout.inlineGap3, 'flex-1 max-w-2xl relative')}>
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Search className={layout.inputIconLeft} size={18} />
           <input
             type="text"
             placeholder="パッケージ名、作者、キーワードで検索..."

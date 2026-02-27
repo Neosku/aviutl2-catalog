@@ -5,6 +5,8 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import type { RegisterMetaSectionProps } from '../types';
 import TagEditor from './TagEditor';
+import { grid, layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function RegisterMetaSection({
   packageForm,
@@ -14,8 +16,14 @@ export default function RegisterMetaSection({
   onTagsChange,
 }: RegisterMetaSectionProps) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300">
+    <section className={surface.cardSection}>
+      <div
+        className={cn(
+          surface.infoBox,
+          layout.inlineStartGap3,
+          'mb-6 border border-blue-100 bg-blue-50/50 rounded-xl text-blue-800 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300',
+        )}
+      >
         <Info size={20} className="mt-0.5 flex-shrink-0 text-blue-500" />
         <div>
           このフォームに入力するプラグイン情報はすべて公開されます。
@@ -25,9 +33,9 @@ export default function RegisterMetaSection({
       </div>
 
       <div className="grid gap-6">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className={grid.twoColWideGap}>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-id">
+            <label className={text.labelSm} htmlFor="package-id">
               ID <span className="text-red-500">*</span>
             </label>
             <input
@@ -38,10 +46,10 @@ export default function RegisterMetaSection({
               required
               placeholder="Kenkun.AviUtlExEdit2"
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400">英数字と記号 ( . - _ ) のみ</p>
+            <p className={text.mutedXs}>英数字と記号 ( . - _ ) のみ</p>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-name">
+            <label className={text.labelSm} htmlFor="package-name">
               パッケージ名 <span className="text-red-500">*</span>
             </label>
             <input
@@ -55,9 +63,9 @@ export default function RegisterMetaSection({
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className={grid.twoColWideGap}>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-author">
+            <label className={text.labelSm} htmlFor="package-author">
               作者名 <span className="text-red-500">*</span>
             </label>
             <input
@@ -70,7 +78,7 @@ export default function RegisterMetaSection({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-original-author">
+            <label className={text.labelSm} htmlFor="package-original-author">
               オリジナル作者名 (任意)
             </label>
             <input
@@ -82,7 +90,7 @@ export default function RegisterMetaSection({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-type">
+            <label className={text.labelSm} htmlFor="package-type">
               種類 <span className="text-red-500">*</span>
             </label>
             <input
@@ -95,7 +103,7 @@ export default function RegisterMetaSection({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-repo-url">
+            <label className={text.labelSm} htmlFor="package-repo-url">
               パッケージのサイト <span className="text-red-500">*</span>
             </label>
             <input
@@ -109,10 +117,7 @@ export default function RegisterMetaSection({
             />
           </div>
           <div className="space-y-2">
-            <label
-              className="text-sm font-medium text-slate-700 dark:text-slate-300"
-              htmlFor="package-niconi-commons-id"
-            >
+            <label className={text.labelSm} htmlFor="package-niconi-commons-id">
               ニコニ・コモンズID (任意)
             </label>
             <input
@@ -126,7 +131,7 @@ export default function RegisterMetaSection({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-dependencies">
+          <label className={text.labelSm} htmlFor="package-dependencies">
             依存パッケージ (現在非対応)
           </label>
           <input
@@ -141,7 +146,7 @@ export default function RegisterMetaSection({
         <TagEditor initialTags={initialTags} suggestions={tagCandidates} onChange={onTagsChange} />
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="package-summary">
+          <label className={text.labelSm} htmlFor="package-summary">
             概要 <span className="text-red-500">*</span>
           </label>
           <input
@@ -154,7 +159,7 @@ export default function RegisterMetaSection({
           />
           <div className="flex justify-end">
             <span
-              className={`text-xs ${packageForm.summary.length > 35 ? 'text-red-500 font-bold' : 'text-slate-400'}`}
+              className={cn('text-xs', packageForm.summary.length > 35 ? 'text-red-500 font-bold' : 'text-slate-400')}
             >
               {packageForm.summary.length} / 35
             </span>

@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { layout } from '@/components/ui/_styles';
 
 interface CarouselImage {
   src: string;
@@ -78,13 +80,16 @@ export default function ImageCarousel({ images = [] }: ImageCarouselProps) {
         </button>
       )}
       <div
-        className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1"
+        className={cn(
+          layout.inlineGap2,
+          'absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1',
+        )}
         role="tablist"
       >
         {images.map((_, i) => (
           <button
             key={i}
-            className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-white' : 'bg-white/40'}`}
+            className={cn('h-1.5 w-1.5 rounded-full', i === index ? 'bg-white' : 'bg-white/40')}
             aria-selected={i === index}
             aria-label={`スライド ${i + 1}/${images.length}`}
             role="tab"

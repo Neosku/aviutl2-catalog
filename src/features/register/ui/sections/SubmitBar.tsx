@@ -2,8 +2,13 @@
  * 送信バーコンポーネント
  */
 import React from 'react';
+import Button, { buttonVariants } from '@/components/ui/Button';
 import { BookOpen, FileBraces, Send } from 'lucide-react';
 import type { RegisterSubmitBarProps } from '../types';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
+
+const utilityLinkButtonClass = buttonVariants({ variant: 'secondary', size: 'actionSm' });
 
 export default function RegisterSubmitBar({
   packageGuideUrl,
@@ -26,32 +31,28 @@ export default function RegisterSubmitBar({
         : `${pendingSubmitCount}件まとめて送信`;
 
   return (
-    <section className="sticky bottom-6 z-20 mb-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+    <section
+      className={cn(
+        surface.card,
+        'sticky bottom-6 z-20 mb-6 p-4 shadow-xl backdrop-blur-md bg-white/90 dark:bg-slate-900/90',
+      )}
+    >
+      <div className={layout.rowBetweenWrapGap4}>
+        <div className={layout.inlineGap2}>
           {packageGuideUrl && (
-            <a
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              href={packageGuideUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <a className={utilityLinkButtonClass} href={packageGuideUrl} target="_blank" rel="noreferrer noopener">
               <BookOpen size={16} />
               説明サイト
             </a>
           )}
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={onOpenJsonImport}
-          >
+          <Button variant="secondary" size="actionSm" type="button" onClick={onOpenJsonImport}>
             <FileBraces size={16} />
             JSON入力
-          </button>
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className={layout.inlineGap3}>
           <div className="hidden sm:flex items-center gap-3">
-            <span className="border-r border-slate-200 pr-3 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <span className={cn(layout.dividerRightMuted, text.mutedXs, 'text-[11px]')}>
               作者の方はできる限りご入力ください
             </span>
             <input
@@ -63,9 +64,11 @@ export default function RegisterSubmitBar({
               aria-label="送信者のニックネーム"
             />
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             type="submit"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-blue-500"
+            className="shadow-md hover:shadow-lg"
             disabled={submitting || !canSubmit}
           >
             {submitting ? (
@@ -79,7 +82,7 @@ export default function RegisterSubmitBar({
                 {submitButtonLabel}
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

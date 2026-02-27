@@ -6,6 +6,7 @@ import type { PackageInstallerSectionProps } from '../types';
 import InstallStepsSection from './InstallStepsSection';
 import InstallerSourceSection from './InstallerSourceSection';
 import UninstallStepsSection from './UninstallStepsSection';
+import { layout, surface, text } from '@/components/ui/_styles';
 
 const PackageInstallerSection = memo(
   function PackageInstallerSection(props: PackageInstallerSectionProps) {
@@ -24,9 +25,9 @@ const PackageInstallerSection = memo(
     } = props;
 
     return (
-      <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">インストーラ</h2>
+      <section className={surface.cardSectionSpacious}>
+        <div className={layout.rowBetweenWrapGap2}>
+          <h2 className={text.titleLg}>インストーラ</h2>
         </div>
 
         <InstallerSourceSection installer={installer} updateInstallerField={updateInstallerField} />

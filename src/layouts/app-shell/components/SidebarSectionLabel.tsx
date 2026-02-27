@@ -1,3 +1,5 @@
+import { cn } from '@/lib/cn';
+
 interface SidebarSectionLabelProps {
   label: string;
   isCollapsed: boolean;
@@ -13,7 +15,11 @@ export default function SidebarSectionLabel({
 }: SidebarSectionLabelProps) {
   return (
     <div
-      className={`h-4 flex items-center shrink-0 transition-all duration-200 ${className} ${isCollapsed ? 'justify-center px-0' : 'px-4'}`}
+      className={cn(
+        'h-4 flex items-center shrink-0 transition-all duration-200',
+        className,
+        isCollapsed ? 'justify-center px-0' : 'px-4',
+      )}
     >
       {isCollapsed ? (
         !hideDivider && <div className="w-8 h-[1px] bg-slate-200 dark:bg-slate-800" />

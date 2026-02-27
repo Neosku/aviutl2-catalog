@@ -1,5 +1,7 @@
 import useNiconiCommonsPage from './hooks/useNiconiCommonsPage';
 import { GuideSection, HeaderSection, TableSection, ToolbarSection } from './sections';
+import { page } from '@/components/ui/_styles';
+import { cn } from '@/lib/cn';
 
 export default function NiconiCommonsPage() {
   const {
@@ -20,7 +22,7 @@ export default function NiconiCommonsPage() {
   } = useNiconiCommonsPage();
 
   return (
-    <div className="max-w-4xl mx-auto select-none">
+    <div className={cn(page.container4xl, page.selectNone)}>
       <HeaderSection copyState={copyState} selectedCount={selectedCount} onCopySelected={onCopySelected} />
 
       <GuideSection onOpenGuide={onOpenGuide} />
