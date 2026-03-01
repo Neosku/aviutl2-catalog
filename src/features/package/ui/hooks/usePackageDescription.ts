@@ -52,7 +52,7 @@ export default function usePackageDescription({
         readMs = performance.now() - readStart;
         const renderStart = performance.now();
         const html = renderMarkdown(markdownText, {
-          baseUrl: isMarkdownUrl(descriptionUrlOrMarkdown) ? descriptionUrlOrMarkdown : baseUrl,
+          baseUrl: url,
         });
         renderMs = performance.now() - renderStart;
         if (!cancelled) {

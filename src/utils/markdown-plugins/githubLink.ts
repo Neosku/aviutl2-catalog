@@ -13,7 +13,6 @@ export function resolveGithubLink(md: MarkdownExit): void {
     if (!githubUrlInfo) {
       return defaultLinkRenderer(tokens, idx, options, env, self);
     }
-    console.log('githubUrlInfo', githubUrlInfo);
 
     const { user, repo, branch, path } = githubUrlInfo;
     const token = tokens[idx];

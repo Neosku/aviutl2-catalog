@@ -1,5 +1,5 @@
 import { createMarkdownExit } from 'markdown-exit';
-import sanitizeHtml from './sanitizeHtml';
+import { escapeHtml } from './escapeHtml';
 import { highlight } from './markdown-plugins/highlight';
 import { safeHtml } from './markdown-plugins/safeHtml';
 import { resolveGithubLink } from './markdown-plugins/githubLink';
@@ -7,6 +7,7 @@ import { alertBlock } from './markdown-plugins/alertBlock';
 import { fixImageUrl } from './markdown-plugins/fixImageUrl';
 
 const md = createMarkdownExit({
+  html: true,
   breaks: true,
   highlight,
 });
@@ -30,12 +31,6 @@ export function renderMarkdown(
       .trim();
     return rendered;
   } catch {
-    return sanitizeHtml
-      .default(markdown, {
-        allowedTags: false,
-        allowedAttributes: false,
-        allowedSchemes: false,
-      })
-      .replaceAll('\n', '<br>');
+    return escapeHtml(markdown).replaceAll('\n', '<br>');
   }
 }

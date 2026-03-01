@@ -3,7 +3,25 @@ import sanitizeHtml from '../sanitizeHtml';
 
 export function doSanitize(html: string): string {
   return sanitizeHtml.default(html, {
-    allowedTags: ['br', 'b', 'i', 'em', 'strong', 'a'],
+    allowedTags: [
+      'br',
+      'b',
+      'i',
+      'em',
+      'strong',
+      'a',
+      'details',
+      'summary',
+      'dl',
+      'dt',
+      'dd',
+      'table',
+      'thead',
+      'tbody',
+      'tr',
+      'th',
+      'td',
+    ],
     allowedAttributes: {
       a: ['href', 'target', 'rel'],
     },
