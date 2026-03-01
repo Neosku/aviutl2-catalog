@@ -138,6 +138,7 @@ pub fn run() {
             commands::archive::copy_item_js,
             commands::system::is_aviutl_running,
             commands::system::launch_aviutl2,
+            commands::system::run_installer_executable,
             commands::system::run_auo_setup,
             paths::complete_initial_setup,
             paths::update_settings,

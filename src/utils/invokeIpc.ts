@@ -20,6 +20,7 @@ type InvokeIpcMap = {
     { url: string; destPath: string; taskId: string; sessionWindowLabel: string },
     string
   >;
+  runInstallerExecutable: CommandSpec<{ exePath: string; args: string[]; elevate: boolean }, void>;
   runAuoSetup: CommandSpec<{ exePath: string }, void>;
   extractZip: CommandSpec<{ zipPath: string; destPath: string }, void>;
   extract7zSfx: CommandSpec<{ sfxPath: string; destPath: string }, void>;

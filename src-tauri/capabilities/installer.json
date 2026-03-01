@@ -18,15 +18,6 @@
       ]
     },
     {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "powershell",
-          "cmd": "powershell"
-        }
-      ]
-    },
-    {
       "identifier": "fs:allow-read-file",
       "allow": ["**/**"]
     },
