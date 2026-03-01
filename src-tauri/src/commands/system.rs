@@ -1,4 +1,7 @@
 use std::{
+    iter::once,
+    mem::size_of,
+    os::windows::ffi::OsStrExt,
     path::PathBuf,
     thread,
     time::{Duration, Instant},
@@ -6,13 +9,96 @@ use std::{
 
 use tauri::{AppHandle, Manager};
 use windows::{
-    Win32::Foundation::{HWND, LPARAM, WPARAM},
-    Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, GW_HWNDNEXT, GetClassNameW, GetDlgItem, GetTopWindow, GetWindow, GetWindowThreadProcessId, PostMessageW, SendMessageW, WM_CLOSE, WM_GETTEXT,
-        WM_GETTEXTLENGTH,
+    Win32::{
+        Foundation::{CloseHandle, HANDLE, HWND, LPARAM, WAIT_FAILED, WPARAM},
+        System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject},
+        UI::{
+            Shell::{SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW},
+            WindowsAndMessaging::{
+                FindWindowExW, GW_HWNDNEXT, GetClassNameW, GetDlgItem, GetTopWindow, GetWindow, GetWindowThreadProcessId, PostMessageW, SW_SHOWNORMAL, SendMessageW, WM_CLOSE,
+                WM_GETTEXT, WM_GETTEXTLENGTH,
+            },
+        },
     },
     core::{PCWSTR, w},
 };
+
+struct OwnedProcessHandle(HANDLE);
+
+impl Drop for OwnedProcessHandle {
+    fn drop(&mut self) {
+        if !self.0.0.is_null() {
+            unsafe {
+                let _ = CloseHandle(self.0);
+            }
+        }
+    }
+}
+
+fn os_str_to_wide(value: &std::ffi::OsStr) -> Vec<u16> {
+    value.encode_wide().chain(once(0)).collect()
+}
+
+fn str_to_wide(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(once(0)).collect()
+}
+
+fn wait_for_process_exit(handle: OwnedProcessHandle) -> Result<u32, String> {
+    let wait_result = unsafe { WaitForSingleObject(handle.0, INFINITE) };
+    if wait_result == WAIT_FAILED {
+        return Err(format!("WaitForSingleObject failed: {}", std::io::Error::last_os_error()));
+    }
+
+    let mut exit_code = 0u32;
+    unsafe {
+        GetExitCodeProcess(handle.0, &mut exit_code).map_err(|e| format!("GetExitCodeProcess failed: {e}"))?;
+    }
+    Ok(exit_code)
+}
+
+fn run_installer_executable_impl(exe_path: PathBuf, args: Vec<String>, elevate: bool) -> Result<(), String> {
+    if !exe_path.is_absolute() {
+        return Err(format!("Installer path must be absolute: {}", exe_path.display()));
+    }
+    if !exe_path.is_file() {
+        return Err(format!("Installer file not found: {}", exe_path.display()));
+    }
+    let file_wide = os_str_to_wide(exe_path.as_os_str());
+    let params = args.join(" ");
+    let params_wide = (!params.is_empty()).then(|| str_to_wide(&params));
+    let verb_wide = elevate.then(|| str_to_wide("runas"));
+    let dir_wide = os_str_to_wide(exe_path.parent().ok_or_else(|| format!("Installer path has no parent directory: {}", exe_path.display()))?.as_os_str());
+
+    let mut exec_info = SHELLEXECUTEINFOW {
+        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_NOCLOSEPROCESS,
+        lpVerb: verb_wide.as_ref().map_or(PCWSTR::null(), |v| PCWSTR(v.as_ptr())),
+        lpFile: PCWSTR(file_wide.as_ptr()),
+        lpParameters: params_wide.as_ref().map_or(PCWSTR::null(), |v| PCWSTR(v.as_ptr())),
+        lpDirectory: PCWSTR(dir_wide.as_ptr()),
+        nShow: SW_SHOWNORMAL.0,
+        ..Default::default()
+    };
+
+    unsafe {
+        ShellExecuteExW(&mut exec_info).map_err(|e| format!("Failed to start '{}': {e}", exe_path.display()))?;
+    }
+
+    if exec_info.hProcess.0.is_null() {
+        return Err(format!("Process handle was not returned for '{}'", exe_path.display()));
+    }
+
+    let exit_code = wait_for_process_exit(OwnedProcessHandle(exec_info.hProcess))?;
+    if exit_code != 0 {
+        return Err(format!(
+            "runInstallerExecutable failed (exe={}, args={}, elevate={}) exit={exit_code}",
+            exe_path.display(),
+            serde_json::to_string(&args).unwrap_or_else(|_| String::from("[]")),
+            elevate
+        ));
+    }
+    Ok(())
+}
 
 fn wait_find_window_by_class_and_pid(class_name: &str, pid: u32, timeout: Duration) -> Option<HWND> {
     let deadline = Instant::now() + timeout;
@@ -57,11 +143,9 @@ fn drain_new_text_from_edit_and_check(hwnd_edit: HWND, last_len_u16: &mut usize,
     }
 }
 
-fn run_auo_setup_impl(_app: AppHandle, exe_path: PathBuf, args: Option<Vec<String>>) -> Result<i32, String> {
+fn run_auo_setup_impl(exe_path: PathBuf, args: Vec<String>) -> Result<i32, String> {
     let mut cmd = std::process::Command::new(&exe_path);
-    if let Some(a) = &args {
-        cmd.args(a);
-    }
+    cmd.args(&args);
     let mut child = cmd.spawn().map_err(|e| format!("Failed to start '{}': {e}", exe_path.display()))?;
     let pid = child.id();
     let hwnd_dialog = wait_find_window_by_class_and_pid("AUO_SETUP", pid, Duration::from_secs(30)).ok_or_else(|| "Timed out waiting for AUO_SETUP window".to_string())?;
@@ -102,7 +186,7 @@ pub fn is_aviutl_running() -> bool {
 }
 
 #[tauri::command]
-pub fn launch_aviutl2(_app: tauri::AppHandle) -> Result<(), String> {
+pub fn launch_aviutl2() -> Result<(), String> {
     let dirs = crate::paths::dirs();
     let exe_path = dirs.aviutl2_root.join("aviutl2.exe");
     if !exe_path.exists() {
@@ -116,9 +200,20 @@ pub fn launch_aviutl2(_app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn run_installer_executable(exe_path: String, args: Vec<String>, elevate: bool) -> Result<(), String> {
+    let exe_path = PathBuf::from(exe_path);
+    tauri::async_runtime::spawn_blocking(move || run_installer_executable_impl(exe_path, args, elevate)).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn run_auo_setup(app: AppHandle, exe_path: String) -> Result<i32, String> {
     let exe_path = PathBuf::from(exe_path);
-    let exe_path = std::fs::canonicalize(exe_path).map_err(|e| e.to_string())?;
+    if !exe_path.is_absolute() {
+        return Err(format!("Installer path must be absolute: {}", exe_path.display()));
+    }
+    if !exe_path.is_file() {
+        return Err(format!("Installer file not found: {}", exe_path.display()));
+    }
     let settings = {
         let config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
         let settings_path = config_dir.join("settings.json");
@@ -145,7 +240,5 @@ pub async fn run_auo_setup(app: AppHandle, exe_path: String) -> Result<i32, Stri
         tracing::info!("Running in standard mode");
         args_vec.push("-aviutldir-default".to_string());
     }
-    let args = if args_vec.is_empty() { None } else { Some(args_vec) };
-    let app_for_task = app.clone();
-    tauri::async_runtime::spawn_blocking(move || run_auo_setup_impl(app_for_task, exe_path, args)).await.map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || run_auo_setup_impl(exe_path, args_vec)).await.map_err(|e| e.to_string())?
 }
