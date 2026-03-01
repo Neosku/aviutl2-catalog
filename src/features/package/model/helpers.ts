@@ -1,7 +1,10 @@
 export function isMarkdownFilePath(path: string): boolean {
   const trimmedPath = path.trim();
   if (!trimmedPath || trimmedPath.includes('\n')) return false;
-  return (!!trimmedPath.match(/http(s)?:\/\/.+/)) || !!trimmedPath.match(/^[./]?([^/]+\/)*[^/]+\.(md|markdown|mdown|mkdn?|mdwn|mdtxt|mdtext|text|txt)(\?.*)?$/i);
+  return (
+    !!trimmedPath.match(/http(s)?:\/\/.+/) ||
+    !!trimmedPath.match(/^[./]?([^/]+\/)*[^/]+\.(md|markdown|mdown|mkdn?|mdwn|mdtxt|mdtext|text|txt)(\?.*)?$/i)
+  );
 }
 
 export function resolveMarkdownUrl(path: string, baseUrl: string): string {
