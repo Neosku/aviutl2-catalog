@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { isMarkdownFilePath, resolveMarkdownUrl } from '../../model/helpers';
+import { isMarkdownFilePath as isMarkdownUrl, resolveMarkdownUrl } from '../../model/helpers';
 import { renderMarkdown } from '../../../../utils/markdown';
 
 interface UsePackageDescriptionParams {
@@ -7,9 +7,12 @@ interface UsePackageDescriptionParams {
   baseUrl: string;
 }
 
-export default function usePackageDescription({ descriptionSource, baseUrl }: UsePackageDescriptionParams) {
+export default function usePackageDescription({
+  descriptionSource: descriptionUrlOrMarkdown,
+  baseUrl,
+}: UsePackageDescriptionParams) {
   const [descriptionHtml, setDescriptionHtml] = useState(() =>
-    isMarkdownFilePath(descriptionSource) ? '' : renderMarkdown(descriptionSource),
+    isMarkdownUrl(descriptionUrlOrMarkdown) ? '' : renderMarkdown(descriptionUrlOrMarkdown),
   );
   const [descriptionLoading, setDescriptionLoading] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
@@ -17,16 +20,15 @@ export default function usePackageDescription({ descriptionSource, baseUrl }: Us
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    const raw = descriptionSource;
     const totalStart = performance.now();
-    if (!raw) {
+    if (!descriptionUrlOrMarkdown) {
       setDescriptionHtml('');
       setDescriptionError('');
       setDescriptionLoading(false);
       return undefined;
     }
-    if (!isMarkdownFilePath(raw)) {
-      setDescriptionHtml(renderMarkdown(raw));
+    if (!isMarkdownUrl(descriptionUrlOrMarkdown)) {
+      setDescriptionHtml(renderMarkdown(descriptionUrlOrMarkdown));
       setDescriptionError('');
       setDescriptionLoading(false);
       return undefined;
@@ -40,7 +42,7 @@ export default function usePackageDescription({ descriptionSource, baseUrl }: Us
       let readMs = 0;
       let renderMs = 0;
       try {
-        const url = resolveMarkdownUrl(raw, baseUrl);
+        const url = resolveMarkdownUrl(descriptionUrlOrMarkdown, baseUrl);
         const fetchStart = performance.now();
         const response = await fetch(url, { signal: controller.signal });
         fetchMs = performance.now() - fetchStart;
@@ -49,7 +51,9 @@ export default function usePackageDescription({ descriptionSource, baseUrl }: Us
         const markdownText = await response.text();
         readMs = performance.now() - readStart;
         const renderStart = performance.now();
-        const html = renderMarkdown(markdownText);
+        const html = renderMarkdown(markdownText, {
+          baseUrl: isMarkdownUrl(descriptionUrlOrMarkdown) ? descriptionUrlOrMarkdown : baseUrl,
+        });
         renderMs = performance.now() - renderStart;
         if (!cancelled) {
           setDescriptionHtml(html);
@@ -67,7 +71,7 @@ export default function usePackageDescription({ descriptionSource, baseUrl }: Us
         if (import.meta.env.DEV && !cancelled && !controller.signal.aborted) {
           const totalMs = performance.now() - totalStart;
           console.info(
-            `[package-md] total=${totalMs.toFixed(1)}ms fetch=${fetchMs.toFixed(1)}ms read=${readMs.toFixed(1)}ms render=${renderMs.toFixed(1)}ms source=${raw}`,
+            `[package-md] total=${totalMs.toFixed(1)}ms fetch=${fetchMs.toFixed(1)}ms read=${readMs.toFixed(1)}ms render=${renderMs.toFixed(1)}ms source=${descriptionUrlOrMarkdown}`,
           );
         }
       }
@@ -77,7 +81,7 @@ export default function usePackageDescription({ descriptionSource, baseUrl }: Us
       cancelled = true;
       controller.abort();
     };
-  }, [descriptionSource, baseUrl]);
+  }, [descriptionUrlOrMarkdown, baseUrl]);
 
   return {
     descriptionHtml,

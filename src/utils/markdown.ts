@@ -82,16 +82,48 @@ md.use((md) => {
   };
 });
 
-export function renderMarkdown(markdown: unknown = ''): string {
-  if (markdown == null) return '';
-  const text = String(markdown).replace(/\r\n?/g, '\n');
-  if (!text) return '';
+function resolveImageSrc(src: string, baseUrl?: string): string {
+  if (!baseUrl) return src;
   try {
-    const rendered = md.render(text).trim();
+    const url = new URL(src, baseUrl);
+    return url.href;
+  } catch {
+    return src;
+  }
+}
+md.use((md) => {
+  // 画像リンクを渡されたbaseUrlを基準に変換する。
+  const defaultImageRenderer =
+    md.renderer.rules.image || ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
+  md.renderer.rules.image = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const srcIndex = token.attrIndex('src');
+    if (srcIndex >= 0) {
+      const src = token.attrs?.[srcIndex]?.[1] || '';
+      const resolvedSrc = resolveImageSrc(src, env.baseUrl);
+      token.attrs![srcIndex][1] = resolvedSrc;
+    }
+    return defaultImageRenderer(tokens, idx, options, env, self);
+  };
+});
+
+export function renderMarkdown(
+  markdown: string,
+  options: {
+    baseUrl?: string;
+  } = {},
+): string {
+  if (!markdown) return '';
+  try {
+    const rendered = md
+      .render(markdown, {
+        baseUrl: options.baseUrl,
+      })
+      .trim();
     return rendered;
   } catch {
     return sanitize
-      .default(text, {
+      .default(markdown, {
         allowedTags: false,
         allowedAttributes: false,
         allowedSchemes: false,
