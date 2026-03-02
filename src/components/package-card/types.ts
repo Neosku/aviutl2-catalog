@@ -1,21 +1,26 @@
-import type { KeyboardEvent } from 'react';
 import type { PackageItem } from '../../features/package/model/types';
+import type { PackageInstallBusyAction } from '../../utils/usePackageInstallerActions';
 
 export interface PackageCardProps {
   item: PackageItem;
   listSearch?: string;
 }
 
+export type PackageCardBusyAction = PackageInstallBusyAction;
+
 export type PackageCardActionHandler = () => Promise<void>;
+
+export interface PackageCardProgressView {
+  ratio: number;
+  label: string;
+}
 
 export interface UsePackageCardActionsResult {
   error: string;
   setError: (value: string) => void;
-  downloading: boolean;
-  updating: boolean;
-  removing: boolean;
-  downloadRatio: number;
-  updateRatio: number;
+  busyAction: PackageCardBusyAction;
+  isBusy: boolean;
+  progress: PackageCardProgressView;
   onDownload: PackageCardActionHandler;
   onUpdate: PackageCardActionHandler;
   onRemove: PackageCardActionHandler;
@@ -29,13 +34,10 @@ export interface PackageCardViewProps {
   isInstalled: boolean;
   hasUpdate: boolean;
   canInstall: boolean;
-  downloading: boolean;
-  updating: boolean;
-  removing: boolean;
-  downloadRatio: number;
-  updateRatio: number;
+  busyAction: PackageCardBusyAction;
+  isBusy: boolean;
+  progress: PackageCardProgressView;
   onOpenDetail: () => void;
-  onCardKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   onDownload: PackageCardActionHandler;
   onUpdate: PackageCardActionHandler;
   onRemove: PackageCardActionHandler;

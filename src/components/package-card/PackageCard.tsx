@@ -1,5 +1,3 @@
-import type { KeyboardEvent } from 'react';
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { hasInstaller } from '../../utils/installer';
 import { formatDate } from '../../utils/text';
@@ -11,20 +9,9 @@ import type { PackageCardProps } from './types';
 
 export default function PackageCard({ item, listSearch = '' }: PackageCardProps) {
   const navigate = useNavigate();
-  const {
-    error,
-    setError,
-    downloading,
-    updating,
-    removing,
-    downloadRatio,
-    updateRatio,
-    onDownload,
-    onUpdate,
-    onRemove,
-  } = usePackageCardActions(item);
+  const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageCardActions(item);
 
-  const thumbnail = useMemo(() => pickThumbnail(item), [item]);
+  const thumbnail = pickThumbnail(item);
   const category = typeof item.type === 'string' ? item.type : 'その他';
   const isInstalled = Boolean(item.installed);
   const hasUpdate = isInstalled && !item.isLatest;
@@ -33,12 +20,6 @@ export default function PackageCard({ item, listSearch = '' }: PackageCardProps)
 
   const openDetail = () => {
     navigate(`/package/${encodeURIComponent(item.id)}`, { state: { fromSearch: listSearch } });
-  };
-
-  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    openDetail();
   };
 
   return (
@@ -51,13 +32,10 @@ export default function PackageCard({ item, listSearch = '' }: PackageCardProps)
         isInstalled={isInstalled}
         hasUpdate={hasUpdate}
         canInstall={canInstall}
-        downloading={downloading}
-        updating={updating}
-        removing={removing}
-        downloadRatio={downloadRatio}
-        updateRatio={updateRatio}
+        busyAction={busyAction}
+        isBusy={isBusy}
+        progress={progress}
         onOpenDetail={openDetail}
-        onCardKeyDown={handleCardKeyDown}
         onDownload={onDownload}
         onUpdate={onUpdate}
         onRemove={onRemove}

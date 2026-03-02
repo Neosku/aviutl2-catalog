@@ -69,7 +69,7 @@ export default function ProgressCircle({
         focusable="false"
         aria-hidden="true"
       >
-        <circle className="text-slate-200 dark:text-slate-700" {...baseCircleProps} />
+        <circle className="text-slate-200/50 dark:text-slate-700/50" {...baseCircleProps} />
         <circle
           className={progressColorClasses}
           strokeDasharray={`${circumference} ${circumference}`}

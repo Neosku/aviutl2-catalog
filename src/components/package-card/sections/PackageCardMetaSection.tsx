@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Calendar, User } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import type { PackageItem } from '../../../features/package/model/types';
@@ -10,7 +11,7 @@ interface PackageCardMetaSectionProps {
   tags: string[];
 }
 
-export default function PackageCardMetaSection({ item, lastUpdated, tags }: PackageCardMetaSectionProps) {
+function PackageCardMetaSection({ item, lastUpdated, tags }: PackageCardMetaSectionProps) {
   return (
     <>
       <div className="mb-1">
@@ -63,3 +64,5 @@ export default function PackageCardMetaSection({ item, lastUpdated, tags }: Pack
     </>
   );
 }
+
+export default memo(PackageCardMetaSection);

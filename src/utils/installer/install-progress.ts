@@ -2,10 +2,10 @@ import type { InstallerAction } from '../catalogSchema';
 import type { DownloadProgress, InstallProgressPayload, InstallProgressPhase } from './types';
 
 const STEP_PROGRESS_LABELS: Record<string, string> = {
-  download: 'ダウンロード中',
+  download: 'ダウンロード',
   extract: '展開中',
   extract_sfx: '展開中',
-  copy: 'コピー中',
+  copy: '配置中',
   delete: '削除中',
   run: '実行中',
   run_auo_setup: '実行中',

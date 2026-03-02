@@ -1,5 +1,7 @@
-import { Package } from 'lucide-react';
+import { memo } from 'react';
+import { AppWindow, FileCode2, FileInput, FileOutput, Package, Puzzle, SlidersHorizontal } from 'lucide-react';
 import { placeholderPatternStyle } from '../helpers';
+import { getPrimaryPackageTypeMeta } from '../../../utils/query';
 import { layout, media } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
@@ -9,11 +11,19 @@ interface PackageCardThumbnailSectionProps {
   category: string;
 }
 
-export default function PackageCardThumbnailSection({
-  thumbnail,
-  itemName,
-  category,
-}: PackageCardThumbnailSectionProps) {
+const categoryIconMap = {
+  'app-window': AppWindow,
+  'file-input': FileInput,
+  'file-output': FileOutput,
+  puzzle: Puzzle,
+  'sliders-horizontal': SlidersHorizontal,
+  'file-code-2': FileCode2,
+} as const;
+
+function PackageCardThumbnailSection({ thumbnail, itemName, category }: PackageCardThumbnailSectionProps) {
+  const packageTypeMeta = getPrimaryPackageTypeMeta(category);
+  const CategoryIcon = packageTypeMeta ? categoryIconMap[packageTypeMeta.icon] : Package;
+
   return (
     <div
       className={cn(
@@ -33,10 +43,10 @@ export default function PackageCardThumbnailSection({
               <div
                 className={cn(
                   layout.center,
-                  'relative w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/40 dark:border-slate-700/50 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500',
+                  'relative w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/40 dark:border-slate-700/50 shadow-sm group-hover:scale-110 transition-all duration-500',
                 )}
               >
-                <Package size={32} className="text-slate-300 dark:text-slate-500" strokeWidth={1.5} />
+                <CategoryIcon size={32} className="text-slate-300 dark:text-slate-500" strokeWidth={1.5} />
               </div>
             </div>
           </div>
@@ -51,3 +61,5 @@ export default function PackageCardThumbnailSection({
     </div>
   );
 }
+
+export default memo(PackageCardThumbnailSection);
