@@ -58,7 +58,7 @@ function PrimaryActionButton({
 }: PrimaryActionButtonProps) {
   return (
     <button
-      className={cn(layout.center, actionButtonBaseClass, className)}
+      className={cn(layout.center, actionButtonBaseClass, busy && 'relative', className)}
       onClick={handleActionClick(onAction)}
       disabled={disabled}
       title={busy ? progress.label : title}
@@ -70,9 +70,9 @@ function PrimaryActionButton({
             value={progress.ratio}
             size={16}
             strokeWidth={3}
-            className={cn('shrink-0', progressClassName)}
+            className={cn('absolute left-5 top-1/2 -translate-y-1/2 shrink-0', progressClassName)}
           />
-          <span className="min-w-0 truncate">{progress.label}</span>
+          <span className="min-w-0 truncate translate-x-3">{progress.label}</span>
         </>
       ) : (
         <>
