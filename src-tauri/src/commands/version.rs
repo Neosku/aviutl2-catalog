@@ -24,21 +24,6 @@ enum HashCacheRoot {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct HashCacheV0Entry {
-    xxh3_128: String,
-    #[serde(rename = "mtimeMs")]
-    mtime_ms: u128,
-    size: u64,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(untagged)]
-enum HashCacheFile {
-    Versioned(HashCacheRoot),
-    Unversioned(HashMap<std::path::PathBuf, HashCacheV0Entry>),
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct HashCacheEntry {
     xxh3_128: String,
     mtime_ms: u128,
@@ -80,13 +65,20 @@ fn read_hash_cache(app: &tauri::AppHandle) -> HashMap<std::path::PathBuf, HashCa
 
     fn read_hash_cache_impl(app: &tauri::AppHandle) -> anyhow::Result<HashMap<std::path::PathBuf, HashCacheEntry>> {
         use std::fs::File;
+        use std::io::ErrorKind;
 
         let path = app.path().app_config_dir().unwrap_or_else(|_| std::env::temp_dir()).join("hash-cache.json");
-        let f = File::open(&path)?;
-        let cache_file: HashCacheFile = serde_json::from_reader(f)?;
-        match cache_file {
-            HashCacheFile::Versioned(HashCacheRoot::V1(map)) => Ok(map),
-            HashCacheFile::Unversioned(v0_map) => Ok(v0_map.into_iter().map(|(k, v)| (k, HashCacheEntry { xxh3_128: v.xxh3_128, mtime_ms: v.mtime_ms, size: v.size })).collect()),
+        let f = match File::open(&path) {
+            Ok(f) => f,
+            Err(e) if e.kind() == ErrorKind::NotFound => {
+                tracing::info!("Hash cache not found. Starting with empty cache: {}", path.display());
+                return Ok(HashMap::new());
+            }
+            Err(e) => return Err(e.into()),
+        };
+        let cache_root: HashCacheRoot = serde_json::from_reader(f)?;
+        match cache_root {
+            HashCacheRoot::V1(map) => Ok(map),
         }
     }
 }
@@ -98,8 +90,8 @@ fn write_hash_cache(app: &tauri::AppHandle, cache: &HashMap<std::path::PathBuf, 
     let _ = create_dir_all(&base);
     let path = base.join("hash-cache.json");
     if let Ok(mut f) = File::create(&path) {
-        let cache_file = HashCacheFile::Versioned(HashCacheRoot::V1(cache.clone()));
-        if let Ok(json) = serde_json::to_string_pretty(&cache_file) {
+        let cache_root = HashCacheRoot::V1(cache.clone());
+        if let Ok(json) = serde_json::to_string_pretty(&cache_root) {
             if let Err(e) = f.write_all(json.as_bytes()) {
                 tracing::error!("Failed to write hash cache: {}", e);
             }
