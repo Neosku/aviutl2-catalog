@@ -9,11 +9,12 @@ import type { CatalogDispatchFn, InstallerMacroContext, InstallerRunnableItem, S
 export async function syncDetectedVersionWithDispatch(
   item: InstallerRunnableItem,
   dispatch: CatalogDispatchFn,
-): Promise<void> {
-  if (!dispatch) return;
+): Promise<string> {
+  if (!dispatch) return '';
   const map = await detectInstalledVersionsMap([item]);
   const detected = String(map[item.id] || '');
   dispatch({ type: 'SET_DETECTED_ONE', payload: { id: item.id, version: detected } });
+  return detected;
 }
 
 export async function executeDeleteAction(params: {

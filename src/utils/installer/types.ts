@@ -36,7 +36,7 @@ export type InstallerRunnableItem = {
 
 export type SetDetectedOneAction = {
   type: 'SET_DETECTED_ONE';
-  payload: { id: string; version: string };
+  payload: { id: string; version: string; forceLatest?: boolean };
 };
 
 export type CatalogDispatchFn = ((action: SetDetectedOneAction) => void) | null | undefined;

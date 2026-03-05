@@ -84,7 +84,7 @@ export type CatalogAction =
   | { type: 'SET_INSTALLED_IDS'; payload: string[] }
   | { type: 'SET_INSTALLED_MAP'; payload: Record<string, string> }
   | { type: 'SET_DETECTED_MAP'; payload: Record<string, string> }
-  | { type: 'SET_DETECTED_ONE'; payload: { id: string; version: string } };
+  | { type: 'SET_DETECTED_ONE'; payload: { id: string; version: string; forceLatest?: boolean } };
 
 function catalogReducerInternal(state: CatalogState, action: CatalogAction): CatalogState {
   switch (action.type) {
@@ -140,13 +140,13 @@ function catalogReducerInternal(state: CatalogState, action: CatalogAction): Cat
     }
     case 'SET_DETECTED_ONE': {
       // 単一パッケージの検出結果を反映（インストール/アンインストール直後など）
-      const { id, version } = action.payload || {};
+      const { id, version, forceLatest } = action.payload || {};
       const detectedMap = { ...state.detectedMap };
       if (id) detectedMap[id] = version || '';
       const items = state.items.map((it) => {
         const v = it.id === id ? version || '' : state.detectedMap?.[it.id] || '';
         const latest = latestVersionOf(it) || '';
-        const isLatest = !!v && !!latest && v === latest;
+        const isLatest = Boolean(it.id === id && forceLatest) || (!!v && !!latest && v === latest);
         return { ...it, installed: v !== '', installedVersion: v, isLatest };
       });
       return { ...state, detectedMap, items };
