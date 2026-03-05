@@ -175,7 +175,6 @@ export interface RegisterSuccessDialogState {
   url: string;
   packageName: string;
   packageAction: string;
-  packageId: string;
 }
 
 export interface RegisterSuccessDialogProps {

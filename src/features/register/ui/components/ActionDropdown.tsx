@@ -34,92 +34,94 @@ const optionVariants = cva('w-full justify-between px-3 py-2 text-left transitio
   },
 });
 
-const ActionDropdown = memo(
-  function ActionDropdown({ value, onChange, options, ariaLabel, buttonId, ariaLabelledby }: ActionDropdownProps) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement | null>(null);
-    const normalized = Array.isArray(options) ? options : [];
-    const selected = normalized.find((opt) => opt.value === value) || normalized[0] || { value: '', label: '' };
-    const dropdownOptions = normalized.filter((opt) => opt.value !== '');
+const ActionDropdown = memo(function ActionDropdown({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  buttonId,
+  ariaLabelledby,
+}: ActionDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const normalized = Array.isArray(options) ? options : [];
+  const selected = normalized.find((opt) => opt.value === value) || null;
+  const dropdownOptions = normalized.filter((opt) => opt.value !== '');
 
-    useEffect(() => {
-      function handleClickOutside(e: MouseEvent) {
-        if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) {
-          setOpen(false);
-        }
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) {
+        setOpen(false);
       }
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-      setOpen(false);
-    }, [value]);
-
-    function choose(val: string) {
-      setOpen(false);
-      onChange?.(val);
     }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-      if (e.key === 'Escape') setOpen(false);
-    }
+  useEffect(() => {
+    setOpen(false);
+  }, [value]);
 
-    return (
-      <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
-        <Button
-          variant="plain"
-          size="none"
-          type="button"
-          id={buttonId}
-          className={triggerVariants({ open })}
-          onClick={() => setOpen((prev) => !prev)}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-label={ariaLabel}
-          aria-labelledby={ariaLabelledby}
+  function choose(val: string) {
+    setOpen(false);
+    onChange?.(val);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Escape') setOpen(false);
+  }
+
+  return (
+    <div className="relative min-w-[140px]" ref={ref} onKeyDown={onKeyDown}>
+      <Button
+        variant="plain"
+        size="none"
+        type="button"
+        id={buttonId}
+        className={triggerVariants({ open })}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledby}
+      >
+        <span className="truncate text-slate-700 dark:text-slate-200">
+          {selected?.label || (value ? `未対応: ${value}` : '')}
+        </span>
+        <span className={cn('text-slate-400 transition-transform duration-200', open ? 'rotate-180' : '')} aria-hidden>
+          <ChevronDown size={16} />
+        </span>
+      </Button>
+      {open && (
+        <div
+          className={cn(
+            surface.panel,
+            'absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto p-1 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10',
+          )}
+          role="listbox"
         >
-          <span className="truncate text-slate-700 dark:text-slate-200">{selected?.label || value}</span>
-          <span
-            className={cn('text-slate-400 transition-transform duration-200', open ? 'rotate-180' : '')}
-            aria-hidden
-          >
-            <ChevronDown size={16} />
-          </span>
-        </Button>
-        {open && (
-          <div
-            className={cn(
-              surface.panel,
-              'absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto p-1 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10',
-            )}
-            role="listbox"
-          >
-            {dropdownOptions.map((opt) => (
-              <Button
-                variant="plain"
-                size="none"
-                type="button"
-                key={opt.value}
-                className={optionVariants({ selected: opt.value === value })}
-                role="option"
-                aria-selected={opt.value === value}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  choose(opt.value);
-                }}
-              >
-                <span className="truncate">{opt.label}</span>
-                {opt.value === value && <Check size={14} />}
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  },
-  (prev: Readonly<ActionDropdownProps>, next: Readonly<ActionDropdownProps>) =>
-    prev.value === next.value && prev.ariaLabel === next.ariaLabel && prev.options === next.options,
-);
+          {dropdownOptions.map((opt) => (
+            <Button
+              variant="plain"
+              size="none"
+              type="button"
+              key={opt.value}
+              className={optionVariants({ selected: opt.value === value })}
+              role="option"
+              aria-selected={opt.value === value}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                choose(opt.value);
+              }}
+            >
+              <span className="truncate">{opt.label}</span>
+              {opt.value === value && <Check size={14} />}
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 export default ActionDropdown;

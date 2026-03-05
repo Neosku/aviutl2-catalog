@@ -2,118 +2,14 @@
  * 入力状態を API 送信用ペイロードへ構築するモジュール
  */
 import { commaListToArray, isHttpsUrl, normalizeArrayText } from './helpers';
+import { buildInstallerSource, serializeInstallStep, serializeUninstallStep } from './installerRules';
 import { getFileExtension } from './parse';
-import type {
-  RegisterInstallStep,
-  RegisterInstallerTestItem,
-  RegisterPackageForm,
-  RegisterUninstallStep,
-} from './types';
-import type {
-  CatalogEntry,
-  Image,
-  Installer,
-  InstallerAction,
-  InstallerSource,
-  License,
-  Version,
-} from '../../../utils/catalogSchema';
+import type { RegisterInstallerTestItem, RegisterPackageForm } from './types';
+import type { CatalogEntry, Image, Installer, License, Version } from '../../../utils/catalogSchema';
 import { ipc } from '../../../utils/invokeIpc';
 
-function extractInstallerSource(form: RegisterPackageForm): InstallerSource {
-  if (form.installer.sourceType === 'direct') {
-    const direct = form.installer.directUrl.trim();
-    if (!direct) throw new Error('installer.source.direct is required');
-    return { direct };
-  }
-  if (form.installer.sourceType === 'booth') {
-    const booth = form.installer.boothUrl.trim();
-    if (!booth) throw new Error('installer.source.booth is required');
-    return { booth };
-  }
-  if (form.installer.sourceType === 'github') {
-    const owner = form.installer.githubOwner.trim();
-    const repo = form.installer.githubRepo.trim();
-    const pattern = form.installer.githubPattern.trim();
-    if (!owner || !repo || !pattern) {
-      throw new Error('installer.source.github owner/repo/pattern are required');
-    }
-    return { github: { owner, repo, pattern } };
-  }
-  if (form.installer.sourceType === 'GoogleDrive') {
-    const id = form.installer.googleDriveId.trim();
-    if (!id) throw new Error('installer.source.GoogleDrive.id is required');
-    return { GoogleDrive: { id } };
-  }
-  throw new Error('installer.source must be selected');
-}
-
-function parseArgsText(argsText: string): string[] {
-  if (!argsText) return [];
-  return argsText
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function serializeInstallStep(step: RegisterInstallStep): InstallerAction {
-  const action = String(step.action || '').trim();
-  const path = String(step.path || '').trim();
-  const from = String(step.from || '').trim();
-  const to = String(step.to || '').trim();
-
-  if (action === 'download') return { action: 'download' };
-  if (action === 'extract') {
-    return { action: 'extract', ...(from ? { from } : {}), ...(to ? { to } : {}) };
-  }
-  if (action === 'extract_sfx') {
-    return { action: 'extract_sfx', ...(from ? { from } : {}), ...(to ? { to } : {}) };
-  }
-  if (action === 'copy') {
-    if (!from || !to) throw new Error('copy action requires from/to');
-    return { action: 'copy', from, to };
-  }
-  if (action === 'delete') {
-    if (!path) throw new Error('delete action requires path');
-    return { action: 'delete', path };
-  }
-  if (action === 'run') {
-    if (!path) throw new Error('run action requires path');
-    return {
-      action: 'run',
-      path,
-      args: parseArgsText(step.argsText),
-      ...(step.elevate ? { elevate: true } : {}),
-    };
-  }
-  if (action === 'run_auo_setup') {
-    if (!path) throw new Error('run_auo_setup action requires path');
-    return { action: 'run_auo_setup', path };
-  }
-  throw new Error(`unsupported install action: ${action || '(empty)'}`);
-}
-
-function serializeUninstallStep(step: RegisterUninstallStep): InstallerAction {
-  const action = String(step.action || '').trim();
-  const path = String(step.path || '').trim();
-  if (action === 'delete') {
-    if (!path) throw new Error('delete action requires path');
-    return { action: 'delete', path };
-  }
-  if (action === 'run') {
-    if (!path) throw new Error('run action requires path');
-    return {
-      action: 'run',
-      path,
-      args: parseArgsText(step.argsText),
-      ...(step.elevate ? { elevate: true } : {}),
-    };
-  }
-  throw new Error(`unsupported uninstall action: ${action || '(empty)'}`);
-}
-
 export function buildInstallerPayload(form: RegisterPackageForm): Installer {
-  const source = extractInstallerSource(form);
+  const source = buildInstallerSource(form.installer);
   return {
     source,
     install: form.installer.installSteps.map(serializeInstallStep),

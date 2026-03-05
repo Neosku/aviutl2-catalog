@@ -39,7 +39,6 @@ export default function Register() {
     url: '',
     packageName: '',
     packageAction: '',
-    packageId: '',
   });
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
   const [jsonDialogText, setJsonDialogText] = useState('');
@@ -183,7 +182,7 @@ export default function Register() {
   }, [packageForm.versions]);
 
   const closeSuccessDialog = useCallback(() => {
-    setSuccessDialog({ open: false, message: '', url: '', packageName: '', packageAction: '', packageId: '' });
+    setSuccessDialog({ open: false, message: '', url: '', packageName: '', packageAction: '' });
   }, []);
 
   const togglePreviewDarkMode = useCallback(() => {
@@ -202,12 +201,13 @@ export default function Register() {
 
   const applyCatalogJsonPatch = useCallback(() => {
     try {
-      const { changedItems } = catalog.applyCatalogJsonPatch(jsonDialogText);
+      const { changedItems, nextCatalogItems } = catalog.applyCatalogJsonPatch(jsonDialogText);
       if (changedItems.length === 0) {
         setJsonDialogError('変更がありませんでした。');
         return;
       }
 
+      catalog.setCatalogItems(nextCatalogItems);
       changedItems.forEach((item) => {
         const form = entryToForm(item, catalog.catalogBaseUrl);
         const tags = commaListToArray(form.tagsText);
@@ -237,7 +237,13 @@ export default function Register() {
     ? `${successDialog.packageAction || '送信完了'}: ${successDialog.packageName}`
     : successDialog.message || '送信が完了しました。';
   const successSupportText = successDialog.packageName && successDialog.message ? successDialog.message : '';
-
+  const handlePackageSenderChange = useCallback(
+    (value: string) => {
+      markUserEdit();
+      setPackageSender(value);
+    },
+    [markUserEdit],
+  );
   const sidebarProps = useMemo(
     () => ({
       packageSearch: catalog.packageSearch,
@@ -303,7 +309,6 @@ export default function Register() {
       description.isExternalDescriptionLoaded,
       description.externalDescriptionStatus,
       formHandlers.updatePackageField,
-      setDescriptionTab,
     ],
   );
   const licenseProps = useMemo(
@@ -354,8 +359,6 @@ export default function Register() {
     }),
     [
       packageForm.installer,
-      installListRef,
-      uninstallListRef,
       formHandlers.addInstallStep,
       formHandlers.addUninstallStep,
       formHandlers.removeInstallStep,
@@ -393,7 +396,6 @@ export default function Register() {
       versionHandlers.updateVersionFile,
       versionHandlers.chooseFileForHash,
       versionHandlers.openDatePicker,
-      versionDateRefs,
     ],
   );
   const previewProps = useMemo(
@@ -462,10 +464,7 @@ export default function Register() {
       blockedSubmitCount: draftState.blockedSubmitCount,
       submittingLabel: batchSubmit.submitProgressText ? `送信中… (${batchSubmit.submitProgressText})` : '送信中…',
       onOpenJsonImport: openJsonDialog,
-      onPackageSenderChange: (value: string) => {
-        markUserEdit();
-        setPackageSender(value);
-      },
+      onPackageSenderChange: handlePackageSenderChange,
     }),
     [
       packageGuideUrl,
@@ -475,8 +474,7 @@ export default function Register() {
       draftState.blockedSubmitCount,
       batchSubmit.submitProgressText,
       openJsonDialog,
-      markUserEdit,
-      setPackageSender,
+      handlePackageSenderChange,
     ],
   );
 

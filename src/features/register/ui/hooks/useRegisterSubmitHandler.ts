@@ -36,10 +36,7 @@ export interface SubmitSinglePackageInput {
 
 export interface SubmitSinglePackageResult {
   nextCatalog: CatalogEntry[];
-  packageId: string;
   packageName: string;
-  actionLabel: string;
-  message: string;
   url: string;
 }
 
@@ -170,15 +167,11 @@ export default function useRegisterSubmitHandler({
           url: successUrl,
           packageAction: actionLabel,
           packageName,
-          packageId,
         });
       }
       return {
         nextCatalog,
-        packageId,
         packageName,
-        actionLabel,
-        message: friendlyMessage,
         url: successUrl,
       };
     },

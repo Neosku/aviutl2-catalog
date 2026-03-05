@@ -1,6 +1,8 @@
 /**
  * register 関連の型定義
  */
+import type { Installer, Version } from '../../../utils/catalogSchema';
+
 export type RegisterDescriptionMode = 'inline' | 'external';
 export type RegisterInstallerSourceType = 'direct' | 'github' | 'GoogleDrive' | 'booth';
 
@@ -102,72 +104,9 @@ export interface RegisterInstallerOption {
   label: string;
 }
 
-export interface RegisterCopyrightPayload {
-  years: string;
-  holder: string;
-}
-
-export interface RegisterLicensePayload {
-  type: string;
-  isCustom: boolean;
-  copyrights: RegisterCopyrightPayload[];
-  licenseBody: string | null;
-}
-
-export interface RegisterImagePayload {
-  thumbnail?: string;
-  infoImg?: string[];
-}
-
-export interface RegisterInstallStepPayload {
-  action: string;
-  path?: string;
-  args?: string[];
-  from?: string;
-  to?: string;
-  elevate?: boolean;
-}
-
-export interface RegisterUninstallStepPayload {
-  action: string;
-  path?: string;
-  args?: string[];
-  elevate?: boolean;
-}
-
-export interface RegisterInstallerSourcePayload {
-  direct?: string;
-  booth?: string;
-  github?: {
-    owner: string;
-    repo: string;
-    pattern: string;
-  };
-  GoogleDrive?: {
-    id: string;
-  };
-}
-
-export interface RegisterInstallerPayload {
-  source: RegisterInstallerSourcePayload;
-  install: RegisterInstallStepPayload[];
-  uninstall: RegisterUninstallStepPayload[];
-}
-
-export interface RegisterVersionPayloadFile {
-  path: string;
-  XXH3_128: string;
-}
-
-export interface RegisterVersionPayload {
-  version: string;
-  release_date: string;
-  file: RegisterVersionPayloadFile[];
-}
-
 export interface RegisterInstallerTestItem {
   id: string;
-  installer: RegisterInstallerPayload;
+  installer: Installer;
   'latest-version': string;
-  versions: RegisterVersionPayload[];
+  versions: Version[];
 }

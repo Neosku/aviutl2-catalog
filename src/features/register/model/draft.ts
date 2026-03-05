@@ -139,85 +139,71 @@ function toDraftFormSnapshot(form: RegisterPackageForm): RegisterDraftFormSnapsh
   };
 }
 
+function normalizeDraftImageSnapshot(
+  entry: RegisterDraftImageSnapshot | null,
+): Omit<RegisterDraftImageSnapshot, 'key' | 'previewPath'> | null {
+  if (!entry) return null;
+  return {
+    existingPath: String(entry.existingPath || ''),
+    sourcePath: String(entry.sourcePath || ''),
+  };
+}
+
+function normalizeDraftFormSnapshot(form: RegisterDraftFormSnapshot) {
+  return {
+    ...form,
+    licenses: form.licenses.map((license) => ({
+      type: license.type,
+      licenseName: license.licenseName,
+      isCustom: license.isCustom,
+      licenseBody: license.licenseBody,
+      copyrights: license.copyrights.map((copyright) => ({
+        years: copyright.years,
+        holder: copyright.holder,
+      })),
+    })),
+    installer: {
+      ...form.installer,
+      installSteps: form.installer.installSteps.map((step) => ({
+        action: step.action,
+        path: step.path,
+        argsText: step.argsText,
+        from: step.from,
+        to: step.to,
+        elevate: step.elevate,
+      })),
+      uninstallSteps: form.installer.uninstallSteps.map((step) => ({
+        action: step.action,
+        path: step.path,
+        argsText: step.argsText,
+        elevate: step.elevate,
+      })),
+    },
+    versions: form.versions.map((version) => ({
+      version: version.version,
+      release_date: version.release_date,
+      files: version.files.map((file) => ({
+        path: file.path,
+        hash: file.hash,
+        fileName: file.fileName,
+      })),
+    })),
+    images: {
+      thumbnail: normalizeDraftImageSnapshot(form.images.thumbnail),
+      info: form.images.info.map((entry) => normalizeDraftImageSnapshot(entry)),
+    },
+  };
+}
+
 export function computeRegisterDraftContentHash(args: {
   packageForm: RegisterPackageForm;
   tags: string[];
   packageSender: string;
 }): string {
-  const form = args.packageForm;
+  const snapshot = toDraftFormSnapshot(args.packageForm);
   const normalized = {
-    id: String(form.id || '').trim(),
-    name: String(form.name || '').trim(),
-    author: String(form.author || '').trim(),
-    originalAuthor: String(form.originalAuthor || '').trim(),
-    type: String(form.type || '').trim(),
-    summary: String(form.summary || '').trim(),
-    niconiCommonsId: String(form.niconiCommonsId || '').trim(),
-    descriptionText: String(form.descriptionText || ''),
-    descriptionPath: String(form.descriptionPath || '').trim(),
-    descriptionMode: form.descriptionMode,
-    descriptionUrl: String(form.descriptionUrl || '').trim(),
-    repoURL: String(form.repoURL || '').trim(),
-    licenses: (Array.isArray(form.licenses) ? form.licenses : []).map((license) => ({
-      type: String(license.type || ''),
-      licenseName: String(license.licenseName || ''),
-      isCustom: !!license.isCustom,
-      licenseBody: String(license.licenseBody || ''),
-      copyrights: (Array.isArray(license.copyrights) ? license.copyrights : []).map((c) => ({
-        years: String(c.years || ''),
-        holder: String(c.holder || ''),
-      })),
-    })),
+    form: normalizeDraftFormSnapshot(snapshot),
     tags: normalizeArrayText(args.tags),
-    dependenciesText: String(form.dependenciesText || ''),
-    installer: {
-      sourceType: form.installer.sourceType,
-      directUrl: String(form.installer.directUrl || ''),
-      boothUrl: String(form.installer.boothUrl || ''),
-      githubOwner: String(form.installer.githubOwner || ''),
-      githubRepo: String(form.installer.githubRepo || ''),
-      githubPattern: String(form.installer.githubPattern || ''),
-      googleDriveId: String(form.installer.googleDriveId || ''),
-      installSteps: (Array.isArray(form.installer.installSteps) ? form.installer.installSteps : []).map((step) => ({
-        action: String(step.action || ''),
-        path: String(step.path || ''),
-        argsText: String(step.argsText || ''),
-        from: String(step.from || ''),
-        to: String(step.to || ''),
-        elevate: !!step.elevate,
-      })),
-      uninstallSteps: (Array.isArray(form.installer.uninstallSteps) ? form.installer.uninstallSteps : []).map(
-        (step) => ({
-          action: String(step.action || ''),
-          path: String(step.path || ''),
-          argsText: String(step.argsText || ''),
-          elevate: !!step.elevate,
-        }),
-      ),
-    },
-    versions: (Array.isArray(form.versions) ? form.versions : []).map((ver) => ({
-      version: String(ver.version || ''),
-      release_date: String(ver.release_date || ''),
-      files: (Array.isArray(ver.files) ? ver.files : []).map((file) => ({
-        path: String(file.path || ''),
-        hash: String(file.hash || ''),
-        fileName: String(file.fileName || ''),
-      })),
-    })),
-    images: {
-      thumbnail: form.images.thumbnail
-        ? {
-            existingPath: String(form.images.thumbnail.existingPath || ''),
-            sourcePath: String(form.images.thumbnail.sourcePath || ''),
-            fileName: String(form.images.thumbnail.file?.name || ''),
-          }
-        : null,
-      info: (Array.isArray(form.images.info) ? form.images.info : []).map((entry) => ({
-        existingPath: String(entry.existingPath || ''),
-        sourcePath: String(entry.sourcePath || ''),
-        fileName: String(entry.file?.name || ''),
-      })),
-    },
     packageSender: String(args.packageSender || '').trim(),
   };
   return computeTextHash(JSON.stringify(normalized));
@@ -255,9 +241,9 @@ function parseDraftRecord(raw: unknown): RegisterDraftRecord | null {
   const draftId = candidate.draftId.trim();
   const fallbackContentHash = computeTextHash(
     JSON.stringify({
-      form: candidate.form,
-      tags: Array.isArray(candidate.tags) ? candidate.tags : [],
-      packageSender: candidate.packageSender || '',
+      form: normalizeDraftFormSnapshot(candidate.form as RegisterDraftFormSnapshot),
+      tags: normalizeArrayText(Array.isArray(candidate.tags) ? candidate.tags : []),
+      packageSender: String(candidate.packageSender || '').trim(),
     }),
   );
   return {

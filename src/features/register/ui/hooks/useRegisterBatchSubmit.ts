@@ -117,7 +117,6 @@ export default function useRegisterBatchSubmit({
             url: lastSuccessUrl,
             packageName: successCount === 1 ? lastSuccessName : `${successCount}件`,
             packageAction: successCount === 1 ? '送信完了' : 'まとめて送信完了',
-            packageId: '',
           });
         }
         if (failureCount > 0) {

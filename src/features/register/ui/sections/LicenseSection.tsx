@@ -34,9 +34,11 @@ const PackageLicenseSection = memo(
     const showBodyInput = forceBodyInput || (!isUnknown && !useTemplate);
     const templatePreview = useTemplate ? buildLicenseBody(activeLicense) : '';
     const [copied, setCopied] = useState(false);
+    const [copyError, setCopyError] = useState('');
 
     useEffect(() => {
       setCopied(false);
+      setCopyError('');
     }, [templatePreview, activeLicense.key]);
 
     async function handleCopyPreview(e: React.MouseEvent<HTMLButtonElement>) {
@@ -45,9 +47,13 @@ const PackageLicenseSection = memo(
       if (!templatePreview) return;
       try {
         await navigator.clipboard.writeText(templatePreview);
+        setCopyError('');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch {}
+      } catch {
+        setCopied(false);
+        setCopyError('コピーに失敗しました');
+      }
     }
     return (
       <section className={surface.cardSectionStack}>
@@ -177,6 +183,11 @@ const PackageLicenseSection = memo(
                         {copied && (
                           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in slide-in-from-right-1">
                             コピーしました
+                          </span>
+                        )}
+                        {copyError && (
+                          <span className="text-xs font-medium text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-right-1">
+                            {copyError}
                           </span>
                         )}
                         <Button

@@ -4,7 +4,7 @@
 import { useCallback } from 'react';
 import { createEmptyCopyright, createEmptyLicense } from '../../model/form';
 import { generateKey } from '../../model/helpers';
-import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterInstallStep, RegisterPackageForm, RegisterUninstallStep } from '../../model/types';
 import type { RegisterStepType } from '../types';
 
 interface UseRegisterInstallerLicenseHandlersArgs {
@@ -16,9 +16,25 @@ export default function useRegisterInstallerLicenseHandlers({
   setPackageForm,
   onUserEdit,
 }: UseRegisterInstallerLicenseHandlersArgs) {
+  type StepCollectionKey = 'installSteps' | 'uninstallSteps';
+
   const notifyUserEdit = useCallback(() => {
     onUserEdit?.();
   }, [onUserEdit]);
+
+  const updateStepCollection = useCallback(
+    <T extends RegisterInstallStep | RegisterUninstallStep>(key: StepCollectionKey, updater: (steps: T[]) => T[]) => {
+      notifyUserEdit();
+      setPackageForm((prev) => ({
+        ...prev,
+        installer: {
+          ...prev.installer,
+          [key]: updater(prev.installer[key] as T[]),
+        },
+      }));
+    },
+    [notifyUserEdit, setPackageForm],
+  );
 
   const updatePackageField = useCallback(
     <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => {
@@ -135,101 +151,63 @@ export default function useRegisterInstallerLicenseHandlers({
   );
 
   const addInstallStep = useCallback(() => {
-    notifyUserEdit();
-    setPackageForm((prev) => ({
-      ...prev,
-      installer: {
-        ...prev.installer,
-        installSteps: [
-          ...prev.installer.installSteps,
-          { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '', elevate: false },
-        ],
-      },
-    }));
-  }, [notifyUserEdit, setPackageForm]);
+    updateStepCollection('installSteps', (steps) => [
+      ...steps,
+      { key: generateKey(), action: 'download', path: '', argsText: '', from: '', to: '', elevate: false },
+    ]);
+  }, [updateStepCollection]);
 
   const updateInstallStep = useCallback(
     (key: string, field: string, value: string | boolean) => {
-      notifyUserEdit();
-      setPackageForm((prev) => ({
-        ...prev,
-        installer: {
-          ...prev.installer,
-          installSteps: prev.installer.installSteps.map((step) => {
-            if (step.key !== key) return step;
-            const next = { ...step, [field]: value };
-            if (field === 'action' && value !== 'run') {
-              next.elevate = false;
-            }
-            return next;
-          }),
-        },
-      }));
+      updateStepCollection('installSteps', (steps) =>
+        steps.map((step) => {
+          if (step.key !== key) return step;
+          const next = { ...step, [field]: value };
+          if (field === 'action' && value !== 'run') {
+            next.elevate = false;
+          }
+          return next;
+        }),
+      );
     },
-    [notifyUserEdit, setPackageForm],
+    [updateStepCollection],
   );
 
   const removeInstallStep = useCallback(
     (key: string) => {
-      notifyUserEdit();
-      setPackageForm((prev) => ({
-        ...prev,
-        installer: {
-          ...prev.installer,
-          installSteps: prev.installer.installSteps.filter((step) => step.key !== key),
-        },
-      }));
+      updateStepCollection('installSteps', (steps) => steps.filter((step) => step.key !== key));
     },
-    [notifyUserEdit, setPackageForm],
+    [updateStepCollection],
   );
 
   const addUninstallStep = useCallback(() => {
-    notifyUserEdit();
-    setPackageForm((prev) => ({
-      ...prev,
-      installer: {
-        ...prev.installer,
-        uninstallSteps: [
-          ...prev.installer.uninstallSteps,
-          { key: generateKey(), action: 'delete', path: '', argsText: '', elevate: false },
-        ],
-      },
-    }));
-  }, [notifyUserEdit, setPackageForm]);
+    updateStepCollection('uninstallSteps', (steps) => [
+      ...steps,
+      { key: generateKey(), action: 'delete', path: '', argsText: '', elevate: false },
+    ]);
+  }, [updateStepCollection]);
 
   const updateUninstallStep = useCallback(
     (key: string, field: string, value: string | boolean) => {
-      notifyUserEdit();
-      setPackageForm((prev) => ({
-        ...prev,
-        installer: {
-          ...prev.installer,
-          uninstallSteps: prev.installer.uninstallSteps.map((step) => {
-            if (step.key !== key) return step;
-            const next = { ...step, [field]: value };
-            if (field === 'action' && value !== 'run') {
-              next.elevate = false;
-            }
-            return next;
-          }),
-        },
-      }));
+      updateStepCollection('uninstallSteps', (steps) =>
+        steps.map((step) => {
+          if (step.key !== key) return step;
+          const next = { ...step, [field]: value };
+          if (field === 'action' && value !== 'run') {
+            next.elevate = false;
+          }
+          return next;
+        }),
+      );
     },
-    [notifyUserEdit, setPackageForm],
+    [updateStepCollection],
   );
 
   const removeUninstallStep = useCallback(
     (key: string) => {
-      notifyUserEdit();
-      setPackageForm((prev) => ({
-        ...prev,
-        installer: {
-          ...prev.installer,
-          uninstallSteps: prev.installer.uninstallSteps.filter((step) => step.key !== key),
-        },
-      }));
+      updateStepCollection('uninstallSteps', (steps) => steps.filter((step) => step.key !== key));
     },
-    [notifyUserEdit, setPackageForm],
+    [updateStepCollection],
   );
 
   const reorderSteps = useCallback(

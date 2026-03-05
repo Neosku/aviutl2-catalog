@@ -26,6 +26,8 @@ export {
 
 export { entryToForm, getFileExtension } from './parse';
 
+export { applyCatalogJsonPatch } from './catalogPatch';
+
 export {
   buildInstallerPayload,
   buildInstallerTestItem,

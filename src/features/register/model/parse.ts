@@ -3,7 +3,7 @@
  */
 import type { CatalogEntry } from '../../../utils/catalogSchema';
 import { arrayToCommaList, buildPreviewUrl, isHttpsUrl, isMarkdownPath } from './helpers';
-import { INSTALL_ACTIONS, LICENSE_TEMPLATE_TYPES, SPECIAL_INSTALL_ACTIONS, UNINSTALL_ACTIONS } from './constants';
+import { LICENSE_TEMPLATE_TYPES } from './constants';
 import {
   createEmptyCopyright,
   createEmptyInstaller,
@@ -185,14 +185,10 @@ export function parseInstallerSource(installer: unknown = {}) {
     next.sourceType = 'GoogleDrive';
     next.googleDriveId = parsed.source.googleDriveId;
   }
-  // 不正値が来ても UI が壊れないよう、未知 action は安全側の既定値へ寄せる。
   next.installSteps = parsed.install.map((step) => {
-    const action = step.action;
-    const normalizedAction =
-      INSTALL_ACTIONS.includes(action) || SPECIAL_INSTALL_ACTIONS.includes(action) ? action : 'download';
     return {
       key: generateKey(),
-      action: normalizedAction,
+      action: step.action,
       path: step.path,
       argsText: step.args.join(', '),
       from: step.from,
@@ -202,7 +198,7 @@ export function parseInstallerSource(installer: unknown = {}) {
   });
   next.uninstallSteps = parsed.uninstall.map((step) => ({
     key: generateKey(),
-    action: UNINSTALL_ACTIONS.includes(step.action) ? step.action : 'delete',
+    action: step.action,
     path: step.path,
     argsText: step.args.join(', '),
     elevate: step.elevate,
@@ -257,33 +253,36 @@ export function parseImages(rawImages: unknown, baseUrl = ''): RegisterImageStat
 }
 
 export function parseLicenses(rawLicenses: unknown, legacyLicense = ''): RegisterLicense[] {
-  const target = parseLicenseInput(asArray(rawLicenses)[0]);
-  if (target) {
-    // 旧スキーマ／新スキーマの両方を吸収し、UI では一貫した編集モデルに正規化する。
-    const rawType = target.type;
-    const isUnknown = rawType === '不明';
-    const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
-    const type = isUnknown || isTemplateType ? rawType : 'その他';
-    const licenseName = !isUnknown && !isTemplateType ? rawType : '';
-    const licenseBody = target.licenseBody;
-    const isCustom = target.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
-    const copyrights = target.copyrights.length
-      ? target.copyrights.slice(0, 1).map((c) => ({
-          key: generateKey(),
-          years: c.years,
-          holder: c.holder,
-        }))
-      : [createEmptyCopyright()];
-    return [
-      {
+  const parsedLicenses = asArray(rawLicenses)
+    .map(parseLicenseInput)
+    .filter((license): license is ParsedLicenseInput => license !== null)
+    .map((target) => {
+      // 旧スキーマ／新スキーマの両方を吸収し、UI では一貫した編集モデルに正規化する。
+      const rawType = target.type;
+      const isUnknown = rawType === '不明';
+      const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
+      const type = isUnknown || isTemplateType ? rawType : 'その他';
+      const licenseName = !isUnknown && !isTemplateType ? rawType : '';
+      const licenseBody = target.licenseBody;
+      const isCustom = target.isCustom || type === '不明' || type === 'その他' || !!licenseBody.trim();
+      const copyrights = target.copyrights.length
+        ? target.copyrights.map((c) => ({
+            key: generateKey(),
+            years: c.years,
+            holder: c.holder,
+          }))
+        : [createEmptyCopyright()];
+      return {
         key: generateKey(),
         type,
         licenseName,
         isCustom,
         licenseBody,
         copyrights,
-      },
-    ];
+      };
+    });
+  if (parsedLicenses.length > 0) {
+    return parsedLicenses;
   }
   if (legacyLicense) {
     const rawType = String(legacyLicense || '');

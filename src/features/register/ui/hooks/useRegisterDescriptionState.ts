@@ -1,7 +1,7 @@
 /**
  * 詳細説明入力の状態とプレビュー生成を扱う hook
  */
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { renderMarkdown } from '../../../../utils/markdown';
 import { getDescriptionSourceUrl, isHttpsUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
@@ -23,6 +23,7 @@ export default function useRegisterDescriptionState({
   const [descriptionPreviewHtml, setDescriptionPreviewHtml] = useState('');
   const [externalDescriptionText, setExternalDescriptionText] = useState('');
   const [externalDescriptionStatus, setExternalDescriptionStatus] = useState('idle');
+  const latestDescriptionTextRef = useRef(packageForm.descriptionText);
 
   const isExternalDescription = packageForm.descriptionMode === 'external';
   const descriptionPreviewSource = isExternalDescription ? externalDescriptionText : packageForm.descriptionText;
@@ -34,6 +35,10 @@ export default function useRegisterDescriptionState({
     () => getDescriptionSourceUrl(packageForm, catalogBaseUrl),
     [packageForm.descriptionMode, packageForm.descriptionUrl, packageForm.descriptionPath, catalogBaseUrl],
   );
+
+  useEffect(() => {
+    latestDescriptionTextRef.current = packageForm.descriptionText;
+  }, [packageForm.descriptionText]);
 
   useEffect(() => {
     if (descriptionTab !== 'preview') {
@@ -74,6 +79,7 @@ export default function useRegisterDescriptionState({
     }
     let cancelled = false;
     const targetId = packageForm.id;
+    const initialDescriptionText = latestDescriptionTextRef.current;
     if (isExternalDescription) {
       setExternalDescriptionText('');
       setExternalDescriptionStatus('loading');
@@ -93,7 +99,11 @@ export default function useRegisterDescriptionState({
           return;
         }
         // 非同期競合で別パッケージに上書きしないよう、id が一致する時だけ反映する。
-        setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: text } : prev));
+        setPackageForm((prev) =>
+          prev.id === targetId && prev.descriptionText === initialDescriptionText
+            ? { ...prev, descriptionText: text }
+            : prev,
+        );
       } catch {
         if (cancelled) return;
         if (isExternalDescription) {
@@ -101,7 +111,11 @@ export default function useRegisterDescriptionState({
           setExternalDescriptionStatus('error');
           return;
         }
-        setPackageForm((prev) => (prev.id === targetId ? { ...prev, descriptionText: '' } : prev));
+        setPackageForm((prev) =>
+          prev.id === targetId && prev.descriptionText === initialDescriptionText
+            ? { ...prev, descriptionText: '' }
+            : prev,
+        );
       } finally {
         if (!cancelled) setDescriptionLoading(false);
       }
