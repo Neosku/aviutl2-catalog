@@ -141,14 +141,26 @@ function catalogReducerInternal(state: CatalogState, action: CatalogAction): Cat
     case 'SET_DETECTED_ONE': {
       // 単一パッケージの検出結果を反映（インストール/アンインストール直後など）
       const { id, version, forceLatest } = action.payload || {};
+      if (!id) return state;
+
+      const detectedVersion = version || '';
       const detectedMap = { ...state.detectedMap };
-      if (id) detectedMap[id] = version || '';
-      const items = state.items.map((it) => {
-        const v = it.id === id ? version || '' : state.detectedMap?.[it.id] || '';
-        const latest = latestVersionOf(it) || '';
-        const isLatest = Boolean(it.id === id && forceLatest) || (!!v && !!latest && v === latest);
-        return { ...it, installed: v !== '', installedVersion: v, isLatest };
-      });
+      detectedMap[id] = detectedVersion;
+
+      const index = state.items.findIndex((it) => it.id === id);
+      if (index < 0) return { ...state, detectedMap };
+
+      const current = state.items[index];
+      const latest = latestVersionOf(current) || '';
+      const isLatest = Boolean(forceLatest) || (!!detectedVersion && !!latest && detectedVersion === latest);
+
+      const items = [...state.items];
+      items[index] = {
+        ...current,
+        installed: detectedVersion !== '',
+        installedVersion: detectedVersion,
+        isLatest,
+      };
       return { ...state, detectedMap, items };
     }
     default:
