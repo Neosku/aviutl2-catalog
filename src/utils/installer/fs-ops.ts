@@ -53,6 +53,7 @@ export async function extractZip(zipPath: string, destPath: string): Promise<voi
     return;
   } catch (e: unknown) {
     await bestEffortLogError(`[extractZip] failed: ${formatUnknownError(e)}`);
+    throw e;
   }
 }
 
@@ -62,6 +63,7 @@ export async function extractSevenZipSfx(sfxPath: string, destPath: string): Pro
     return;
   } catch (e: unknown) {
     await bestEffortLogError(`[extractSevenZipSfx] failed: ${formatUnknownError(e)}`);
+    throw e;
   }
 }
 

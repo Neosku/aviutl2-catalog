@@ -57,6 +57,10 @@ type InvokeIpc = {
     : (args: InvokeIpcMap[K]['args']) => Promise<InvokeIpcMap[K]['result']>;
 };
 
+const COMMAND_NAME_OVERRIDES: Partial<Record<keyof InvokeIpcMap, string>> = {
+  extract7zSfx: 'extract_7z_sfx',
+};
+
 function camelToSnakeCase(str: string): string {
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
@@ -65,7 +69,8 @@ export const ipc: InvokeIpc = new Proxy({} as InvokeIpc, {
   get(_target, prop) {
     return async (args?: unknown): Promise<unknown> => {
       try {
-        const command = camelToSnakeCase(String(prop));
+        const commandKey = String(prop) as keyof InvokeIpcMap;
+        const command = COMMAND_NAME_OVERRIDES[commandKey] ?? camelToSnakeCase(String(prop));
         if (typeof args === 'undefined' || args === null) {
           return await tauriCore.invoke(command);
         }

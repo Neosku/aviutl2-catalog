@@ -208,9 +208,7 @@ pub async fn run_installer_executable(exe_path: String, args: Vec<String>, eleva
 #[tauri::command]
 pub async fn run_auo_setup(app: AppHandle, exe_path: String) -> Result<i32, String> {
     let exe_path = PathBuf::from(exe_path);
-    if !exe_path.is_absolute() {
-        return Err(format!("Installer path must be absolute: {}", exe_path.display()));
-    }
+    let exe_path = std::fs::canonicalize(exe_path).map_err(|e| e.to_string())?;
     if !exe_path.is_file() {
         return Err(format!("Installer file not found: {}", exe_path.display()));
     }
