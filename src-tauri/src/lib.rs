@@ -78,12 +78,24 @@ fn init_logger(app: &tauri::AppHandle) {
     tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).with_writer(writer).init();
 }
 
+#[cfg(target_os = "windows")]
+fn bring_existing_window_to_front(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main").or_else(|| app.get_webview_window("init-setup")) else {
+        return;
+    };
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os = "windows", not(debug_assertions)))]
     {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}));
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            bring_existing_window_to_front(app);
+        }));
     }
 
     builder
@@ -107,12 +119,6 @@ pub fn run() {
         })
         .setup(|app| {
             init_logger(app.handle());
-
-            #[cfg(all(debug_assertions, target_os = "windows"))]
-            {
-                use tauri_plugin_deep_link::DeepLinkExt;
-                app.deep_link().register_all().map_err(|e| std::io::Error::other(e.to_string()))?;
-            }
 
             paths::init_settings(app.handle())?;
             let _ = init_app(app.handle());
