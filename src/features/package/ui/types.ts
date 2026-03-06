@@ -1,4 +1,5 @@
 import type { To } from 'react-router-dom';
+import type { PackageInstallBusyAction } from '../../../utils/usePackageInstallerActions';
 import type { CarouselImage, PackageItem, PackageLicenseEntry } from '../model/types';
 
 export interface PackageProgressView {
@@ -28,11 +29,9 @@ export interface PackageSidebarSectionProps {
   updated: string;
   latest: string;
   canInstall: boolean;
-  downloading: boolean;
-  updating: boolean;
-  removing: boolean;
-  downloadProgress: PackageProgressView;
-  updateProgress: PackageProgressView;
+  busyAction: PackageInstallBusyAction;
+  isBusy: boolean;
+  progress: PackageProgressView;
   renderableLicenses: PackageLicenseEntry[];
   licenseTypesLabel: string;
   onOpenLicense: (license: PackageLicenseEntry) => void;
@@ -49,11 +48,9 @@ export interface LicenseModalProps {
 export interface UsePackageInstallActionsResult {
   error: string;
   setError: (value: string) => void;
-  downloading: boolean;
-  updating: boolean;
-  removing: boolean;
-  downloadProgressView: PackageProgressView;
-  updateProgressView: PackageProgressView;
+  busyAction: PackageInstallBusyAction;
+  isBusy: boolean;
+  progressView: PackageProgressView;
   onDownload: () => Promise<void>;
   onUpdate: () => Promise<void>;
   onRemove: () => Promise<void>;

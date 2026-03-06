@@ -9,30 +9,24 @@ import { layout, surface } from '@/components/ui/_styles';
 
 type PackageSidebarActionsCardProps = Pick<
   PackageSidebarSectionProps,
-  | 'item'
-  | 'canInstall'
-  | 'downloading'
-  | 'updating'
-  | 'removing'
-  | 'downloadProgress'
-  | 'updateProgress'
-  | 'onDownload'
-  | 'onUpdate'
-  | 'onRemove'
+  'item' | 'canInstall' | 'busyAction' | 'isBusy' | 'progress' | 'onDownload' | 'onUpdate' | 'onRemove'
 >;
 
 export default function PackageSidebarActionsCard({
   item,
   canInstall,
-  downloading,
-  updating,
-  removing,
-  downloadProgress,
-  updateProgress,
+  busyAction,
+  isBusy,
+  progress,
   onDownload,
   onUpdate,
   onRemove,
 }: PackageSidebarActionsCardProps) {
+  const downloading = busyAction === 'download';
+  const updating = busyAction === 'update';
+  const removing = busyAction === 'remove';
+  const primaryDisabled = isBusy || !canInstall;
+
   return (
     <div className={cn(surface.cardSection, 'space-y-3')}>
       {item.installed ? (
@@ -48,19 +42,19 @@ export default function PackageSidebarActionsCard({
                 'h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors gap-2 w-full',
               )}
               onClick={() => void onUpdate()}
-              disabled={!canInstall || updating}
+              disabled={primaryDisabled}
               type="button"
             >
               {updating ? (
                 <span className={layout.inlineGap2}>
                   <ProgressCircle
-                    value={updateProgress.ratio}
+                    value={progress.ratio}
                     size={20}
                     strokeWidth={3}
                     className="text-amber-600 dark:text-amber-400"
-                    ariaLabel={`${updateProgress.label} ${updateProgress.percent}%`}
+                    ariaLabel={`${progress.label} ${progress.percent}%`}
                   />
-                  {updateProgress.label} {`${updateProgress.percent}%`}
+                  {progress.label} {`${progress.percent}%`}
                 </span>
               ) : (
                 <>
@@ -69,23 +63,25 @@ export default function PackageSidebarActionsCard({
               )}
             </button>
           )}
-          <Button
-            variant="danger"
-            size="default"
-            radius="xl"
-            className="w-full"
-            onClick={() => void onRemove()}
-            disabled={removing}
-            type="button"
-          >
-            {removing ? (
-              '削除中…'
-            ) : (
-              <>
-                <Trash2 size={18} /> 削除
-              </>
-            )}
-          </Button>
+          {!updating ? (
+            <Button
+              variant="danger"
+              size="default"
+              radius="xl"
+              className="w-full"
+              onClick={() => void onRemove()}
+              disabled={isBusy}
+              type="button"
+            >
+              {removing ? (
+                '削除中…'
+              ) : (
+                <>
+                  <Trash2 size={18} /> 削除
+                </>
+              )}
+            </Button>
+          ) : null}
         </>
       ) : (
         <Button
@@ -94,18 +90,18 @@ export default function PackageSidebarActionsCard({
           radius="xl"
           className="w-full"
           onClick={() => void onDownload()}
-          disabled={!canInstall || downloading}
+          disabled={primaryDisabled}
           type="button"
         >
           {downloading ? (
             <span className={layout.inlineGap2}>
               <ProgressCircle
-                value={downloadProgress.ratio}
+                value={progress.ratio}
                 size={20}
                 strokeWidth={3}
-                ariaLabel={`${downloadProgress.label} ${downloadProgress.percent}%`}
+                ariaLabel={`${progress.label} ${progress.percent}%`}
               />
-              {downloadProgress.label} {`${downloadProgress.percent}%`}
+              {progress.label} {`${progress.percent}%`}
             </span>
           ) : (
             <>

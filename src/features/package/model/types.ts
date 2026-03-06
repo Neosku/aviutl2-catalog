@@ -51,17 +51,6 @@ export interface PackageItem {
   [key: string]: unknown;
 }
 
-export interface PackageInstallProgress {
-  ratio?: number;
-  percent?: number;
-  label?: string;
-  phase?: string;
-  step?: string | null;
-  stepIndex?: number | null;
-  totalSteps?: number | null;
-  [key: string]: unknown;
-}
-
 export interface CarouselImage {
   src: string;
   alt: string;

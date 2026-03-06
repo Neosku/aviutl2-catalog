@@ -8,11 +8,9 @@ export default function PackageSidebarSection({
   updated,
   latest,
   canInstall,
-  downloading,
-  updating,
-  removing,
-  downloadProgress,
-  updateProgress,
+  busyAction,
+  isBusy,
+  progress,
   renderableLicenses,
   licenseTypesLabel,
   onOpenLicense,
@@ -34,11 +32,9 @@ export default function PackageSidebarSection({
         <PackageSidebarActionsCard
           item={item}
           canInstall={canInstall}
-          downloading={downloading}
-          updating={updating}
-          removing={removing}
-          downloadProgress={downloadProgress}
-          updateProgress={updateProgress}
+          busyAction={busyAction}
+          isBusy={isBusy}
+          progress={progress}
           onDownload={onDownload}
           onUpdate={onUpdate}
           onRemove={onRemove}

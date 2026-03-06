@@ -14,15 +14,11 @@ export default function usePackageInstallActions({
   item,
   dispatch,
 }: UsePackageInstallActionsParams): UsePackageInstallActionsResult {
-  const { error, setError, busyAction, progress, onDownload, onUpdate, onRemove } = usePackageInstallerActions({
+  const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageInstallerActions({
     item,
     dispatch,
     missingInstallerMessage: 'インストールが未実装です',
   });
-
-  const downloading = busyAction === 'download';
-  const updating = busyAction === 'update';
-  const removing = busyAction === 'remove';
 
   const activeProgressView = useMemo(
     () => ({
@@ -36,11 +32,9 @@ export default function usePackageInstallActions({
   return {
     error,
     setError,
-    downloading,
-    updating,
-    removing,
-    downloadProgressView: downloading ? activeProgressView : IDLE_PROGRESS_VIEW,
-    updateProgressView: updating ? activeProgressView : IDLE_PROGRESS_VIEW,
+    busyAction,
+    isBusy,
+    progressView: busyAction === 'download' || busyAction === 'update' ? activeProgressView : IDLE_PROGRESS_VIEW,
     onDownload,
     onUpdate,
     onRemove,

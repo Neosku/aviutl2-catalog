@@ -3,14 +3,14 @@ import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import ErrorDialog from '../../../components/ErrorDialog';
 import { latestVersionOf } from '../../../utils/catalog';
+import { useCatalog, useCatalogDispatch } from '../../../utils/catalogStore';
 import { hasInstaller } from '../../../utils/installer';
 import { buildLicenseBody } from '../../../utils/licenseTemplates';
 import { formatDate } from '../../../utils/text';
-import { readFromSearch, shouldOpenExternalLink } from '../model/helpers';
-import type { CarouselImage, PackageLicense, PackageLicenseEntry } from '../model/types';
+import { collectPackageImages, readFromSearch, shouldOpenExternalLink } from '../model/helpers';
+import type { PackageItem, PackageLicense, PackageLicenseEntry } from '../model/types';
 import LicenseModal from './components/LicenseModal';
 import usePackageAutoInstall from './hooks/usePackageAutoInstall';
-import usePackageCatalogContext from './hooks/usePackageCatalogContext';
 import usePackageDescription from './hooks/usePackageDescription';
 import usePackageInstallActions from './hooks/usePackageInstallActions';
 import { PackageContentSection, PackageHeaderSection, PackageSidebarSection } from './sections';
@@ -22,35 +22,16 @@ const MARKDOWN_BASE_URL = 'https://raw.githubusercontent.com/Neosku/aviutl2-cata
 export default function PackagePage() {
   const { id } = useParams();
   const location = useLocation();
-  const { items, loading, dispatch } = usePackageCatalogContext();
+  const { items, loading } = useCatalog();
+  const dispatch = useCatalogDispatch();
   const [openLicense, setOpenLicense] = useState<PackageLicenseEntry | null>(null);
+  const packageItems = items as PackageItem[];
 
   const fromSearch = readFromSearch(location.state);
   const listLink = useMemo(() => (fromSearch ? { pathname: '/', search: fromSearch } : '/'), [fromSearch]);
 
-  const item = useMemo(() => items.find((entry) => entry.id === id), [id, items]);
-  const imageGroups = useMemo(() => (Array.isArray(item?.images) ? item.images : []), [item]);
-  const heroImage = useMemo(() => {
-    for (const group of imageGroups) {
-      if (!Array.isArray(group?.infoImg)) continue;
-      const candidate = group.infoImg.find((src) => typeof src === 'string' && src.trim());
-      if (candidate) return candidate.trim();
-    }
-    return '';
-  }, [imageGroups]);
-
-  const carouselImages = useMemo<CarouselImage[]>(() => {
-    const result: CarouselImage[] = [];
-    imageGroups.forEach((group) => {
-      if (!Array.isArray(group?.infoImg)) return;
-      group.infoImg.forEach((src) => {
-        if (typeof src === 'string' && src.trim()) {
-          result.push({ src: src.trim(), alt: '' });
-        }
-      });
-    });
-    return result;
-  }, [imageGroups]);
+  const item = useMemo(() => packageItems.find((entry) => entry.id === id), [id, packageItems]);
+  const { heroImage, carouselImages } = useMemo(() => collectPackageImages(item?.images), [item?.images]);
 
   const descriptionSource = item?.description || '';
   const description = usePackageDescription({
@@ -63,13 +44,13 @@ export default function PackagePage() {
     dispatch,
   });
 
-  const canInstall = item ? hasInstaller(item) || !!item.downloadURL : false;
+  const canInstall = item ? hasInstaller(item) : false;
 
   usePackageAutoInstall({
     item,
     locationSearch: location.search,
     canInstall,
-    downloading: actions.downloading,
+    downloading: actions.busyAction === 'download',
     onDownload: actions.onDownload,
   });
 
@@ -144,11 +125,9 @@ export default function PackagePage() {
           updated={updated}
           latest={latest}
           canInstall={canInstall}
-          downloading={actions.downloading}
-          updating={actions.updating}
-          removing={actions.removing}
-          downloadProgress={actions.downloadProgressView}
-          updateProgress={actions.updateProgressView}
+          busyAction={actions.busyAction}
+          isBusy={actions.isBusy}
+          progress={actions.progressView}
           renderableLicenses={renderableLicenses}
           licenseTypesLabel={licenseTypesLabel}
           onOpenLicense={setOpenLicense}

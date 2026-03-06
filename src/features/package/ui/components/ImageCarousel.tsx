@@ -1,13 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { CarouselImage } from '../../model/types';
 import { cn } from '@/lib/cn';
 import { layout } from '@/components/ui/_styles';
-
-interface CarouselImage {
-  src: string;
-  alt?: string;
-}
 
 interface ImageCarouselProps {
   images?: CarouselImage[];
