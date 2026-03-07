@@ -30,9 +30,6 @@ export default function PackageHeaderSection({ item, listLink, heroImage }: Pack
                 {item.type || '未分類'}
               </Badge>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{item.name}</h1>
-              {item.summary ? (
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">{item.summary}</p>
-              ) : null}
             </div>
             {item.installed ? (
               <Badge variant="success" shape="pill" size="sm" className={cn(layout.inlineGap1, 'font-bold')}>
@@ -40,16 +37,6 @@ export default function PackageHeaderSection({ item, listLink, heroImage }: Pack
               </Badge>
             ) : null}
           </div>
-
-          {item.tags?.length ? (
-            <div className={cn(layout.wrapGap2, text.mutedXs)}>
-              {item.tags.map((tag) => (
-                <Badge key={tag} variant="outlineNeutral" shape="pill" size="sm" className="px-2 py-1 normal-case">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
         </div>
       </section>
     </>

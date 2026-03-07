@@ -5,6 +5,7 @@ import { PackageSidebarActionsCard, PackageSidebarBackLink, PackageSidebarInfoCa
 export default function PackageSidebarSection({
   item,
   listLink,
+  listSearch,
   updated,
   latest,
   canInstall,
@@ -23,6 +24,7 @@ export default function PackageSidebarSection({
       <div className="contents lg:block lg:sticky lg:top-6 lg:z-10 lg:space-y-4">
         <PackageSidebarInfoCard
           item={item}
+          listSearch={listSearch}
           updated={updated}
           latest={latest}
           renderableLicenses={renderableLicenses}

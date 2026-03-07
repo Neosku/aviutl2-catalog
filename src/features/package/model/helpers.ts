@@ -35,6 +35,34 @@ export function shouldOpenExternalLink(href: string): boolean {
   return true;
 }
 
+export function buildPackageListSearch(
+  baseSearch: string,
+  overrides: {
+    q?: string | null;
+    tags?: string[] | null;
+  } = {},
+): string {
+  const normalizedBase = baseSearch.startsWith('?') ? baseSearch.slice(1) : baseSearch;
+  const params = new URLSearchParams(normalizedBase);
+
+  if ('q' in overrides) {
+    const q = String(overrides.q || '').trim();
+    if (q) params.set('q', q);
+    else params.delete('q');
+  }
+
+  if ('tags' in overrides) {
+    const tags = Array.isArray(overrides.tags)
+      ? overrides.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
+      : [];
+    if (tags.length) params.set('tags', tags.join(','));
+    else params.delete('tags');
+  }
+
+  const next = params.toString();
+  return next ? `?${next}` : '';
+}
+
 export function collectPackageImages(imageGroups: PackageImageGroup[] | undefined): {
   heroImage: string;
   carouselImages: CarouselImage[];

@@ -7,7 +7,7 @@ import { useCatalog, useCatalogDispatch } from '../../../utils/catalogStore';
 import { hasInstaller } from '../../../utils/installer';
 import { buildLicenseBody } from '../../../utils/licenseTemplates';
 import { formatDate } from '../../../utils/text';
-import { collectPackageImages, readFromSearch, shouldOpenExternalLink } from '../model/helpers';
+import { buildPackageListSearch, collectPackageImages, readFromSearch, shouldOpenExternalLink } from '../model/helpers';
 import type { PackageItem, PackageLicense, PackageLicenseEntry } from '../model/types';
 import LicenseModal from './components/LicenseModal';
 import usePackageAutoInstall from './hooks/usePackageAutoInstall';
@@ -28,7 +28,8 @@ export default function PackagePage() {
   const packageItems = items as PackageItem[];
 
   const fromSearch = readFromSearch(location.state);
-  const listLink = useMemo(() => (fromSearch ? { pathname: '/', search: fromSearch } : '/'), [fromSearch]);
+  const listSearch = useMemo(() => buildPackageListSearch(fromSearch), [fromSearch]);
+  const listLink = useMemo(() => (listSearch ? { pathname: '/', search: listSearch } : '/'), [listSearch]);
 
   const item = useMemo(() => packageItems.find((entry) => entry.id === id), [id, packageItems]);
   const { heroImage, carouselImages } = useMemo(() => collectPackageImages(item?.images), [item?.images]);
@@ -122,6 +123,7 @@ export default function PackagePage() {
         <PackageSidebarSection
           item={item}
           listLink={listLink}
+          listSearch={listSearch}
           updated={updated}
           latest={latest}
           canInstall={canInstall}

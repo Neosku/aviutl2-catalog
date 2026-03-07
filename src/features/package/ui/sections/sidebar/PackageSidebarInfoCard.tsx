@@ -1,31 +1,66 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import { Calendar, ExternalLink, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { buildPackageListSearch } from '../../../model/helpers';
 import type { PackageSidebarSectionProps } from '../../types';
 import { layout, surface, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
 type PackageSidebarInfoCardProps = Pick<
   PackageSidebarSectionProps,
-  'item' | 'updated' | 'latest' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
+  'item' | 'listSearch' | 'updated' | 'latest' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
 >;
 
 export default function PackageSidebarInfoCard({
   item,
+  listSearch,
   updated,
   latest,
   renderableLicenses,
   licenseTypesLabel,
   onOpenLicense,
 }: PackageSidebarInfoCardProps) {
+  const authorLink = useMemo(() => {
+    const author = String(item.author || '').trim();
+    if (!author) return null;
+    const search = buildPackageListSearch(listSearch, { q: author, tags: [] });
+    return search ? `/${search}` : '/';
+  }, [item.author, listSearch]);
+
+  const tagLinks = useMemo(
+    () =>
+      (item.tags || []).map((tag) => ({
+        tag,
+        to: (() => {
+          const search = buildPackageListSearch(listSearch, { q: '', tags: [tag] });
+          return search ? `/${search}` : '/';
+        })(),
+      })),
+    [item.tags, listSearch],
+  );
+
   return (
     <div className={cn(surface.cardSection, 'space-y-4')}>
       <div className={cn(layout.rowBetween, text.bodySmMuted)}>
         <span>作者</span>
-        <span className={cn(layout.inlineGap2, 'text-slate-800 dark:text-slate-200')}>
-          <User size={14} />
-          {item.author || '?'}
-        </span>
+        {authorLink ? (
+          <Link
+            to={authorLink}
+            className={cn(
+              layout.inlineGap2,
+              'text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline-offset-2 hover:underline',
+            )}
+          >
+            <User size={14} />
+            {item.author}
+          </Link>
+        ) : (
+          <span className={cn(layout.inlineGap2, 'text-slate-800 dark:text-slate-200')}>
+            <User size={14} />?
+          </span>
+        )}
       </div>
       <div className={cn(layout.rowBetween, text.bodySmMuted)}>
         <span>更新日</span>
@@ -48,6 +83,29 @@ export default function PackageSidebarInfoCard({
         <div className={cn(layout.rowBetween, text.bodySmMuted)}>
           <span>ニコニコモンズID</span>
           <span className="text-slate-800 dark:text-slate-200 font-mono">{item.niconiCommonsId}</span>
+        </div>
+      ) : null}
+      {item.tags?.length ? (
+        <div className="space-y-2">
+          <span className={text.bodySmMuted}>タグ</span>
+          <div className={layout.wrapGap2}>
+            {tagLinks.map(({ tag, to }) => (
+              <Link
+                key={tag}
+                to={to}
+                className="inline-flex"
+              >
+                <Badge
+                  variant="outlineNeutral"
+                  shape="pill"
+                  size="sm"
+                  className="px-2 py-1 normal-case hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                >
+                  #{tag}
+                </Badge>
+              </Link>
+            ))}
+          </div>
         </div>
       ) : null}
       <div className="space-y-2">
