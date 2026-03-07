@@ -38,7 +38,7 @@ export default function PackageSidebarActionsCard({
             <button
               className={cn(
                 layout.center,
-                'h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors gap-2 w-full',
+                'h-10 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-sm font-bold rounded-lg transition-colors gap-2 w-full cursor-pointer disabled:cursor-not-allowed',
               )}
               onClick={() => void onUpdate()}
               disabled={primaryDisabled}
@@ -67,7 +67,7 @@ export default function PackageSidebarActionsCard({
               variant="danger"
               size="default"
               radius="xl"
-              className="w-full"
+              className="w-full cursor-pointer disabled:cursor-not-allowed"
               onClick={() => void onRemove()}
               disabled={isBusy}
               type="button"
@@ -87,7 +87,7 @@ export default function PackageSidebarActionsCard({
           variant="primary"
           size="default"
           radius="xl"
-          className="w-full"
+          className="w-full cursor-pointer disabled:cursor-not-allowed"
           onClick={() => void onDownload()}
           disabled={primaryDisabled}
           type="button"

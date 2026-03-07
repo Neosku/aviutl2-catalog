@@ -74,38 +74,6 @@
     @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200;
   }
 
-  .markdown-alert {
-    @apply rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200;
-  }
-
-  .markdown-alert-title {
-    @apply flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100;
-  }
-
-  .markdown-alert-note svg[data-is-alert-icon] {
-    @apply text-blue-600 dark:text-blue-300;
-  }
-
-  .markdown-alert-tip svg[data-is-alert-icon] {
-    @apply text-green-600 dark:text-green-300;
-  }
-
-  .markdown-alert-important svg[data-is-alert-icon] {
-    @apply text-purple-600 dark:text-purple-300;
-  }
-
-  .markdown-alert-warning svg[data-is-alert-icon] {
-    @apply text-yellow-600 dark:text-yellow-300;
-  }
-
-  .markdown-alert-caution svg[data-is-alert-icon] {
-    @apply text-red-600 dark:text-red-300;
-  }
-
-  .markdown-alert p:not(.markdown-alert-title) {
-    @apply mt-2 text-sm text-slate-600 dark:text-slate-300;
-  }
-
   .modal {
     @apply fixed inset-0 z-50 flex items-center justify-center p-4;
   }
@@ -506,7 +474,33 @@ body {
   border-radius: 0.75rem;
 }
 
+.markdown-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.markdown-badges a {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.markdown-badges img {
+  display: block;
+  margin: 0 !important;
+}
+
+.markdown-alert .markdown-alert-title svg[data-is-alert-icon] {
+  margin-right: 0.75rem;
+}
+
 .markdown-codeblock {
-  /* catppuccin-mochaの背景色に合わせる */
-  background: #1e1e2e;
+  --markdown-code-bg: #e5e7eb;
+  background: var(--markdown-code-bg);
+}
+
+.dark .markdown-codeblock {
+  --markdown-code-bg: #161b22;
 }

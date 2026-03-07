@@ -8,9 +8,15 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function normalizeCodeBlockHtml(html: string): string {
+  return html
+    .replace('<pre class="shiki ', '<pre class="markdown-codeblock shiki ')
+    .replace(/background-color:[^;"]+/g, 'background-color:var(--markdown-code-bg)');
+}
+
 async function spawnHighlight(code: string, lang: string, nonce: string) {
   try {
-    const highlighted = await shiki(code, { lang, theme: 'catppuccin-mocha' });
+    const highlighted = normalizeCodeBlockHtml(await shiki(code, { lang, theme: 'catppuccin-mocha' }));
     for (let attempt = 0; attempt < HIGHLIGHT_MAX_POLL_ATTEMPTS; attempt += 1) {
       const el = document.querySelector(`pre[data-highlight-nonce="${nonce}"]`);
       if (el) {

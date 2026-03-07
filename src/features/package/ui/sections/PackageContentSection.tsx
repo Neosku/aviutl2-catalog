@@ -49,7 +49,7 @@ export default function PackageContentSection({
 
       <section className={surface.cardSection}>
         <h2 className={sectionTitleClass}>概要</h2>
-        <p className={text.bodySmMuted}>{item.summary || '?'}</p>
+        <p className={`${text.bodySmMuted} select-text`}>{item.summary || '?'}</p>
       </section>
 
       {item.description ? (
@@ -59,7 +59,7 @@ export default function PackageContentSection({
             <p className={text.mutedSm}>詳細説明を読み込み中です…</p>
           ) : (
             <div
-              className="prose prose-slate max-w-none dark:prose-invert"
+              className="prose prose-slate max-w-none dark:prose-invert select-text"
               dangerouslySetInnerHTML={descriptionMarkup}
               onClick={handleDescriptionClick}
               onKeyDown={handleDescriptionKeyDown}

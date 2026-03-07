@@ -107,7 +107,7 @@ export default function PackagePage() {
   const latest = latestVersionOf(item) || '?';
 
   return (
-    <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col')}>
+    <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col select-none')}>
       <PackageHeaderSection item={item} listLink={listLink} heroImage={heroImage} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] flex-1">

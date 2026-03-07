@@ -1,4 +1,4 @@
-import { AlertCircle, AlertOctagon, AlertTriangle, createElement, IconNode, Info, Lightbulb } from 'lucide';
+import { AlertOctagon, AlertTriangle, createElement, IconNode, Info, Lightbulb, MessageSquareWarning } from 'lucide';
 import { MarkdownExit } from 'markdown-exit';
 import githubAlerts, { MarkdownItGitHubAlertsOptions } from 'markdown-it-github-alerts';
 
@@ -26,7 +26,7 @@ export function alertBlock(md: MarkdownExit): void {
     icons: {
       note: renderAlertIcon(Info),
       tip: renderAlertIcon(Lightbulb),
-      important: renderAlertIcon(AlertCircle),
+      important: renderAlertIcon(MessageSquareWarning),
       warning: renderAlertIcon(AlertTriangle),
       caution: renderAlertIcon(AlertOctagon),
     },

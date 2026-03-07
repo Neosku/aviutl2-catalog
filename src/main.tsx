@@ -10,6 +10,12 @@ import { useGlobalGuards } from './bootstrap/useGlobalGuards';
 import { useCatalogBootstrap } from './bootstrap/useCatalogBootstrap';
 import { applyBootThemeInitClass, detectWindowLabel, scheduleMainWindowReveal, type AppMode } from './bootstrap/window';
 // eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-colors-light.css';
+// eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-colors-dark-media.css';
+// eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-base.css';
+// eslint-disable-next-line import/no-unassigned-import
 import './styles/index.css';
 
 applyBootThemeInitClass();
