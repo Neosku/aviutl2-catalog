@@ -6,14 +6,14 @@ import { layout, surface, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 import type { PackageHeaderSectionProps } from '../types';
 
-export default function PackageHeaderSection({ item, listLink, heroImage }: PackageHeaderSectionProps) {
+export default function PackageHeaderSection({ item, listLink, listLabel, heroImage }: PackageHeaderSectionProps) {
   const heroImageStyle = useMemo(() => ({ backgroundImage: `url(${heroImage})` }), [heroImage]);
 
   return (
     <>
       <nav className={cn(text.mutedSm, 'flex items-center')}>
         <Link to={listLink} className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-          パッケージ一覧
+          {listLabel}
         </Link>
         <ChevronRight size={16} className="mx-2" />
         <span className="font-medium text-slate-900 dark:text-slate-100 truncate">{item.name}</span>

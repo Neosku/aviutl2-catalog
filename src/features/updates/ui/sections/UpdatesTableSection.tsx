@@ -1,5 +1,7 @@
 import ProgressCircle from '../../../../components/ProgressCircle';
+import { buildPackageDetailHref } from '../../../package/model/helpers';
 import { latestVersionOf } from '../../../../utils/catalog';
+import { Link } from 'react-router-dom';
 import type { UpdatesTableSectionProps } from '../types';
 import { surface, table, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
@@ -43,12 +45,19 @@ export default function UpdatesTableSection({
                     className={cn(
                       table.rowBase,
                       table.rowRelaxed,
-                      'grid-cols-[minmax(0,2.5fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_7.5rem]',
+                      'grid-cols-[minmax(0,2.5fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_7.5rem] hover:bg-transparent dark:hover:bg-transparent',
                     )}
                   >
                     <div className="min-w-0">
-                      <div className={text.titleSmTruncate}>{item.name}</div>
-                      <div className={text.mutedXsTruncate}>{item.id}</div>
+                      <Link
+                        to={buildPackageDetailHref(item.id, '', 'updates')}
+                        className={cn(
+                          text.titleSmTruncate,
+                          'block hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline-offset-2 hover:underline',
+                        )}
+                      >
+                        {item.name}
+                      </Link>
                     </div>
                     <div className={cellTruncateClass}>{item.author || '?'}</div>
                     <div className={cellTruncateClass}>{item.type || '?'}</div>

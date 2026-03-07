@@ -11,6 +11,7 @@ export interface PackageProgressView {
 export interface PackageHeaderSectionProps {
   item: PackageItem;
   listLink: To;
+  listLabel: string;
   heroImage: string;
 }
 
@@ -26,6 +27,8 @@ export interface PackageContentSectionProps {
 export interface PackageSidebarSectionProps {
   item: PackageItem;
   listLink: To;
+  listLabel: string;
+  listLinkState?: unknown;
   updated: string;
   latest: string;
   canInstall: boolean;

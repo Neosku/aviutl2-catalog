@@ -124,7 +124,7 @@ export default function PackageCardActionSection({
   const primaryDisabled = isBusy || !canInstall;
 
   return (
-    <div className="pointer-events-auto relative z-20 flex items-end justify-between gap-3">
+    <div className="relative z-20 flex items-end justify-between gap-3">
       <div className="flex items-center mb-1">
         {isInstalled ? (
           <div className={cn(layout.inlineGap1_5, 'text-xs font-mono text-slate-500 dark:text-slate-400')}>
@@ -134,7 +134,7 @@ export default function PackageCardActionSection({
         ) : null}
       </div>
 
-      <div className={cn(layout.inlineGap2, 'shrink-0 w-[140px] justify-end')}>
+      <div className={cn(layout.inlineGap2, 'pointer-events-auto shrink-0 w-[140px] justify-end')}>
         {!isInstalled ? (
           <PrimaryActionButton
             busy={downloading}

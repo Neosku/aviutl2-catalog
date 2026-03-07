@@ -65,7 +65,6 @@ export default function TableSection({
                   </div>
                   <div className="min-w-0">
                     <div className={text.titleSmTruncate}>{item.name || item.id}</div>
-                    <div className={text.mutedXsTruncate}>{item.id}</div>
                   </div>
                   <div className={table.cellBodyTruncate}>{item.author}</div>
                   <div

@@ -34,7 +34,7 @@ export default function PackageCardView({
       <button
         type="button"
         aria-label={`${item.name} の詳細を開く`}
-        className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+        className="absolute inset-0 z-0 rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         onClick={onOpenDetail}
       />
       <div className="pointer-events-none flex-1 p-4 flex flex-col min-w-0 relative z-10">

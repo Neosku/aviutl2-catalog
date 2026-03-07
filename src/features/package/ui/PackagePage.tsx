@@ -1,13 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
 import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
+import { APP_ROUTE_PATHS } from '../../../routePaths';
 import ErrorDialog from '../../../components/ErrorDialog';
 import { latestVersionOf } from '../../../utils/catalog';
 import { useCatalog, useCatalogDispatch } from '../../../utils/catalogStore';
 import { hasInstaller } from '../../../utils/installer';
 import { buildLicenseBody } from '../../../utils/licenseTemplates';
 import { formatDate } from '../../../utils/text';
-import { collectPackageImages, readPackageListSearchFromDetail, shouldOpenExternalLink } from '../model/helpers';
+import { HOME_LIST_RESTORE_STATE } from '../../../layouts/app-shell/types';
+import {
+  collectPackageImages,
+  readPackageDetailSource,
+  readPackageListSearchFromDetail,
+  shouldOpenExternalLink,
+} from '../model/helpers';
 import type { PackageItem, PackageLicense, PackageLicenseEntry } from '../model/types';
 import LicenseModal from './components/LicenseModal';
 import usePackageAutoInstall from './hooks/usePackageAutoInstall';
@@ -28,7 +35,13 @@ export default function PackagePage() {
   const packageItems = items as PackageItem[];
 
   const listSearch = useMemo(() => readPackageListSearchFromDetail(location.search), [location.search]);
-  const listLink = useMemo(() => (listSearch ? { pathname: '/', search: listSearch } : '/'), [listSearch]);
+  const detailSource = useMemo(() => readPackageDetailSource(location.search), [location.search]);
+  const listLink = useMemo(() => {
+    if (detailSource === 'updates') return APP_ROUTE_PATHS.updates;
+    return listSearch ? { pathname: '/', search: listSearch } : APP_ROUTE_PATHS.home;
+  }, [detailSource, listSearch]);
+  const listLabel = detailSource === 'updates' ? 'アップデートセンター' : 'パッケージ一覧';
+  const listLinkState = detailSource === 'updates' ? undefined : HOME_LIST_RESTORE_STATE;
 
   const item = useMemo(() => packageItems.find((entry) => entry.id === id), [id, packageItems]);
   const { heroImage, carouselImages } = useMemo(() => collectPackageImages(item?.images), [item?.images]);
@@ -108,7 +121,7 @@ export default function PackagePage() {
 
   return (
     <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col select-none')}>
-      <PackageHeaderSection item={item} listLink={listLink} heroImage={heroImage} />
+      <PackageHeaderSection item={item} listLink={listLink} listLabel={listLabel} heroImage={heroImage} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] flex-1">
         <PackageContentSection
@@ -122,6 +135,8 @@ export default function PackagePage() {
         <PackageSidebarSection
           item={item}
           listLink={listLink}
+          listLabel={listLabel}
+          listLinkState={listLinkState}
           updated={updated}
           latest={latest}
           canInstall={canInstall}

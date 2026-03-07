@@ -4,6 +4,8 @@ import { PackageSidebarActionsCard, PackageSidebarBackLink, PackageSidebarInfoCa
 export default function PackageSidebarSection({
   item,
   listLink,
+  listLabel,
+  listLinkState,
   updated,
   latest,
   canInstall,
@@ -39,7 +41,7 @@ export default function PackageSidebarSection({
           onRemove={onRemove}
         />
       </div>
-      <PackageSidebarBackLink listLink={listLink} />
+      <PackageSidebarBackLink listLink={listLink} listLabel={listLabel} listLinkState={listLinkState} />
     </aside>
   );
 }
