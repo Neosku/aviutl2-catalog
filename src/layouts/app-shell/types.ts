@@ -27,9 +27,17 @@ export interface AppDirsPayload {
   [key: string]: unknown;
 }
 
+export interface HomeRestoreState {
+  restoreSearchFromQuery?: true;
+  restoreScroll?: true;
+}
+
+export const HOME_SEARCH_RESTORE_STATE: HomeRestoreState = { restoreSearchFromQuery: true };
+export const HOME_LIST_RESTORE_STATE: HomeRestoreState = { restoreSearchFromQuery: true, restoreScroll: true };
+
 export interface HomeContextValue {
   filteredPackages: PackageItem[];
-  searchQuery: string;
+  saveHomeScrollPosition: () => void;
   selectedCategory: string;
   clearFilters: () => void;
   isFilterActive: boolean;

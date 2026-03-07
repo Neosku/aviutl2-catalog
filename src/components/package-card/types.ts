@@ -4,6 +4,7 @@ import type { PackageInstallBusyAction } from '../../utils/usePackageInstallerAc
 export interface PackageCardProps {
   item: PackageItem;
   listSearch?: string;
+  onBeforeOpenDetail?: () => void;
 }
 
 export type PackageCardBusyAction = PackageInstallBusyAction;

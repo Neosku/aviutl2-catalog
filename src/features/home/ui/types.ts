@@ -28,6 +28,7 @@ export interface FiltersSectionProps {
 export interface PackageGridSectionProps {
   filteredPackages: PackageItem[];
   listSearch: string;
+  onBeforeOpenDetail: () => void;
 }
 
 export interface EmptyStateSectionProps {

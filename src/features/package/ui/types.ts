@@ -26,7 +26,6 @@ export interface PackageContentSectionProps {
 export interface PackageSidebarSectionProps {
   item: PackageItem;
   listLink: To;
-  listSearch: string;
   updated: string;
   latest: string;
   canInstall: boolean;

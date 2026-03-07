@@ -14,7 +14,8 @@ export default function useHomePage() {
   const location = useLocation();
   const {
     filteredPackages,
-    searchQuery,
+    clearFilters,
+    saveHomeScrollPosition,
     selectedCategory,
     updateUrl,
     categories,
@@ -34,14 +35,9 @@ export default function useHomePage() {
   const sortedSelectedTags = useMemo(() => sortTags(selectedTags), [selectedTags]);
   const listSearch = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    if (searchQuery) {
-      params.set('q', searchQuery);
-    } else {
-      params.delete('q');
-    }
     const next = params.toString();
     return next ? `?${next}` : '';
-  }, [location.search, searchQuery]);
+  }, [location.search]);
 
   const setCategory = useCallback(
     (category: string) => {
@@ -78,14 +74,11 @@ export default function useHomePage() {
     updateUrl({ tags: [] });
   }, [updateUrl]);
 
-  const clearConditions = useCallback(() => {
-    updateUrl({ q: '', type: '', tags: [], installed: '' });
-  }, [updateUrl]);
-
   return {
     filteredPackages,
     categories,
     selectedCategory,
+    saveHomeScrollPosition,
     filterInstalled,
     selectedTags,
     sortedSelectedTags,
@@ -103,6 +96,6 @@ export default function useHomePage() {
     selectSortOrder,
     toggleTag,
     clearTags,
-    clearConditions,
+    clearConditions: clearFilters,
   };
 }

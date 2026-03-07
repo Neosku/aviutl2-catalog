@@ -3,6 +3,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { Calendar, ExternalLink, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { HOME_SEARCH_RESTORE_STATE } from '../../../../../layouts/app-shell/types';
 import { buildPackageListSearch } from '../../../model/helpers';
 import type { PackageSidebarSectionProps } from '../../types';
 import { layout, surface, text } from '@/components/ui/_styles';
@@ -10,12 +11,11 @@ import { cn } from '@/lib/cn';
 
 type PackageSidebarInfoCardProps = Pick<
   PackageSidebarSectionProps,
-  'item' | 'listSearch' | 'updated' | 'latest' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
+  'item' | 'updated' | 'latest' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
 >;
 
 export default function PackageSidebarInfoCard({
   item,
-  listSearch,
   updated,
   latest,
   renderableLicenses,
@@ -25,20 +25,20 @@ export default function PackageSidebarInfoCard({
   const authorLink = useMemo(() => {
     const author = String(item.author || '').trim();
     if (!author) return null;
-    const search = buildPackageListSearch(listSearch, { q: author, tags: [] });
+    const search = buildPackageListSearch('', { q: author, tags: [] });
     return search ? `/${search}` : '/';
-  }, [item.author, listSearch]);
+  }, [item.author]);
 
   const tagLinks = useMemo(
     () =>
       (item.tags || []).map((tag) => ({
         tag,
         to: (() => {
-          const search = buildPackageListSearch(listSearch, { q: '', tags: [tag] });
+          const search = buildPackageListSearch('', { q: '', tags: [tag] });
           return search ? `/${search}` : '/';
         })(),
       })),
-    [item.tags, listSearch],
+    [item.tags],
   );
 
   return (
@@ -48,6 +48,7 @@ export default function PackageSidebarInfoCard({
         {authorLink ? (
           <Link
             to={authorLink}
+            state={HOME_SEARCH_RESTORE_STATE}
             className={cn(
               layout.inlineGap2,
               'text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline-offset-2 hover:underline',
@@ -90,11 +91,7 @@ export default function PackageSidebarInfoCard({
           <span className={text.bodySmMuted}>タグ</span>
           <div className={layout.wrapGap2}>
             {tagLinks.map(({ tag, to }) => (
-              <Link
-                key={tag}
-                to={to}
-                className="inline-flex"
-              >
+              <Link key={tag} to={to} state={HOME_SEARCH_RESTORE_STATE} className="inline-flex">
                 <Badge
                   variant="outlineNeutral"
                   shape="pill"

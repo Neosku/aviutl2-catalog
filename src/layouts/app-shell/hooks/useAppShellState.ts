@@ -5,7 +5,15 @@ import { useCatalog } from '../../../utils/catalogStore';
 import { ipc } from '../../../utils/invokeIpc';
 import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../../../utils/query';
 import { sortOrderFromQuery, sortParamsFromOrder } from '../constants';
-import type { ActivePage, HomeContextValue, HomeSortOrder, ParsedHomeQuery, SortKey, UrlOverrideValue } from '../types';
+import type {
+  ActivePage,
+  HomeContextValue,
+  HomeRestoreState,
+  HomeSortOrder,
+  ParsedHomeQuery,
+  SortKey,
+  UrlOverrideValue,
+} from '../types';
 import useDebouncedValue from './useDebouncedValue';
 
 function toSortKey(rawSortKey: string | null): SortKey {
@@ -13,6 +21,17 @@ function toSortKey(rawSortKey: string | null): SortKey {
     return rawSortKey;
   }
   return 'popularity';
+}
+
+function readHomeRestoreState(value: unknown): HomeRestoreState | null {
+  if (!value || typeof value !== 'object') return null;
+  const restoreSearchFromQuery = (value as { restoreSearchFromQuery?: unknown }).restoreSearchFromQuery === true;
+  const restoreScroll = (value as { restoreScroll?: unknown }).restoreScroll === true;
+  if (!restoreSearchFromQuery && !restoreScroll) return null;
+  return {
+    restoreSearchFromQuery: restoreSearchFromQuery ? true : undefined,
+    restoreScroll: restoreScroll ? true : undefined,
+  };
 }
 
 export default function useAppShellState() {
@@ -23,6 +42,9 @@ export default function useAppShellState() {
   const [error, setError] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const homeScrollRef = useRef(0);
+  const pendingDraftSearchSyncRef = useRef<string | null>(null);
+  const handledSearchSyncLocationKeyRef = useRef<string | null>(null);
+  const previousIsHomeRef = useRef(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const parseQuery = useMemo<ParsedHomeQuery>(() => {
@@ -41,9 +63,15 @@ export default function useAppShellState() {
   const selectedTags = parseQuery.tags;
   const sortOrder = sortOrderFromQuery(parseQuery.sortKey);
   const isHome = location.pathname === '/';
+  const homeRestoreState = useMemo(
+    () => (isHome ? readHomeRestoreState(location.state) : null),
+    [isHome, location.state],
+  );
 
-  const [searchQuery, setSearchQuery] = useState(parseQuery.q);
-  const debouncedQuery = useDebouncedValue(searchQuery, 250);
+  const [draftSearchQuery, setDraftSearchQuery] = useState(parseQuery.q);
+  const debouncedDraftSearchQuery = useDebouncedValue(draftSearchQuery, 50);
+  const shouldSyncSearchFromQuery =
+    homeRestoreState?.restoreSearchFromQuery === true && handledSearchSyncLocationKeyRef.current !== location.key;
 
   const updateUrl = useCallback(
     (overrides: Record<string, UrlOverrideValue>) => {
@@ -63,7 +91,8 @@ export default function useAppShellState() {
       });
 
       if (!('q' in overrides)) {
-        if (searchQuery) params.set('q', searchQuery);
+        const currentQuery = isHome ? draftSearchQuery : parseQuery.q;
+        if (currentQuery) params.set('q', currentQuery);
         else params.delete('q');
       }
 
@@ -74,51 +103,73 @@ export default function useAppShellState() {
 
       navigate(`${location.pathname}?${params.toString()}`, { replace: true });
     },
-    [location.pathname, location.search, navigate, searchQuery],
+    [draftSearchQuery, isHome, location.pathname, location.search, navigate, parseQuery.q],
   );
 
-  useEffect(() => {
-    if (!isHome) return;
-    setSearchQuery((prev) => (prev === parseQuery.q ? prev : parseQuery.q));
-  }, [isHome, parseQuery.q]);
-
-  useEffect(() => {
-    const isPackageDetail = location.pathname.startsWith('/package/');
-    if (location.pathname !== '/' && !isPackageDetail) setSearchQuery('');
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!isHome) return;
-    if (debouncedQuery !== parseQuery.q) {
-      updateUrl({ q: debouncedQuery });
-    }
-  }, [debouncedQuery, isHome, parseQuery.q, updateUrl]);
-
-  useEffect(() => {
-    if (!isHome) return;
+  const saveHomeScrollPosition = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-    const onScroll = () => {
-      homeScrollRef.current = container.scrollTop;
-    };
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
-  }, [isHome]);
+    homeScrollRef.current = container.scrollTop;
+  }, []);
+
+  const setSearchInput = useCallback((next: string) => {
+    setDraftSearchQuery(next);
+  }, []);
 
   useLayoutEffect(() => {
-    if (!isHome) return;
+    if (!shouldSyncSearchFromQuery) return;
+    pendingDraftSearchSyncRef.current = parseQuery.q;
+    handledSearchSyncLocationKeyRef.current = location.key;
+    setDraftSearchQuery(parseQuery.q);
+  }, [location.key, parseQuery.q, shouldSyncSearchFromQuery]);
+
+  useEffect(() => {
+    if (!isHome) {
+      pendingDraftSearchSyncRef.current = null;
+      return;
+    }
+    const pending = pendingDraftSearchSyncRef.current;
+    if (pending !== null) {
+      if (debouncedDraftSearchQuery === pending) {
+        pendingDraftSearchSyncRef.current = null;
+      }
+      return;
+    }
+    if (debouncedDraftSearchQuery !== parseQuery.q) {
+      updateUrl({ q: debouncedDraftSearchQuery });
+    }
+  }, [debouncedDraftSearchQuery, isHome, parseQuery.q, updateUrl]);
+
+  useLayoutEffect(() => {
+    if (!isHome) {
+      previousIsHomeRef.current = false;
+      return;
+    }
     const container = scrollContainerRef.current;
     if (!container) return;
+    const enteredHome = !previousIsHomeRef.current;
+    if (!enteredHome) return;
     const previousBehavior = container.style.scrollBehavior;
     container.style.scrollBehavior = 'auto';
-    container.scrollTop = homeScrollRef.current || 0;
+    const nextScrollTop = homeRestoreState?.restoreScroll ? homeScrollRef.current || 0 : 0;
+    container.scrollTop = nextScrollTop;
     container.style.scrollBehavior = previousBehavior;
-  }, [isHome]);
+    previousIsHomeRef.current = true;
+    const frameId = window.requestAnimationFrame(() => {
+      const currentContainer = scrollContainerRef.current;
+      if (!currentContainer || location.pathname !== '/') return;
+      const currentBehavior = currentContainer.style.scrollBehavior;
+      currentContainer.style.scrollBehavior = 'auto';
+      currentContainer.scrollTop = nextScrollTop;
+      currentContainer.style.scrollBehavior = currentBehavior;
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [homeRestoreState?.restoreScroll, isHome, location.pathname]);
 
   const categories = useMemo(() => ['すべて', ...ORDERED_PACKAGE_TYPES], []);
 
   const filteredPackages = useMemo(() => {
-    const base = searchQuery ? items.filter((item) => matchQuery(item, searchQuery)) : items;
+    const base = parseQuery.q ? items.filter((item) => matchQuery(item, parseQuery.q)) : items;
     const category = selectedCategory === 'すべて' ? '' : selectedCategory;
     const filteredByTags = filterByTagsAndType(base, selectedTags, category ? [category] : []);
     const filteredByInstalled = filterInstalled
@@ -126,7 +177,7 @@ export default function useAppShellState() {
       : filteredByTags;
     const sorter = getSorter(parseQuery.sortKey, parseQuery.dir);
     return filteredByInstalled.toSorted(sorter);
-  }, [items, searchQuery, selectedCategory, selectedTags, filterInstalled, parseQuery.sortKey, parseQuery.dir]);
+  }, [filterInstalled, items, parseQuery.dir, parseQuery.q, parseQuery.sortKey, selectedCategory, selectedTags]);
 
   const isFilterActive = filterInstalled || selectedCategory !== 'すべて' || selectedTags.length > 0;
   const updateAvailableCount = useMemo(() => items.filter((item) => item.installed && !item.isLatest).length, [items]);
@@ -142,9 +193,10 @@ export default function useAppShellState() {
   );
 
   const clearFilters = useCallback(() => {
-    setSearchQuery('');
-    navigate(location.pathname, { replace: true });
-  }, [location.pathname, navigate]);
+    pendingDraftSearchSyncRef.current = '';
+    setDraftSearchQuery('');
+    updateUrl({ q: '', type: '', tags: [], installed: '' });
+  }, [updateUrl]);
 
   const setSortOrder = useCallback(
     (order: HomeSortOrder) => {
@@ -247,7 +299,7 @@ export default function useAppShellState() {
   const outletContext = useMemo<HomeContextValue>(
     () => ({
       filteredPackages,
-      searchQuery,
+      saveHomeScrollPosition,
       selectedCategory,
       clearFilters,
       isFilterActive,
@@ -268,7 +320,7 @@ export default function useAppShellState() {
       filterInstalled,
       filteredPackages,
       isFilterActive,
-      searchQuery,
+      saveHomeScrollPosition,
       selectedCategory,
       selectedTags,
       setSortOrder,
@@ -285,8 +337,8 @@ export default function useAppShellState() {
     isSidebarCollapsed,
     activePage,
     isHome,
-    searchQuery,
-    setSearchQuery,
+    displaySearchQuery: draftSearchQuery,
+    setSearchQuery: setSearchInput,
     scrollContainerRef,
     outletContext,
     updateAvailableCount,

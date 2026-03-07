@@ -31,7 +31,7 @@ export default function AppShell() {
 
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
         {state.isHome ? (
-          <HomeSearchHeader searchQuery={state.searchQuery} onSearchQueryChange={state.setSearchQuery} />
+          <HomeSearchHeader searchQuery={state.displaySearchQuery} onSearchQueryChange={state.setSearchQuery} />
         ) : null}
 
         <div

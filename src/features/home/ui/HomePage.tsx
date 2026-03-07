@@ -30,7 +30,11 @@ export default function HomePage() {
       />
 
       {filteredCount > 0 ? (
-        <PackageGridSection filteredPackages={state.filteredPackages} listSearch={state.listSearch} />
+        <PackageGridSection
+          filteredPackages={state.filteredPackages}
+          listSearch={state.listSearch}
+          onBeforeOpenDetail={state.saveHomeScrollPosition}
+        />
       ) : (
         <EmptyStateSection onClearConditions={state.clearConditions} />
       )}

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { buildPackageDetailHref } from '../../features/package/model/helpers';
 import { hasInstaller } from '../../utils/installer';
 import { formatDate } from '../../utils/text';
 import ErrorDialog from '../ErrorDialog';
@@ -7,7 +8,7 @@ import usePackageCardActions from './usePackageCardActions';
 import PackageCardView from './PackageCardView';
 import type { PackageCardProps } from './types';
 
-export default function PackageCard({ item, listSearch = '' }: PackageCardProps) {
+export default function PackageCard({ item, listSearch = '', onBeforeOpenDetail }: PackageCardProps) {
   const navigate = useNavigate();
   const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageCardActions(item);
 
@@ -19,7 +20,8 @@ export default function PackageCard({ item, listSearch = '' }: PackageCardProps)
   const lastUpdated = item.updatedAt ? formatDate(item.updatedAt).replace(/-/g, '/') : '?';
 
   const openDetail = () => {
-    navigate(`/package/${encodeURIComponent(item.id)}`, { state: { fromSearch: listSearch } });
+    onBeforeOpenDetail?.();
+    navigate(buildPackageDetailHref(item.id, listSearch));
   };
 
   return (

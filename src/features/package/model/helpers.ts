@@ -1,5 +1,7 @@
 import type { CarouselImage, PackageImageGroup } from './types';
 
+const PACKAGE_LIST_BACK_PARAM = 'back';
+
 export function isMarkdownFilePath(path: string): boolean {
   const trimmedPath = path.trim();
   if (!trimmedPath || trimmedPath.includes('\n')) return false;
@@ -19,12 +21,6 @@ export function resolveMarkdownUrl(path: string, baseUrl: string): string {
     return new URL(trimmed, baseUrl).toString();
   } catch {}
   throw new Error('Unable to resolve markdown path');
-}
-
-export function readFromSearch(state: unknown): string {
-  if (!state || typeof state !== 'object') return '';
-  const value = (state as Record<string, unknown>).fromSearch;
-  return typeof value === 'string' ? value : '';
 }
 
 export function shouldOpenExternalLink(href: string): boolean {
@@ -61,6 +57,22 @@ export function buildPackageListSearch(
 
   const next = params.toString();
   return next ? `?${next}` : '';
+}
+
+export function buildPackageDetailHref(id: string, listSearch: string): string {
+  const normalizedListSearch = buildPackageListSearch(listSearch);
+  const encodedId = encodeURIComponent(id);
+  if (!normalizedListSearch) return `/package/${encodedId}`;
+
+  const params = new URLSearchParams();
+  params.set(PACKAGE_LIST_BACK_PARAM, normalizedListSearch);
+  return `/package/${encodedId}?${params.toString()}`;
+}
+
+export function readPackageListSearchFromDetail(search: string): string {
+  const normalizedSearch = search.startsWith('?') ? search.slice(1) : search;
+  const params = new URLSearchParams(normalizedSearch);
+  return buildPackageListSearch(params.get(PACKAGE_LIST_BACK_PARAM) || '');
 }
 
 export function collectPackageImages(imageGroups: PackageImageGroup[] | undefined): {
