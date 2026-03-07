@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import ImageCarousel from '../components/ImageCarousel';
 import type { PackageContentSectionProps } from '../types';

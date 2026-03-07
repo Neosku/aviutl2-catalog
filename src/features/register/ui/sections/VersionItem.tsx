@@ -1,7 +1,8 @@
 /**
  * バージョン項目コンポーネント
  */
-import React, { memo, useCallback } from 'react';
+import { memo, useCallback } from 'react';
+import type { MouseEvent, SyntheticEvent } from 'react';
 import Button from '@/components/ui/Button';
 import { Calendar, ChevronDown, Folder, FolderOpen, Plus } from 'lucide-react';
 import type { VersionItemProps } from '../types';
@@ -24,14 +25,14 @@ const VersionItem = memo(
     versionDateRefs,
   }: VersionItemProps) {
     const handleToggle = useCallback(
-      (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+      (event: SyntheticEvent<HTMLDetailsElement>) => {
         toggleVersionOpen(version.key, event.currentTarget.open);
       },
       [toggleVersionOpen, version.key],
     );
 
     const handleRemove = useCallback(
-      (event: React.MouseEvent<HTMLButtonElement>) => {
+      (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
         event.stopPropagation();
         removeVersion(version.key);

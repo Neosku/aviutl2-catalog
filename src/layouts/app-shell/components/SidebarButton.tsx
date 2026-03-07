@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { layout } from '@/components/ui/_styles';
@@ -10,7 +10,7 @@ export interface SidebarIconProps {
   'aria-hidden'?: boolean;
 }
 
-type SidebarIconType = React.ComponentType<SidebarIconProps> | ReactElement<SidebarIconProps>;
+type SidebarIconType = ComponentType<SidebarIconProps> | ReactElement<SidebarIconProps>;
 type SidebarButtonVariant = 'default' | 'action' | 'ghost';
 
 interface PortalTooltipProps {
@@ -27,7 +27,7 @@ interface SidebarButtonProps {
   variant?: SidebarButtonVariant;
   badgeCount?: number;
   shortcut?: string;
-  rightIcon?: React.ComponentType<{ size?: number; className?: string }>;
+  rightIcon?: ComponentType<{ size?: number; className?: string }>;
 }
 
 // Global state for tooltip grouping (fast-pass)
@@ -124,13 +124,13 @@ export default function SidebarButton({
   const iconClass = `shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`;
 
   let iconElement: ReactNode = null;
-  if (React.isValidElement<SidebarIconProps>(icon)) {
-    iconElement = React.cloneElement(icon, {
+  if (isValidElement<SidebarIconProps>(icon)) {
+    iconElement = cloneElement(icon, {
       className: `${icon.props?.className || ''} ${iconClass}`.trim(),
       'aria-hidden': icon.props?.['aria-hidden'] ?? true,
     });
   } else if (icon) {
-    const IconComponent = icon as React.ComponentType<SidebarIconProps>;
+    const IconComponent = icon as ComponentType<SidebarIconProps>;
     iconElement = <IconComponent size={20} className={iconClass} />;
   }
 

@@ -1,7 +1,7 @@
 /**
  * プレビューセクションのコンポーネント
  */
-import React, { useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { Moon, Sun } from 'lucide-react';
 import PackageCard from '../../../../components/package-card/PackageCard';

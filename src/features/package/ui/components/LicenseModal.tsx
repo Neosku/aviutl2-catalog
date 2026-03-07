@@ -1,4 +1,3 @@
-import React from 'react';
 import Button from '@/components/ui/Button';
 import type { LicenseModalProps } from '../types';
 import { cn } from '@/lib/cn';

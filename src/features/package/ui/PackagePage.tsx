@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import ErrorDialog from '../../../components/ErrorDialog';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Paperclip } from 'lucide-react';
 import { FILE_INPUT_CLASS } from '../constants';
 import FeedbackDeleteButton from '../components/FeedbackDeleteButton';

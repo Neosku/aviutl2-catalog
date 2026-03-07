@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import Button from '@/components/ui/Button';
 import { FolderOpen } from 'lucide-react';
 import { action, layout, state, surface, text } from '@/components/ui/_styles';
@@ -34,8 +34,8 @@ interface DetailsSectionActionsProps {
   canProceed: boolean;
   onBack: () => void;
   onNext: () => void;
-  savingContent: React.ReactNode;
-  idleContent: React.ReactNode;
+  savingContent: ReactNode;
+  idleContent: ReactNode;
 }
 
 interface DetailsSectionBaseProps {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { buttonVariants } from '@/components/ui/Button';
 import { ExternalLink } from 'lucide-react';
 import { text } from '@/components/ui/_styles';

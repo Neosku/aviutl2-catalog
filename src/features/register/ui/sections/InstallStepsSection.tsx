@@ -1,7 +1,6 @@
 /**
  * インストール手順コンポーネント
  */
-import React from 'react';
 import Button from '@/components/ui/Button';
 import { GripVertical, Plus } from 'lucide-react';
 import { ACTION_LABELS, INSTALL_ACTION_OPTIONS, SPECIAL_INSTALL_ACTIONS } from '../../model/form';

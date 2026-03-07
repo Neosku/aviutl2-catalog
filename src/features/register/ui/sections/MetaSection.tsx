@@ -1,7 +1,6 @@
 /**
  * パッケージ基本情報登録セクションのコンポーネント
  */
-import React from 'react';
 import { Info } from 'lucide-react';
 import type { RegisterMetaSectionProps } from '../types';
 import TagEditor from './TagEditor';

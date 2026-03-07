@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import FeedbackSuccessDialog from './components/FeedbackSuccessDialog';
 import useFeedbackAttachments from './hooks/useFeedbackAttachments';
 import useFeedbackDiagnostics from './hooks/useFeedbackDiagnostics';

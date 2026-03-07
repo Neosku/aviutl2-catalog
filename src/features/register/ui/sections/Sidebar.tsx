@@ -1,7 +1,6 @@
 /**
  * サイドバーのコンポーネント
  */
-import React from 'react';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { Plus, Search } from 'lucide-react';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Smartphone } from 'lucide-react';
 import { BUG_FIELDS } from '../../model/fieldNames';
 import FeedbackToggleSwitch from '../components/FeedbackToggleSwitch';

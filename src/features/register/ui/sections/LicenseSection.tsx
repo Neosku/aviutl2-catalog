@@ -1,7 +1,8 @@
 /**
  * ライセンス情報入力コンポーネント
  */
-import React, { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import type { MouseEvent } from 'react';
 import Button from '@/components/ui/Button';
 import { Check, ChevronDown, Copy } from 'lucide-react';
 import {
@@ -41,7 +42,7 @@ const PackageLicenseSection = memo(
       setCopyError('');
     }, [templatePreview, activeLicense.key]);
 
-    async function handleCopyPreview(e: React.MouseEvent<HTMLButtonElement>) {
+    async function handleCopyPreview(e: MouseEvent<HTMLButtonElement>) {
       e.preventDefault();
       e.stopPropagation();
       if (!templatePreview) return;

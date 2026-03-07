@@ -1,4 +1,4 @@
-import type React from 'react';
+import type { ChangeEvent } from 'react';
 import type { SettingsFormState } from '../model/types';
 
 export interface AppSettingsSectionProps {
@@ -6,7 +6,7 @@ export interface AppSettingsSectionProps {
   packageStateEnabled: boolean;
   saving: boolean;
   success: string;
-  onAviutl2RootChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onAviutl2RootChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onPortableToggle: (next: boolean) => void;
   onPackageStateEnabledToggle: (nextEnabled: boolean) => void;
   onPickAviutl2Root: () => void;

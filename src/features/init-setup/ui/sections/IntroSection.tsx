@@ -1,4 +1,3 @@
-import React from 'react';
 import AppIcon from '../../../../../src-tauri/icons/icon.svg';
 import type { IntroSectionProps } from '../types';
 import Button from '@/components/ui/Button';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import TitleBar from '../../../layouts/app-shell/title-bar/TitleBar';
 import UpdateDialog from '../../app-update/UpdateDialog';

@@ -2,7 +2,7 @@
  * バージョン配下のファイルカードコンポーネント
  * ハッシュ計算やパス入力を行う
  */
-import React, { memo } from 'react';
+import { memo } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { FileSearch } from 'lucide-react';

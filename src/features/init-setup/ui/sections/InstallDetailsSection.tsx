@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Download } from 'lucide-react';
 import ProgressCircle from '../../../../components/ProgressCircle';
 import DetailsSectionBase from '../components/DetailsSectionBase';

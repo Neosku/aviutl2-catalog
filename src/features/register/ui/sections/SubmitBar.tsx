@@ -1,7 +1,6 @@
 /**
  * 送信バーコンポーネント
  */
-import React from 'react';
 import Button, { buttonVariants } from '@/components/ui/Button';
 import { BookOpen, FileBraces, Send } from 'lucide-react';
 import type { RegisterSubmitBarProps } from '../types';

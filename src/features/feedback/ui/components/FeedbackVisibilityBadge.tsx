@@ -1,4 +1,3 @@
-import React from 'react';
 import type { FeedbackVisibilityBadgeProps } from '../types';
 import { cn } from '@/lib/cn';
 

@@ -1,7 +1,7 @@
 /**
  * インストーラーのコンテナセクション。
  */
-import React, { memo } from 'react';
+import { memo } from 'react';
 import type { PackageInstallerSectionProps } from '../types';
 import InstallStepsSection from './InstallStepsSection';
 import InstallerSourceSection from './InstallerSourceSection';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Download, FolderOpen } from 'lucide-react';
 import type { InstallStatusSectionProps } from '../types';
 import { cn } from '@/lib/cn';

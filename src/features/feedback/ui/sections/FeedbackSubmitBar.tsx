@@ -1,4 +1,3 @@
-import React from 'react';
 import Button from '@/components/ui/Button';
 import { action } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';

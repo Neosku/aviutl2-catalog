@@ -1,4 +1,3 @@
-import React from 'react';
 import Button from '@/components/ui/Button';
 import { Bug, MessageSquare } from 'lucide-react';
 import type { FeedbackModeTabsProps } from '../types';

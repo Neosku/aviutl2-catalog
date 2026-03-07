@@ -1,7 +1,7 @@
 /**
  * バージョン情報コンポーネント
  */
-import React, { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { ChevronUp, History, Plus } from 'lucide-react';
 import type { PackageVersionSectionProps } from '../types';

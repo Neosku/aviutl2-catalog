@@ -1,11 +1,11 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import { Check } from 'lucide-react';
 import type { DoneSectionProps } from '../types';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 import { action, layout, state, text } from '@/components/ui/_styles';
 
-const pulseStyle: React.CSSProperties = { animationDuration: '3s' };
+const pulseStyle: CSSProperties = { animationDuration: '3s' };
 
 export default function DoneSection({ busy, onFinalize, onBack }: DoneSectionProps) {
   return (

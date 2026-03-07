@@ -1,7 +1,6 @@
 /**
  * アンインストール手順コンポーネント
  */
-import React from 'react';
 import Button from '@/components/ui/Button';
 import { GripVertical, Plus } from 'lucide-react';
 import { UNINSTALL_ACTION_OPTIONS } from '../../model/form';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { BUG_FIELDS } from '../../model/fieldNames';
 import FeedbackVisibilityBadge from '../components/FeedbackVisibilityBadge';
 import FeedbackAttachmentSection from './FeedbackAttachmentSection';

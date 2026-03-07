@@ -1,4 +1,3 @@
-import React from 'react';
 import type { PackageSidebarSectionProps } from '../types';
 import { PackageSidebarActionsCard, PackageSidebarBackLink, PackageSidebarInfoCard } from './sidebar';
 

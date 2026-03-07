@@ -1,7 +1,8 @@
 /**
  * ドロップダウンリストコンポーネント
  */
-import React, { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import Button from '@/components/ui/Button';
 import { cva } from 'class-variance-authority';
 import { Check, ChevronDown } from 'lucide-react';
@@ -67,7 +68,7 @@ const ActionDropdown = memo(function ActionDropdown({
     onChange?.(val);
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Escape') setOpen(false);
   }
 

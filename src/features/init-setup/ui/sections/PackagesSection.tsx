@@ -1,4 +1,3 @@
-import React from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Check, CheckCircle2, Download } from 'lucide-react';

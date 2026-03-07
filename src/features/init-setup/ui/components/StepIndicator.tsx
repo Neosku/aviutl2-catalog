@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Check } from 'lucide-react';
 import type { StepIndicatorProps } from '../types';
 import { cn } from '@/lib/cn';

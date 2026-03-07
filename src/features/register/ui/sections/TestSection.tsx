@@ -1,7 +1,7 @@
 /**
  * インストーラーテストセクションのコンポーネント
  */
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { AlertCircle, Download, Trash2 } from 'lucide-react';

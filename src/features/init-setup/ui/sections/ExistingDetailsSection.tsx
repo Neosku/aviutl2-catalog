@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import DetailsSectionBase from '../components/DetailsSectionBase';
 import type { ExistingDetailsSectionProps } from '../types';
 import { action, layout } from '@/components/ui/_styles';

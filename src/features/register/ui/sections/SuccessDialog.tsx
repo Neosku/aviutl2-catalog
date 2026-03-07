@@ -1,7 +1,6 @@
 /**
  * 送信完了ダイアログコンポーネント
  */
-import React from 'react';
 import Button, { buttonVariants } from '@/components/ui/Button';
 import { Check, ExternalLink } from 'lucide-react';
 import type { RegisterSuccessDialogProps } from '../types';

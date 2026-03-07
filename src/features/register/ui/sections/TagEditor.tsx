@@ -1,7 +1,8 @@
 /**
  * タグ編集コンポーネント
  */
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import Button from '@/components/ui/Button';
 import { Check, X } from 'lucide-react';
 import { normalizeArrayText } from '../../model/helpers';
@@ -69,7 +70,7 @@ const TagEditor = memo(function TagEditor({ initialTags, suggestions = [], onCha
   );
 
   const handleTagInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
       handleAddTagsFromInput(inputValue);

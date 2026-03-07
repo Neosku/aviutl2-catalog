@@ -1,7 +1,7 @@
 /**
  * 詳細説明エリアの表示コンポーネント
  */
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';

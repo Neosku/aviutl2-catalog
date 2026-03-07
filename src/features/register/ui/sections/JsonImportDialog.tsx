@@ -1,7 +1,6 @@
 /**
  * カタログ JSON の部分上書き入力ダイアログ
  */
-import React from 'react';
 import { Alert } from '@/components/ui/Alert';
 import Button from '@/components/ui/Button';
 import { FileBraces } from 'lucide-react';

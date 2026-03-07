@@ -1,7 +1,6 @@
 /**
  * インストーラーのソースコンポーネント
  */
-import React from 'react';
 import Button from '@/components/ui/Button';
 import { INSTALLER_SOURCES } from '../../model/form';
 import type { PackageInstallerSectionProps } from '../types';
