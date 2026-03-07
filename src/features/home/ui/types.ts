@@ -1,22 +1,24 @@
 import type { PackageItem } from '../../package/model/types';
-import type { HomeContextValue, HomeSortOption, HomeSortOrder } from '../../../layouts/app-shell/types';
+import type { HomeContextValue, HomeInstallStatus, HomeSortOrder } from '../../../layouts/app-shell/types';
 
-export type { HomeContextValue, HomeSortOption, HomeSortOrder };
+export type { HomeContextValue, HomeInstallStatus, HomeSortOrder };
 
 export interface FiltersSectionProps {
   categories: string[];
   selectedCategory: string;
   filteredCount: number;
-  filterInstalled: boolean;
+  installStatus: HomeInstallStatus;
   selectedTags: string[];
   sortedSelectedTags: string[];
   sortedAllTags: string[];
   isFilterExpanded: boolean;
+  isInstallMenuOpen: boolean;
   isSortMenuOpen: boolean;
   sortOrder: HomeSortOrder;
-  sortOptions: readonly HomeSortOption[];
   onCategoryChange: (category: string) => void;
-  onToggleInstalled: () => void;
+  onToggleInstallMenu: () => void;
+  onCloseInstallMenu: () => void;
+  onSelectInstallStatus: (status: HomeInstallStatus) => void;
   onToggleFilterExpanded: () => void;
   onToggleSortMenu: () => void;
   onCloseSortMenu: () => void;

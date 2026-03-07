@@ -1,23 +1,61 @@
-import { ArrowUpDown, CheckCircle2, ChevronDown, ChevronUp, Filter, Layers, Tags, X } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpDown,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Filter,
+  Layers,
+  Tags,
+  X,
+} from 'lucide-react';
 import Button from '@/components/ui/Button';
 import type { FiltersSectionProps } from '../types';
+import {
+  INSTALL_STATUS_LABELS,
+  INSTALL_STATUS_OPTIONS,
+  SORT_OPTIONS,
+  SORT_OPTION_LABELS,
+} from '../../../../layouts/app-shell/constants';
 import { cn } from '@/lib/cn';
 import { layout, state, surface } from '@/components/ui/_styles';
+
+function renderInstallStatusIcon(status: FiltersSectionProps['installStatus'], tone: 'accent' | 'neutral' = 'neutral') {
+  if (status === 'installed') {
+    return tone === 'accent' ? (
+      <CheckCircle2
+        size={16}
+        className="text-emerald-600 dark:text-emerald-300 fill-emerald-600/20 dark:fill-emerald-300/20"
+      />
+    ) : (
+      <CheckCircle2 size={16} className="text-slate-600 dark:text-slate-300 fill-slate-600/10 dark:fill-slate-300/10" />
+    );
+  }
+
+  if (status === 'not_installed') {
+    return <Circle size={16} className="text-slate-600 dark:text-slate-300" />;
+  }
+
+  return <ArrowDownToLine size={16} className="text-slate-600 dark:text-slate-300" />;
+}
 
 export default function FiltersSection({
   categories,
   selectedCategory,
   filteredCount,
-  filterInstalled,
+  installStatus,
   selectedTags,
   sortedSelectedTags,
   sortedAllTags,
   isFilterExpanded,
+  isInstallMenuOpen,
   isSortMenuOpen,
   sortOrder,
-  sortOptions,
   onCategoryChange,
-  onToggleInstalled,
+  onToggleInstallMenu,
+  onCloseInstallMenu,
+  onSelectInstallStatus,
   onToggleFilterExpanded,
   onToggleSortMenu,
   onCloseSortMenu,
@@ -25,6 +63,23 @@ export default function FiltersSection({
   onToggleTag,
   onClearTags,
 }: FiltersSectionProps) {
+  const installButtonLabel = INSTALL_STATUS_LABELS[installStatus];
+  const installButtonVariant =
+    installStatus === 'installed' ? 'accentEmerald' : installStatus === 'not_installed' ? 'muted' : 'secondary';
+  const neutralControlTextClass = 'text-slate-600 dark:text-slate-300';
+  const dropdownPanelClass = cn(
+    surface.baseMuted,
+    state.enterZoomIn95,
+    'absolute right-0 top-full mt-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-xl z-20 py-1 origin-top-right duration-100',
+  );
+  const dropdownItemBaseClass =
+    'w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer';
+  const dropdownItemSelectedClass = 'text-slate-800 font-bold bg-slate-100 dark:bg-slate-800/80 dark:text-slate-100';
+  const dropdownItemIdleClass = 'text-slate-600 dark:text-slate-300';
+  const installButtonTextClass =
+    installStatus === 'installed' ? 'text-emerald-600 dark:text-emerald-300' : neutralControlTextClass;
+  const selectedSortLabel = SORT_OPTION_LABELS[sortOrder];
+
   return (
     <div className="sticky top-0 z-30 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80 -mx-6 mb-6 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all">
       <div className="px-6 py-3">
@@ -70,37 +125,63 @@ export default function FiltersSection({
                 'flex items-baseline px-3 py-2 bg-slate-100 dark:bg-slate-800 mr-2 h-[38px] min-w-[4rem] justify-center',
               )}
             >
-              <span className="text-lg font-black text-slate-700 dark:text-slate-200 tabular-nums leading-none">
+              <span className={cn('text-lg font-black tabular-nums leading-none', neutralControlTextClass)}>
                 {filteredCount}
               </span>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">件</span>
+              <span className={cn('text-xs font-bold ml-1', neutralControlTextClass)}>件</span>
             </div>
 
-            <Button
-              onClick={onToggleInstalled}
-              variant={filterInstalled ? 'accentEmerald' : 'secondary'}
-              size="actionSm"
-              className="whitespace-nowrap cursor-pointer"
-              type="button"
-            >
-              <CheckCircle2
-                size={16}
-                className={
-                  filterInstalled ? 'text-emerald-500 fill-emerald-500/20' : 'text-slate-300 dark:text-slate-600'
-                }
-              />
-              インストール済
-            </Button>
+            <div className="relative">
+              <Button
+                onClick={onToggleInstallMenu}
+                variant={installButtonVariant}
+                size="actionSm"
+                className="whitespace-nowrap cursor-pointer"
+                type="button"
+              >
+                {renderInstallStatusIcon(installStatus, installStatus === 'installed' ? 'accent' : 'neutral')}
+                <span className={cn('text-sm font-medium', installButtonTextClass)}>{installButtonLabel}</span>
+                <ChevronDown size={14} />
+              </Button>
+              {isInstallMenuOpen ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label="インストール状態メニューを閉じる"
+                    className="fixed inset-0 z-10"
+                    onClick={onCloseInstallMenu}
+                  />
+                  <div className={dropdownPanelClass}>
+                    {INSTALL_STATUS_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => onSelectInstallStatus(option.value)}
+                        className={cn(
+                          dropdownItemBaseClass,
+                          installStatus === option.value ? dropdownItemSelectedClass : dropdownItemIdleClass,
+                        )}
+                        type="button"
+                      >
+                        <span className="flex items-center gap-2">
+                          {renderInstallStatusIcon(option.value)}
+                          <span>{option.label}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
 
             <Button
               onClick={onToggleFilterExpanded}
               variant={isFilterExpanded || selectedTags.length > 0 ? 'accentBlue' : 'secondary'}
               size="actionSm"
-              className="whitespace-nowrap cursor-pointer"
+              className={cn('whitespace-nowrap cursor-pointer', neutralControlTextClass)}
               type="button"
             >
-              <Filter size={16} />
-              タグ絞り込み
+              <Filter size={16} className={neutralControlTextClass} />
+              <span className={cn('text-sm font-medium', neutralControlTextClass)}>タグ絞り込み</span>
               {selectedTags.length > 0 ? (
                 <span
                   className={cn(
@@ -119,14 +200,12 @@ export default function FiltersSection({
                 onClick={onToggleSortMenu}
                 variant="secondary"
                 size="actionSm"
-                className="whitespace-nowrap cursor-pointer text-slate-500 dark:text-slate-400"
+                className={cn('whitespace-nowrap cursor-pointer', neutralControlTextClass)}
                 title="並び替え"
                 type="button"
               >
-                <ArrowUpDown size={16} />
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                  {sortOptions.find((option) => option.value === sortOrder)?.label || '並び替え'}
-                </span>
+                <ArrowUpDown size={16} className={neutralControlTextClass} />
+                <span className={cn('text-sm font-medium', neutralControlTextClass)}>{selectedSortLabel}</span>
                 <ChevronDown size={14} />
               </Button>
               {isSortMenuOpen ? (
@@ -137,28 +216,18 @@ export default function FiltersSection({
                     className="fixed inset-0 z-10"
                     onClick={onCloseSortMenu}
                   />
-                  <div
-                    className={cn(
-                      surface.baseMuted,
-                      state.enterZoomIn95,
-                      'absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-xl z-20 py-1 origin-top-right duration-100',
-                    )}
-                  >
-                    {sortOptions.map((option) => (
+                  <div className={dropdownPanelClass}>
+                    {SORT_OPTIONS.map((option) => (
                       <button
                         key={option.value}
                         onClick={() => onSelectSortOrder(option.value)}
                         className={cn(
-                          layout.rowBetween,
-                          'w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer',
-                          sortOrder === option.value
-                            ? 'text-blue-600 font-bold bg-blue-50 dark:bg-blue-900/10'
-                            : 'text-slate-600 dark:text-slate-300',
+                          dropdownItemBaseClass,
+                          sortOrder === option.value ? dropdownItemSelectedClass : dropdownItemIdleClass,
                         )}
                         type="button"
                       >
-                        {option.label}
-                        {sortOrder === option.value ? <CheckCircle2 size={14} /> : null}
+                        <span>{option.label}</span>
                       </button>
                     ))}
                   </div>

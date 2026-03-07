@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../../../utils/catalogStore';
 import { ipc } from '../../../utils/invokeIpc';
 import { filterByTagsAndType, getSorter, matchQuery, ORDERED_PACKAGE_TYPES } from '../../../utils/query';
-import { sortOrderFromQuery, sortParamsFromOrder } from '../constants';
+import { installStatusFromQueryValue, sortOrderFromQuery, sortParamsFromOrder } from '../constants';
 import type {
   ActivePage,
   HomeContextValue,
@@ -54,11 +54,11 @@ export default function useAppShellState() {
     const dir = sortKey === 'newest' ? 'desc' : params.get('dir') === 'asc' ? 'asc' : 'desc';
     const type = params.get('type') || '';
     const tags = (params.get('tags') || '').split(',').filter(Boolean);
-    const installed = params.get('installed') === '1';
-    return { q, sortKey, dir, type, tags, installed };
+    const installStatus = installStatusFromQueryValue(params.get('installed'));
+    return { q, sortKey, dir, type, tags, installStatus };
   }, [location.search]);
 
-  const filterInstalled = parseQuery.installed;
+  const installStatus = parseQuery.installStatus;
   const selectedCategory = parseQuery.type || 'すべて';
   const selectedTags = parseQuery.tags;
   const sortOrder = sortOrderFromQuery(parseQuery.sortKey);
@@ -172,14 +172,17 @@ export default function useAppShellState() {
     const base = parseQuery.q ? items.filter((item) => matchQuery(item, parseQuery.q)) : items;
     const category = selectedCategory === 'すべて' ? '' : selectedCategory;
     const filteredByTags = filterByTagsAndType(base, selectedTags, category ? [category] : []);
-    const filteredByInstalled = filterInstalled
-      ? filteredByTags.filter((item: { installed?: boolean }) => item.installed)
-      : filteredByTags;
+    const filteredByInstalled =
+      installStatus === 'installed'
+        ? filteredByTags.filter((item: { installed?: boolean }) => item.installed)
+        : installStatus === 'not_installed'
+          ? filteredByTags.filter((item: { installed?: boolean }) => !item.installed)
+          : filteredByTags;
     const sorter = getSorter(parseQuery.sortKey, parseQuery.dir);
     return filteredByInstalled.toSorted(sorter);
-  }, [filterInstalled, items, parseQuery.dir, parseQuery.q, parseQuery.sortKey, selectedCategory, selectedTags]);
+  }, [installStatus, items, parseQuery.dir, parseQuery.q, parseQuery.sortKey, selectedCategory, selectedTags]);
 
-  const isFilterActive = filterInstalled || selectedCategory !== 'すべて' || selectedTags.length > 0;
+  const isFilterActive = installStatus !== 'all' || selectedCategory !== 'すべて' || selectedTags.length > 0;
   const updateAvailableCount = useMemo(() => items.filter((item) => item.installed && !item.isLatest).length, [items]);
 
   const toggleTag = useCallback(
@@ -309,7 +312,7 @@ export default function useAppShellState() {
       categories,
       allTags: allTags || [],
       selectedTags,
-      filterInstalled,
+      installStatus,
       toggleTag,
       updateUrl,
     }),
@@ -317,7 +320,7 @@ export default function useAppShellState() {
       allTags,
       categories,
       clearFilters,
-      filterInstalled,
+      installStatus,
       filteredPackages,
       isFilterActive,
       saveHomeScrollPosition,

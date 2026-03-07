@@ -7,6 +7,7 @@ export interface HomeSortOption {
   label: string;
 }
 
+export type HomeInstallStatus = 'all' | 'installed' | 'not_installed';
 export type SortKey = 'popularity' | 'newest' | 'trend' | 'added';
 export type SortDir = 'desc' | 'asc';
 export type UrlOverrideValue = string | string[] | null | undefined;
@@ -17,7 +18,7 @@ export interface ParsedHomeQuery {
   dir: SortDir;
   type: string;
   tags: string[];
-  installed: boolean;
+  installStatus: HomeInstallStatus;
 }
 
 export type ActivePage = 'home' | 'updates' | 'register' | 'niconi-commons' | 'feedback' | 'settings' | 'package' | '';
@@ -47,7 +48,7 @@ export interface HomeContextValue {
   categories: string[];
   allTags: string[];
   selectedTags: string[];
-  filterInstalled: boolean;
+  installStatus: HomeInstallStatus;
   toggleTag: (tag: string) => void;
   updateUrl: (overrides: Record<string, UrlOverrideValue>) => void;
 }

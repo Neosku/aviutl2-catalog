@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useHomeContext } from '../../../../layouts/app-shell/AppShell';
-import { SORT_OPTIONS } from '../../../../layouts/app-shell/constants';
-import type { HomeSortOrder } from '../types';
+import { installStatusToQueryValue } from '../../../../layouts/app-shell/constants';
+import type { HomeInstallStatus, HomeSortOrder } from '../types';
 
 const HOME_CATEGORY_ALL = 'すべて';
 
@@ -22,15 +22,15 @@ export default function useHomePage() {
     allTags,
     selectedTags,
     toggleTag,
-    filterInstalled,
+    installStatus,
     sortOrder,
     setSortOrder,
   } = useHomeContext();
 
+  const [isInstallMenuOpen, setIsInstallMenuOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-  const sortOptions = SORT_OPTIONS;
   const sortedAllTags = useMemo(() => sortTags(allTags), [allTags]);
   const sortedSelectedTags = useMemo(() => sortTags(selectedTags), [selectedTags]);
   const listSearch = useMemo(() => {
@@ -46,9 +46,21 @@ export default function useHomePage() {
     [updateUrl],
   );
 
-  const toggleInstalledFilter = useCallback(() => {
-    updateUrl({ installed: filterInstalled ? '' : '1' });
-  }, [filterInstalled, updateUrl]);
+  const toggleInstallMenu = useCallback(() => {
+    setIsInstallMenuOpen((prev) => !prev);
+  }, []);
+
+  const closeInstallMenu = useCallback(() => {
+    setIsInstallMenuOpen(false);
+  }, []);
+
+  const selectInstallStatus = useCallback(
+    (status: HomeInstallStatus) => {
+      updateUrl({ installed: installStatusToQueryValue(status) });
+      setIsInstallMenuOpen(false);
+    },
+    [updateUrl],
+  );
 
   const toggleFilterExpanded = useCallback(() => {
     setIsFilterExpanded((prev) => !prev);
@@ -79,17 +91,19 @@ export default function useHomePage() {
     categories,
     selectedCategory,
     saveHomeScrollPosition,
-    filterInstalled,
+    installStatus,
     selectedTags,
     sortedSelectedTags,
     sortedAllTags,
     listSearch,
+    isInstallMenuOpen,
     isSortMenuOpen,
     isFilterExpanded,
     sortOrder,
-    sortOptions,
     setCategory,
-    toggleInstalledFilter,
+    toggleInstallMenu,
+    closeInstallMenu,
+    selectInstallStatus,
     toggleFilterExpanded,
     toggleSortMenu,
     closeSortMenu,
