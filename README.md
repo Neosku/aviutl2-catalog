@@ -1,16 +1,26 @@
-# AviUtl2 カタログ
+<h1 align="center">
+  <img src="./src-tauri/icons/icon.svg" width="120"><br>
+  AviUtl2 カタログ
+</h1>
 
-![Platform](https://img.shields.io/badge/Windows-Only-0078D6)
-[![Release](https://img.shields.io/github/v/release/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/releases/latest)
-![WinGet](https://img.shields.io/winget/v/Neosku.AviUtl2-Catalog)
-[![Downloads](https://img.shields.io/github/downloads/Neosku/aviutl2-catalog/total)](https://github.com/Neosku/aviutl2-catalog/releases/latest)
-[![License](https://img.shields.io/github/license/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/blob/main/LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/Neosku/aviutl2-catalog)](https://github.com/Neosku/aviutl2-catalog/commits/main)
+<p align="center">
+  AviUtl2のプラグインやスクリプトを<br>
+  検索・導入・更新まで一括管理できるデスクトップアプリ
+</p>
 
-AviUtl2のプラグインやスクリプトを、検索から導入・更新まで一括で管理できるデスクトップアプリです。
-現在ベータ版です。
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-Only-0078D6">
+  <a href="https://github.com/Neosku/aviutl2-catalog/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Neosku/aviutl2-catalog">
+  </a>
+  <img src="https://img.shields.io/winget/v/Neosku.AviUtl2-Catalog">
+  <a href="https://github.com/Neosku/aviutl2-catalog/releases/latest">
+    <img src="https://img.shields.io/github/downloads/Neosku/aviutl2-catalog/total">
+  </a>
+  <img src="https://img.shields.io/github/license/Neosku/aviutl2-catalog">
+  <img src="https://img.shields.io/github/last-commit/Neosku/aviutl2-catalog">
+</p>
 
----
 
 ## 主な機能
 
