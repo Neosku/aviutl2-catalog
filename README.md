@@ -21,6 +21,13 @@
   <img src="https://img.shields.io/github/last-commit/Neosku/aviutl2-catalog">
 </p>
 
+<p align="center">
+  日本語 |
+  <a href="./docs/README.en.md">English</a> |
+  <a href="./docs/README.ko.md">한국어</a> |
+  <a href="./docs/README.zh-CN.md">简体中文</a> |
+  <a href="./docs/README.zh-TW.md">繁體中文</a>
+</p>
 
 ## 主な機能
 

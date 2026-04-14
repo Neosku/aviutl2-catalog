@@ -3,6 +3,13 @@
 !CHANGELOG.md
 !Plugin/update.md
 
+# README
+!README.md
+!docs/README.en.md
+!docs/README.ko.md
+!docs/README.zh-CN.md
+!docs/README.zh-TW.md
+
 # Rust のビルド成果物
 /src-tauri/target/
 
