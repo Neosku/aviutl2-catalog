@@ -1,3 +1,4 @@
+import * as tauriPath from '@tauri-apps/api/path';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { formatUnknownError } from '../errors';
 import { ipc } from '../invokeIpc';
@@ -15,36 +16,52 @@ export function ensureAbsolutePath(p: unknown, label: string): string {
   return s;
 }
 
-export async function deletePath(absPath: string): Promise<boolean> {
-  let ok = false;
-  let lastErr: unknown = null;
-  try {
-    const hasPath = await tauriFs.exists(absPath);
-    if (!hasPath) {
-      return false;
+function normalizePathForCompare(path: string): string {
+  const replaced = path.replaceAll('\\', '/');
+  const trimmed = replaced.replace(/\/+$/, '');
+  return (trimmed || replaced).toLowerCase();
+}
+
+async function getProtectedDeleteRoots(): Promise<Set<string>> {
+  const dirs = await ipc.getAppDirs();
+  const roots = new Set<string>();
+  const candidates = [dirs?.aviutl2_root, dirs?.aviutl2_data, dirs?.plugin_dir, dirs?.script_dir];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      roots.add(normalizePathForCompare(candidate.trim()));
     }
-    try {
-      await tauriFs.remove(absPath, { recursive: true });
-      ok = true;
-    } catch {
-      try {
-        const st = await tauriFs.stat(absPath);
-        if (st.isDirectory) {
-          await tauriFs.remove(absPath, { recursive: true });
-        } else {
-          await tauriFs.remove(absPath);
-        }
-        ok = true;
-      } catch (e: unknown) {
-        lastErr = e;
-      }
-    }
-    if (ok) return true;
-  } catch (e: unknown) {
-    lastErr = e;
   }
-  if (!ok) throw lastErr || new Error('remove failed');
-  return ok;
+  return roots;
+}
+
+async function isFilesystemRoot(dirPath: string): Promise<boolean> {
+  const parentDir = await tauriPath.dirname(dirPath);
+  return normalizePathForCompare(parentDir) === normalizePathForCompare(dirPath);
+}
+
+async function removeEmptyDirectParentIfNeeded(absPath: string): Promise<void> {
+  const parentDir = await tauriPath.dirname(absPath);
+  if (!parentDir) return;
+  if (await isFilesystemRoot(parentDir)) return;
+  const protectedRoots = await getProtectedDeleteRoots();
+  if (protectedRoots.has(normalizePathForCompare(parentDir))) return;
+  const entries = await tauriFs.readDir(parentDir);
+  if (entries.length !== 0) return;
+  await tauriFs.remove(parentDir);
+}
+
+export async function deletePath(absPath: string): Promise<boolean> {
+  const hasPath = await tauriFs.exists(absPath);
+  if (!hasPath) {
+    return false;
+  }
+  await tauriFs.remove(absPath, { recursive: true });
+  try {
+    await removeEmptyDirectParentIfNeeded(absPath);
+  } catch (e: unknown) {
+    await bestEffortLogError(`[deletePath] remove empty parent failed path="${absPath}": ${formatUnknownError(e)}`);
+  }
+  return true;
 }
 
 export async function extractZip(zipPath: string, destPath: string): Promise<void> {
