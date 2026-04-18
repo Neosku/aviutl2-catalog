@@ -4,7 +4,7 @@
     "loading": "Loading...",
     "notFoundTitle": "Page Not Found",
     "notFoundDescription": "The page you requested does not exist or has been moved.",
-    "goHome": "Back to package list"
+    "goHome": "Back to Package List"
   },
   "actions": {
     "close": "Close",
