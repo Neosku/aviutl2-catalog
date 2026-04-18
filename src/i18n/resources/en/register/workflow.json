@@ -15,8 +15,8 @@
     "body": "All plugin information entered in this form will be public.\nAnyone can register a package, even if they are not the original author."
   },
   "sidebar": {
-    "newPackage": "Create package",
-    "pendingList": "Pending submissions",
+    "newPackage": "Create Package",
+    "pendingList": "Pending Submissions",
     "pendingReady": "Ready to submit",
     "draftStatusNotRequired": "No test required",
     "draftStatusReady": "Tested",
@@ -36,15 +36,15 @@
   },
   "preview": {
     "title": "Preview",
-    "switchToLight": "Switch to light mode",
-    "switchToDark": "Switch to dark mode",
-    "fallbackName": "Package name",
+    "switchToLight": "Switch to Light Mode",
+    "switchToDark": "Switch to Dark Mode",
+    "fallbackName": "Package Name",
     "fallbackAuthor": "Author",
     "fallbackSummary": "The summary appears here"
   },
   "jsonImport": {
     "title": "JSON input",
-    "description": "Paste JSON in the same format as template.json. Matching items will be partially overwritten, and unmatched ids will be added as new entries. You can add multiple packages at once.",
+    "description": "Paste your JSON file in the same format as template.json. Matching items will be partially overwritten, and unmatched IDs will be added as new entries. You can add multiple packages at once.",
     "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"Example Plugin\",\n    \"type\": \"Input plugin\",\n    \"summary\": \"A short package summary goes here.\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"Example Script\",\n    \"type\": \"Script\",\n    \"summary\": \"A short script summary goes here.\"\n  }\n]",
     "cancel": "Cancel",
     "apply": "Apply"
