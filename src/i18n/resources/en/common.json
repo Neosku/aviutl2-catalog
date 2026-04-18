@@ -2,8 +2,8 @@
   "appName": "AviUtl2 Catalog",
   "router": {
     "loading": "Loading...",
-    "notFoundTitle": "Page not found",
-    "notFoundDescription": "The page you requested does not exist or has moved.",
+    "notFoundTitle": "Page Not Found",
+    "notFoundDescription": "The page you requested does not exist or has been moved.",
     "goHome": "Back to package list"
   },
   "actions": {
@@ -46,30 +46,30 @@
   },
   "packageTypes": {
     "core": "Core",
-    "mod": "MOD",
-    "inputPlugin": "Input plugin",
-    "outputPlugin": "Output plugin",
-    "generalPlugin": "General plugin",
-    "filterPlugin": "Filter plugin",
+    "mod": "Mod",
+    "inputPlugin": "Input Plugins",
+    "outputPlugin": "Output Plugins",
+    "generalPlugin": "General Plugins",
+    "filterPlugin": "Filter Plugins",
     "script": "Script",
     "other": "Other"
   },
   "errors": {
     "unknown": "Unknown error",
-    "submitFailed": "Submission failed. Check your network connection and configuration.",
+    "submitFailed": "Submission failed. Please check your Internet connection.",
     "submitEndpointRequired": "VITE_SUBMIT_ENDPOINT is not configured.",
     "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT must start with https://."
   },
   "submit": {
-    "successDefault": "Submission completed.",
+    "successDefault": "Submission completed!",
     "completeTitle": "Submitted"
   },
   "process": {
     "checkFailed": "Could not check whether AviUtl2 is running: {{detail}}",
-    "running": "AviUtl2 is running.\nClose the app before installing or uninstalling packages."
+    "running": "AviUtl2 is running!\nClose the app before installing or uninstalling packages."
   },
   "github": {
-    "rateLimit": "GitHub API primary rate limit reached. Retry after {{resetAt}}."
+    "rateLimit": "You have been ratelimited by GitHub's API. Retry after {{resetAt}}."
   },
   "markdownAlerts": {
     "note": "Note",
@@ -92,8 +92,8 @@
     "notesUnavailable": "Release notes are unavailable.",
     "later": "Later",
     "updating": "Updating...",
-    "updateNow": "Update now",
-    "appliedMessage": "The update was applied. Please restart the app.",
+    "updateNow": "Update Now",
+    "appliedMessage": "Update applied! Please restart the app.",
     "failed": "The update failed. Check your network connection and permissions."
   },
   "windowControls": {
@@ -109,7 +109,7 @@
     },
     "errors": {
       "aviutlFolderRequired": "Please select the AviUtl2 folder.",
-      "packageIdEmpty": "Package ID is empty.",
+      "packageIdEmpty": "The package ID is empty.",
       "aviutlExeNotFound": "aviutl2.exe was not found: {{path}}",
       "launchAviutlFailed": "Failed to launch AviUtl2: {{detail}}",
       "exedit2NotInstalled": "Kenkun.AviUtlExEdit2 is not installed. Install it and try again.",
