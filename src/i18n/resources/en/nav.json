@@ -1,21 +1,21 @@
 {
   "navigation": {
-    "home": "Package list",
-    "updates": "Update center",
+    "home": "Package List",
+    "updates": "Update Center",
     "links": "Links",
     "niconiCommons": "Niconi Commons",
-    "register": "Package registration",
+    "register": "Package Registration",
     "feedback": "Feedback",
     "settings": "Settings"
   },
   "sections": {
-    "mainMenu": "Main menu",
+    "mainMenu": "Main Menu",
     "shortcuts": "Shortcuts"
   },
   "items": {
     "launchAviutl2": "Launch AviUtl2",
-    "openDataDir": "Open data folder",
-    "openSidebar": "Open sidebar",
-    "closeSidebar": "Close sidebar"
+    "openDataDir": "Open Data Folder",
+    "openSidebar": "Open Sidebar",
+    "closeSidebar": "Close Sidebar"
   }
 }
