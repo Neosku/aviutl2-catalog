@@ -1,7 +1,7 @@
 {
   "intro": {
     "title": "AviUtl2 目录",
-    "description": "为首次使用配置 AviUtl2 目录",
+    "description": "为首次使用设置 AviUtl2 目录",
     "start": "开始设置"
   },
   "steps": {
@@ -13,27 +13,27 @@
   },
   "installStatus": {
     "title": "安装状态",
-    "description": "请选择与当前 AviUtl2 环境相符的选项",
+    "description": "请根据 AviUtl2 的安装状态进行选择",
     "installedTitle": "已安装",
-    "installedDescription": "如果 AviUtl2 已经安装，请选择此项",
+    "installedDescription": "如果已经安装了 AviUtl2，请选择此项",
     "freshTitle": "全新安装",
-    "freshDescription": "如果 AviUtl2 尚未安装，请选择此项。\n系统会自动下载并安装最新版本。"
+    "freshDescription": "如果尚未安装 AviUtl2，请选择此项。\n程序将自动下载并安装最新版本。"
   },
   "details": {
     "portableMode": "便携模式",
     "standard": "标准（推荐）",
     "portable": "便携",
-    "standardDescription": "将插件和脚本安装到 ProgramData。",
-    "portableDescription": "将插件和脚本安装到 aviutl2.exe 旁边的 data 文件夹。",
+    "standardDescription": "将插件和脚本安装到 ProgramData 中",
+    "portableDescription": "将插件和脚本安装到与 aviutl2.exe 同目录下的 data 文件夹中",
     "existing": {
-      "title": "选择文件夹",
-      "description": "请选择已安装 AviUtl2 的文件夹",
+      "title": "指定文件夹",
+      "description": "请选择已安装的 AviUtl2 文件夹",
       "label": "AviUtl2 文件夹路径",
       "hint": "请选择包含 aviutl2.exe 的文件夹"
     },
     "install": {
-      "title": "选择安装位置",
-      "description": "请选择要安装 AviUtl2 的文件夹",
+      "title": "指定安装位置",
+      "description": "请指定要安装 AviUtl2 的文件夹",
       "label": "安装文件夹",
       "next": "安装并继续",
       "installing": "安装中...",
@@ -41,39 +41,39 @@
     }
   },
   "packages": {
-    "title": "推荐包",
+    "title": "安装推荐包",
     "allInstalled": "所有推荐包均已安装",
-    "description": "安装标准使用所需的核心插件",
-    "loading": "正在加载包信息...",
-    "missingSummary": "加载详细信息失败",
+    "description": "安装标准使用所需的基本插件",
+    "loading": "正在获取包信息...",
+    "missingSummary": "详细信息获取失败",
     "progressAria": "{{name}} 的进度",
     "installed": "已安装",
     "notInstalled": "未安装",
-    "skip": "不安装并继续",
-    "installAndNext": "全部安装并继续"
+    "skip": "跳过安装并继续",
+    "installAndNext": "批量安装并继续"
   },
   "done": {
     "title": "设置完成",
-    "description": "所有设置均已准备就绪",
+    "description": "所有设置已完成",
     "openApp": "打开 AviUtl2 目录"
   },
   "errors": {
-    "aviutlRootRequired": "请输入 AviUtl2 文件夹。",
-    "saveFailed": "保存设置失败。",
-    "installDirRequired": "请输入安装文件夹。",
+    "aviutlRootRequired": "请输入 AviUtl2 的文件夹。",
+    "saveFailed": "设置失败。",
+    "installDirRequired": "请输入安装位置。",
     "setupFailed": "设置失败。",
     "installFailed": "安装失败。",
     "bulkInstallPartialFailed": "部分安装失败。",
     "generic": "发生错误。",
-    "packageInfoPartialFailed": "无法加载部分包信息：{{ids}}",
+    "packageInfoPartialFailed": "无法获取部分包信息：{{ids}}",
     "requiredPackagesLoadFailed": "无法加载必需包信息。",
     "packageInfoMissing": "未找到包信息：{{id}}",
     "networkRequired": "请连接到互联网。",
     "packageInfoUnavailable": "无法获取包信息。",
     "packageNotInstallable": "此包无法安装。",
-    "pickInstallDir": "选择安装文件夹",
+    "pickInstallDir": "选择安装位置",
     "pickExistingDir": "选择 AviUtl2 文件夹",
-    "pickDirFailed": "选择文件夹失败。",
-    "finalizeFailed": "无法完成初始设置。"
+    "pickDirFailed": "文件夹选择失败。",
+    "finalizeFailed": "初始设置失败。"
   }
 }

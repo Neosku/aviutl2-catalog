@@ -1,16 +1,16 @@
 {
   "page": {
-    "title": "链接",
-    "description": "访问相关网站和支持资源"
+    "title": "链接集",
+    "description": "访问相关网站及支持信息"
   },
   "sections": {
     "official": {
-      "title": "AviUtl2",
-      "description": "AviUtl2 官方网站和相关资料"
+      "title": "AviUtl2 本体",
+      "description": "AviUtl2 本体的官方网站及相关链接"
     },
     "community": {
       "title": "社区",
-      "description": "AviUtl2 社区链接"
+      "description": "AviUtl2 用户社区链接"
     },
     "support": {
       "title": "支持",
@@ -18,49 +18,49 @@
     },
     "developers": {
       "title": "开发者",
-      "description": "面向在 AviUtl2 目录发布包的开发者资源"
+      "description": "面向在 AviUtl2 目录中发布包的开发者的链接"
     },
     "catalog": {
       "title": "GitHub 仓库",
-      "description": "与 AviUtl2 目录相关的 GitHub 仓库"
+      "description": "AviUtl2 目录相关的 GitHub 仓库链接"
     }
   },
   "entries": {
     "official-site": {
       "title": "官方网站",
-      "description": "AviUtl2 官方网站"
+      "description": "AviUtl2 官方网站「AviUtlのお部屋」"
     },
     "official-changelog": {
-      "title": "更新日志（Nanashi.）",
-      "description": "用于查看 AviUtl2 发布历史的非官方网站"
+      "title": "更新历史（by Nanashi.）",
+      "description": "用于查看 AviUtl2 本体更新历史的非官方网站"
     },
     "community-discord": {
       "title": "Discord",
-      "description": "用于讨论和提问 AviUtl2 的非官方 Discord 社区"
+      "description": "用于 AviUtl2 信息交流及提问的非官方 Discord 社区"
     },
     "support-feedback": {
       "title": "反馈",
-      "description": "提交错误报告、功能请求和询问的表单"
+      "description": "提交问题报告、改进建议及咨询的表单"
     },
     "support-register": {
-      "title": "包登记",
-      "description": "用于添加新包或更新现有条目的表单"
+      "title": "包注册",
+      "description": "用于发布新包或修改注册内容的表单"
     },
     "developers-register-guide": {
-      "title": "如何发布包",
-      "description": "说明如何发布包的指南"
+      "title": "包发布方法",
+      "description": "讲解包发布步骤的指南文档"
     },
     "developers-update-status": {
       "title": "自动更新支持状态",
-      "description": "汇总已列出包的自动更新支持情况的文档"
+      "description": "汇总已发布包自动更新支持状态的文档"
     },
     "catalog-github-app": {
       "title": "AviUtl2 目录仓库",
-      "description": "AviUtl2 目录应用的 GitHub 仓库"
+      "description": "AviUtl2 目录本体的 GitHub 仓库"
     },
     "catalog-github-data": {
       "title": "目录数据仓库",
-      "description": "包列表数据的 GitHub 仓库"
+      "description": "已发布包数据的 GitHub 管理仓库"
     }
   }
 }

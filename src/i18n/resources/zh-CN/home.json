@@ -2,24 +2,24 @@
   "shared": {
     "all": "全部"
   },
-  "searchPlaceholder": "按包名、作者或关键词搜索...",
+  "searchPlaceholder": "按包名称、作者或关键词搜索...",
   "filters": {
     "label": "筛选",
     "tagFilter": "标签筛选",
     "closeInstallMenu": "关闭安装状态菜单",
-    "closeDeprecationMenu": "关闭弃用菜单",
+    "closeDeprecationMenu": "关闭弃用状态菜单",
     "closeSortMenu": "关闭排序菜单",
-    "category": "分类",
+    "category": "类型",
     "sort": "排序",
-    "count": "项",
+    "count": "个",
     "selected": "已选择：",
     "clearAll": "全部清除",
-    "allTags": "全部标签",
+    "allTags": "所有标签",
     "clearSelection": "清除选择"
   },
   "empty": {
-    "title": "当前筛选条件下没有匹配的包",
-    "clear": "清除筛选"
+    "title": "无符合条件的包",
+    "clear": "清除条件"
   },
   "categories": {},
   "installStatus": {
@@ -27,20 +27,20 @@
     "not_installed": "未安装"
   },
   "deprecationStatus": {
-    "active": "隐藏已弃用",
+    "active": "排除已弃用",
     "deprecated": "仅显示已弃用"
   },
   "sortOptions": {
-    "popularity_desc": "人气",
-    "trend_desc": "热门",
-    "added_desc": "最近添加",
-    "updated_desc": "最近更新"
+    "popularity_desc": "按人气排序",
+    "trend_desc": "按趋势排序",
+    "added_desc": "按最新添加排序",
+    "updated_desc": "按最近更新排序"
   },
   "errors": {
-    "dataDirUnavailable": "无法确定数据文件夹。请在设置中检查 AviUtl2 文件夹。",
+    "dataDirUnavailable": "无法获取数据文件夹位置。请在设置界面中确认 AviUtl2 的文件夹。",
     "dataDirOpenFailed": "无法打开数据文件夹。请检查设置。",
-    "launchFailed": "启动 AviUtl2 失败。",
-    "catalogUnavailable": "无法加载目录（没有网络连接且没有可用缓存）。",
-    "catalogLoadFailed": "加载目录失败。"
+    "launchFailed": "AviUtl2 启动失败。",
+    "catalogUnavailable": "目录加载失败（无网络/无缓存）。",
+    "catalogLoadFailed": "目录加载失败。"
   }
 }

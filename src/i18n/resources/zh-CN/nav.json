@@ -2,9 +2,9 @@
   "navigation": {
     "home": "包列表",
     "updates": "更新中心",
-    "links": "链接",
-    "niconiCommons": "Niconi Commons",
-    "register": "包登记",
+    "links": "链接集",
+    "niconiCommons": "ニコニコモンズ",
+    "register": "包注册",
     "feedback": "反馈",
     "settings": "设置"
   },

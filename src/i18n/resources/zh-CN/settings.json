@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "设置",
-    "description": "配置并自定义应用"
+    "description": "应用程序的设置及自定义"
   },
   "sections": {
     "app": "应用设置",
@@ -12,42 +12,42 @@
     "aviutl2Root": {
       "label": "AviUtl2 文件夹",
       "description": "请选择包含 aviutl2.exe 的文件夹。",
-      "placeholder": "包含 aviutl2.exe 的文件夹",
-      "dialogTitle": "AviUtl2 根文件夹"
+      "placeholder": "aviutl2.exe 所在的文件夹",
+      "dialogTitle": "AviUtl2 的根文件夹"
     },
     "language": {
       "label": "显示语言",
-      "description": "选择应用界面使用的语言。"
+      "description": "选择应用程序界面的显示语言。"
     },
     "portableMode": {
       "title": "便携模式",
-      "recommendedOff": "推荐：关闭",
-      "description": "将插件和脚本存储在 aviutl2.exe 旁边的 data 文件夹中。"
+      "recommendedOff": "建议关闭",
+      "description": "将插件和脚本保存到与 aviutl2.exe 同目录下的 data 文件夹中"
     },
     "theme": {
       "title": "深色模式"
     },
     "packageState": {
-      "title": "发送匿名使用统计",
-      "description": "为了改进应用推荐，会匿名发送已安装和已卸载的包 ID，以及当前已安装的包 ID。"
+      "title": "发送匿名统计",
+      "description": "为了提供基于使用情况的排序，程序将匿名发送已安装/已卸载的包ID以及已安装的包ID。感谢您的配合。"
     },
     "save": "保存设置",
     "saved": "已保存"
   },
   "dataManagement": {
-    "packages": "导出 / 导入包列表",
+    "packages": "导出/导入包列表",
     "export": "导出",
     "import": "导入",
     "status": {
-      "pickExport": "正在选择导出目标...",
-      "exporting": "正在创建导出文件...",
+      "pickExport": "正在选择导出位置...",
+      "exporting": "正在创建导出...",
       "prepareImport": "正在准备导入...",
       "pickImport": "正在选择导入文件...",
       "readingImport": "正在读取导入文件...",
-      "detecting": "正在检测已安装的包...",
+      "detecting": "正在检测安装状态...",
       "installing": "安装中... ({{current}}/{{total}}) {{label}}",
-      "removing": "移除中... ({{current}}/{{total}}) {{label}}",
-      "refreshing": "正在刷新已安装包状态..."
+      "removing": "删除中... ({{current}}/{{total}}) {{label}}",
+      "refreshing": "正在更新安装状态..."
     },
     "dialogs": {
       "exportTitle": "导出包列表",
@@ -56,38 +56,38 @@
     },
     "messages": {
       "exportSaved": "导出文件已保存。",
-      "importConfirm": "将根据导入文件安装或移除包。\n要继续吗？"
+      "importConfirm": "将根据导入内容安装/删除包。\n是否继续？"
     },
     "summary": {
-      "installed": "已安装：{{installed}}/{{total}}",
-      "removed": "已移除：{{removed}}/{{total}}",
-      "unknownIds": "未知 ID：{{ids}}",
+      "installed": "已安装：{{installed}}/{{total}} 个",
+      "removed": "已删除：{{removed}}/{{total}} 个",
+      "unknownIds": "未注册ID：{{ids}}",
       "skippedInstall": "无法安装：{{ids}}",
       "skippedRemove": "无法移除：{{ids}}",
       "failedInstall": "安装失败：{{ids}}",
-      "failedRemove": "移除失败：{{ids}}"
+      "failedRemove": "删除失败：{{ids}}"
     },
     "errors": {
-      "exportFailed": "导出失败。请检查权限和目标位置。",
+      "exportFailed": "导出失败。请检查权限或保存位置。",
       "importFailed": "导入失败。",
-      "invalidImportFormat": "导入文件格式无效。",
-      "invalidJson": "无法解析导入文件中的 JSON。",
-      "emptyImport": "导入文件为空。",
-      "catalogMissing": "目录数据尚未加载。"
+      "invalidImportFormat": "导入文件格式不正确。",
+      "invalidJson": "无法读取导入文件的JSON。",
+      "emptyImport": "导入文件内容为空。",
+      "catalogMissing": "未加载目录信息。"
     }
   },
   "appInfo": {
     "version": "版本",
     "license": "许可证",
-    "licenseBody": "本软件基于 MIT 许可证提供。完整文本请参阅 LICENSE.txt。"
+    "licenseBody": "本软件基于 MIT License 提供。许可证全文请参阅 LICENSE.txt。"
   },
   "messages": {
     "saveSuccess": "设置已保存。"
   },
   "errors": {
-    "directoryPickFailed": "选择目录失败。",
-    "aviutl2Required": "请选择 AviUtl2 文件夹。",
-    "languageApplyFailed": "设置已保存，但显示语言未能立即应用。",
-    "saveFailed": "保存设置失败。请检查权限和路径。"
+    "directoryPickFailed": "目录选择失败。",
+    "aviutl2Required": "请指定 AviUtl2 文件夹。",
+    "languageApplyFailed": "设置已保存，但无法立即应用显示语言。",
+    "saveFailed": "保存失败。请检查权限或路径。"
   }
 }

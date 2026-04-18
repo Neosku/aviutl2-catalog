@@ -1,28 +1,28 @@
 {
   "page": {
-    "title": "Niconi Commons ID",
-    "description": "浏览已登记 Niconi Commons ID 的已安装包"
+    "title": "ニコニ・コモンズID",
+    "description": "显示已安装且注册了ニコニ・コモンズID的包列表"
   },
   "header": {
-    "copied": "已复制 {{count}} 项",
-    "copy": "复制 Niconi Commons ID"
+    "copied": "已复制 {{count}} 个",
+    "copy": "复制ニコニ・コモンズID"
   },
   "guide": {
-    "title": "什么是 Niconi Commons ID？",
-    "body": "Niconi Commons 是一个帮助创作者安全复用彼此作品并进行协作的服务。\n在 Niconico 上，你可以将制作作品时使用的 AviUtl2、插件、脚本、素材等工具和资源登记为父作品，以构建内容树。\n在发布视频时登记父作品，可以让这些工具和素材的创作者知道他们的作品得到了使用与认可，也有助于支持他们的创作活动。\nNiconico 还提供了一些可能为创作者带来经济支持的机制。\n请考虑为你使用过的工具和素材登记父作品。",
-    "note": "注意：登记父作品不会减少你自己的收益。",
-    "open": "如何登记父作品"
+    "title": "什么是ニコニ・コモンズID？",
+    "body": "ニコニ・コモンズID是一个帮助创作者安全复用彼此作品并进行协作的服务。\n在niconico上，您可以将创作中使用的工具和素材例如：AviUtl2 本体、插件、脚本、素材等）注册为父作品，从而建立作品之间的联系（内容树）。\n在投稿视频时注册父作品，可以让这些工具和素材的创作者知道他们的作品得到了使用与认可，成为其创作活动的动力。\\n此外，niconico还通过“儿童津贴”等机制，向作者提供经济上的回馈。\n请务必为你使用过的工具和素材注册父作品。",
+    "note": "※注意：注册父作品并不会减少您自身的收益。",
+    "open": "如何注册父作品"
   },
   "toolbar": {
-    "visible": "可见：{{count}}",
-    "selected": "已选择：{{count}}",
-    "searchPlaceholder": "包名 / ID / 作者 / Commons ID"
+    "visible": "显示 {{count}} 个",
+    "selected": "已选择 {{count}} 个",
+    "searchPlaceholder": "按包名称/ID/作者/コモンズID搜索"
   },
   "table": {
     "emptyEligible": "没有符合条件的包。",
-    "selectAllVisible": "选择所有可见项目",
-    "package": "包",
-    "author": "作者",
+    "selectAllVisible": "全选当前显示",
+    "package": "包名称",
+    "author": "作者名",
     "selectItem": "选择 {{name}}"
   }
 }

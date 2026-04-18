@@ -10,7 +10,7 @@
   },
   "empty": {
     "available": "没有可更新的包",
-    "loadingPaused": "正在加载暂停的更新设置...",
+    "loadingPaused": "正在加载暂停设置...",
     "paused": "没有已暂停的包"
   },
   "table": {
@@ -24,8 +24,8 @@
     "progressAria": "{{name}} 的更新进度"
   },
   "errors": {
-    "bulkFailed": "{{count}} 个包更新失败（例如：{{name}}：{{detail}}）",
+    "bulkFailed": "有 {{count}} 个插件更新失败（例如：{{name}}：{{detail}}）",
     "updateFailed": "更新失败\n\n{{detail}}",
-    "pauseSaveFailed": "无法保存已暂停的更新设置\n\n{{detail}}"
+    "pauseSaveFailed": "无法保存更新暂停设置\n\n{{detail}}"
   }
 }
