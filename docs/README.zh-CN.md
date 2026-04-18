@@ -142,6 +142,12 @@ winget install --id Neosku.AviUtl2-Catalog -e
 
 ---
 
+## 翻译协力
+
+- 中文翻译：@nsYW
+
+---
+
 ## 许可证
 
 本软件基于 **MIT 许可证** 发布。

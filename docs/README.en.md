@@ -142,6 +142,12 @@ When you launch the app, a message appears if an update is available. You can up
 
 ---
 
+## Translation Credits
+
+- Chinese translation: @nsYW
+
+---
+
 ## License
 
 This software is released under the **MIT License**.
