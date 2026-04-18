@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Links",
-    "description": "Access related sites and support resources"
+    "description": "Access related sites and support resources\n(Note: Some information may be only available in Japanese.)"
   },
   "sections": {
     "official": {
@@ -28,15 +28,15 @@
   "entries": {
     "official-site": {
       "title": "Official site",
-      "description": "The official AviUtl2 site"
+      "description": "The official site of AviUtl2 (Japanese only)"
     },
     "official-changelog": {
       "title": "Changelog (by Nanashi.)",
-      "description": "An unofficial site for checking AviUtl2 release history"
+      "description": "An unofficial site for checking AviUtl2's release history (Japanese only)"
     },
     "community-discord": {
       "title": "Discord",
-      "description": "An unofficial Discord community for AviUtl2 discussions and questions"
+      "description": "An unofficial Discord community for discussions and questions regarding AviUtl2"
     },
     "support-feedback": {
       "title": "Feedback",
@@ -44,7 +44,7 @@
     },
     "support-register": {
       "title": "Package registration",
-      "description": "Form for adding new packages or updating existing entries"
+      "description": "Form for adding new packages to the catalog, or updating existing entries"
     },
     "developers-register-guide": {
       "title": "How to publish a package",
