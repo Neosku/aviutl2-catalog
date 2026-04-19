@@ -1,10 +1,7 @@
-エンドユーザー使用許諾契約書（EULA)
-End User License Agreement (EULA)
+エンドユーザー使用許諾契約書（EULA）
 
-Copyright (c) 2025 Neosku
-[Note to English users: An English version of the EULA can be found below the Japanese translation.]
+Copyright (c) 2025-2026 Neosku
 
-[ 日本語 / Japanese ]
 本ソフトウェアをインストールまたは使用する前に、本使用許諾契約書（以下「本契約」といいます。）をよくお読みください。
 本ソフトウェアをインストールまたは使用した時点で、利用者（以下「ユーザー」といいます。）は本契約の内容に同意したものとみなされます。
 
@@ -32,9 +29,9 @@ Copyright (c) 2025 Neosku
 
 1. 本ソフトウェアは、人気順の算出を目的として、利用状況に関する情報（以下「統計情報」といいます。）を作者が管理するサーバーへ送信することがあります。
 2. 統計情報には、例えば次の情報が含まれます。
-   (1) インストールまたはアンインストールしたパッケージのID
-   (2) インストール済みのパッケージID
-   (3) 送信日時およびランダムに生成された識別子
+   1. インストールまたはアンインストールしたパッケージのID
+   2. インストール済みのパッケージID
+   3. 送信日時およびランダムに生成された識別子
 3. 作者は、統計情報を個人を特定する目的で利用しません。作者は、統計情報を集計その他の処理を行った上で、人気順の表示等のために利用します。
 4. ユーザーは、設定画面により、統計情報の送信を有効または無効に設定できます。
 5. 作者は、統計情報の漏えい、滅失または毀損の防止その他の安全管理のため、合理的な措置を講じます。
@@ -47,45 +44,3 @@ Copyright (c) 2025 Neosku
 すでにインストールしている場合は、直ちに本ソフトウェアをアンインストールしてください。
 
 以上
-
-[ 英語 / English ]
-Please read this License Agreement (hereinafter referred to as “this Agreement”) carefully before installing or using this software.
-By installing or using this software, the user (hereinafter referred to as “the User”) is deemed to have agreed to the terms of this Agreement.
-
-### Article 1 (About the Software)
-
-1. This Software is a utility designed to facilitate the installation of plugins and scripts for AviUtl2.
-2. This Software is provided under the MIT License.
-3. This Agreement sets forth additional precautions and disclaimers regarding the use of this Software.
-
-### Article 2 (Regarding Plugins and Scripts)
-
-1. This Software provides functions to assist in the download and installation of plugins and scripts available on the Internet; it does not provide or guarantee the plugins and scripts themselves.
-2. Users shall comply with the respective licenses, terms of use, and agreements established for each plugin and script installed through this software.
-
-### Article 3 (User Responsibility)
-
-1. Users shall bear all responsibility, at their own risk and expense, for the use, modification, redistribution, and other actions related to plugins and scripts.
-2. The author of this software shall not be liable in any way even if the user violates the license or other terms of any plugin or script.
-
-### Article 4 (Disclaimer)
-
-1. The author shall not be liable for any damages arising from the use or inability to use this software, regardless of the reason.
-
-### Article 5 (Collection and Transmission of Statistical Information)
-
-1. For the purpose of calculating popularity rankings, this software may transmit information regarding usage (hereinafter referred to as “statistical information”) to a server managed by the author.
-2. Statistical information includes, for example, the following:
-   (1) The ID of installed or uninstalled packages
-   (2) The IDs of installed packages
-   (3) The date and time of transmission and a randomly generated identifier
-3. The Author will not use statistical information for the purpose of identifying individuals. The Author will aggregate and otherwise process statistical information and use it for purposes such as displaying popularity rankings.
-4. Users may enable or disable the transmission of statistical information by accessing the Settings menu.
-5. The Author will take reasonable measures to prevent the leakage, loss, or damage of statistical information and to ensure its security.
-6. The Author will not provide statistical information to third parties, unless if strictly required by law.
-
-
-### Article 6 (Termination of Agreement)
-
-If you do not agree to this Agreement, you must not install or use this software.
-If you have already installed the Software, please uninstall it immediately.
