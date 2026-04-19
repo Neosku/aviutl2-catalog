@@ -10,13 +10,13 @@
   "guide": {
     "title": "What is a Niconi Commons ID?",
     "body": "Niconi Commons is a service that helps creators collaborate and safely reuse each other's work.\nOn Niconico, you can register the tools and assets used to make your work, such as AviUtl2, plugins, scripts, and materials, as parent works to build a content tree.\nRegistering parent works when posting a video lets the creators of those tools and assets know they are appreciated and supports their work.\nNiconico also provides systems that can lead to financial support for creators.\nPlease consider registering parent works for the tools and assets you use.",
-    "note": "Note: registering parent works does not reduce your own revenue.",
-    "open": "How to register parent works"
+    "note": "Note: Registering parent works does not reduce your own revenue. Niconi Commons is only available in Japan.",
+    "open": "How to register parent works (Japanese only)"
   },
   "toolbar": {
     "visible": "Visible: {{count}}",
     "selected": "Selected: {{count}}",
-    "searchPlaceholder": "Package name / ID / author / Commons ID"
+    "searchPlaceholder": "Package Name / ID / Author / Commons ID"
   },
   "table": {
     "emptyEligible": "There are no eligible packages.",

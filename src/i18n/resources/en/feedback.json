@@ -2,27 +2,27 @@
   "header": {
     "title": "Feedback",
     "description": "Send bug reports and feedback.",
-    "issuesLink": "Reported issues"
+    "issuesLink": "Issues Page (GitHub)"
   },
   "shared": {
     "optional": "(Optional)",
     "loading": "Collecting information..."
   },
   "modes": {
-    "bug": "Bug report",
-    "inquiry": "Feedback / inquiry"
+    "bug": "Bug Report",
+    "inquiry": "Feedback / Inquiry"
   },
   "visibility": {
     "public": "Public",
     "private": "Private",
-    "publicTitle": "Public visibility",
-    "privateTitle": "Private visibility",
-    "publicDescription": "<strong>Title</strong> and <strong>details</strong> will be public. Contact details, attachments, device info, and other metadata remain private.",
+    "publicTitle": "Public Report",
+    "privateTitle": "Private Report",
+    "publicDescription": "The <strong>title</strong> and <strong>description</strong> of your report will be public.\nOther information such as contact details, attachments, and device info will remain private.",
     "privateDescription": "Feedback and inquiries are not published. Only the developer can review them."
   },
   "fields": {
     "title": "Title",
-    "detail": "Details",
+    "detail": "Description",
     "contact": "Contact",
     "bugTitlePlaceholder": "Describe the bug briefly",
     "bugDetailPlaceholder": "Explain what happened, how to reproduce it, and what you expected",
@@ -43,27 +43,27 @@
     "unknownVersion": "Unknown",
     "driver": "Driver",
     "cores": "Cores",
-    "logical": "Logical",
+    "logical": "Logical processors",
     "maxClock": "Max clock",
     "unavailable": "Device information could not be collected."
   },
   "log": {
     "title": "Log file",
     "include": "Attach app.log",
-    "unavailable": "The log could not be retrieved."
+    "unavailable": "Log could not be retrieved."
   },
   "submit": {
     "sending": "Sending..."
   },
   "messages": {
-    "bugSuccess": "Your bug report has been sent. Thank you.",
-    "inquirySuccess": "Your feedback has been sent. Thank you."
+    "bugSuccess": "Your bug report has been sent. Thank you!",
+    "inquirySuccess": "Your feedback has been sent. Thank you!"
   },
   "errors": {
-    "requiredFields": "Title and details are required."
+    "requiredFields": "Please provide the title and description of your report."
   },
   "payload": {
-    "bugTitlePrefix": "Bug report",
+    "bugTitlePrefix": "Bug Report",
     "inquiryTitlePrefix": "Inquiry"
   }
 }

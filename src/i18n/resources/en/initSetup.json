@@ -1,51 +1,51 @@
 {
   "intro": {
     "title": "AviUtl2 Catalog",
-    "description": "Configure AviUtl2 Catalog for first use",
-    "start": "Start setup"
+    "description": "Configure AviUtl2 Catalog for first-time use",
+    "start": "Start Setup"
   },
   "steps": {
     "intro": "Start",
-    "installStatus": "Setup status",
-    "detailsExisting": "Review settings",
+    "installStatus": "Setup Status",
+    "detailsExisting": "Review Settings",
     "detailsInstall": "Install",
-    "packages": "Recommended packages"
+    "packages": "Recommended Packages"
   },
   "installStatus": {
-    "title": "Install status",
-    "description": "Choose the option that matches your AviUtl2 setup",
-    "installedTitle": "Already installed",
-    "installedDescription": "Use this if AviUtl2 is already installed",
-    "freshTitle": "Fresh install",
-    "freshDescription": "Use this if AviUtl2 is not installed yet.\nThe latest version will be downloaded and installed automatically."
+    "title": "Install Status",
+    "description": "Choose the option that matches your AviUtl2 setup.",
+    "installedTitle": "Existing Install",
+    "installedDescription": "Use this if AviUtl2 is already installed.",
+    "freshTitle": "Start from Scratch",
+    "freshDescription": "Use this if AviUtl2 isn't installed yet.\nThe latest version will be downloaded and installed for you."
   },
   "details": {
-    "portableMode": "Portable mode",
+    "portableMode": "Install Method",
     "standard": "Standard (Recommended)",
     "portable": "Portable",
     "standardDescription": "Install plugins and scripts into ProgramData.",
     "portableDescription": "Install plugins and scripts into the data folder next to aviutl2.exe.",
     "existing": {
-      "title": "Choose folder",
+      "title": "Choose Folder",
       "description": "Select the folder where AviUtl2 is already installed",
-      "label": "AviUtl2 folder path",
+      "label": "AviUtl2 Folder Path",
       "hint": "Select the folder that contains aviutl2.exe"
     },
     "install": {
-      "title": "Choose install location",
-      "description": "Select the folder where AviUtl2 should be installed",
+      "title": "Install Location",
+      "description": "Select the folder where AviUtl2 should be installed.",
       "label": "Install folder",
-      "next": "Install and continue",
+      "next": "Install and Continue",
       "installing": "Installing...",
-      "progressAria": "Installation progress"
+      "progressAria": "Installation progress:"
     }
   },
   "packages": {
-    "title": "Recommended packages",
+    "title": "Recommended Packages",
     "allInstalled": "All recommended packages are already installed",
-    "description": "Install the core plugins needed for standard use",
+    "description": "Installs the core plugins needed for standard use",
     "loading": "Loading package information...",
-    "missingSummary": "Failed to load detailed information",
+    "missingSummary": "Failed to load detailed information.",
     "progressAria": "Progress for {{name}}",
     "installed": "Installed",
     "notInstalled": "Not installed",
@@ -53,22 +53,22 @@
     "installAndNext": "Install all and continue"
   },
   "done": {
-    "title": "Setup complete",
-    "description": "All settings are ready",
+    "title": "Setup complete!",
+    "description": "All settings have been set, have fun!",
     "openApp": "Open AviUtl2 Catalog"
   },
   "errors": {
     "aviutlRootRequired": "Please enter the AviUtl2 folder.",
-    "saveFailed": "Failed to save the settings.",
+    "saveFailed": "Failed to save settings.",
     "installDirRequired": "Please enter an installation folder.",
     "setupFailed": "Setup failed.",
-    "installFailed": "Installation failed.",
-    "bulkInstallPartialFailed": "Some installations failed.",
+    "installFailed": "Package failed to install. (Is AviUtl2 running?)",
+    "bulkInstallPartialFailed": "Some packages failed to install. (Is AviUtl2 running?)",
     "generic": "An error occurred.",
     "packageInfoPartialFailed": "Could not load some package information: {{ids}}",
     "requiredPackagesLoadFailed": "Could not load the required package information.",
     "packageInfoMissing": "Package information was not found: {{id}}",
-    "networkRequired": "Please connect to the internet.",
+    "networkRequired": "An Internet connection is required.",
     "packageInfoUnavailable": "Could not fetch the package information.",
     "packageNotInstallable": "This package cannot be installed.",
     "pickInstallDir": "Choose install folder",
