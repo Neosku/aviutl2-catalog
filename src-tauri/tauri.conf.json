@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AviUtl2 カタログ",
+  "productName": "AviUtl2 Catalog",
   "mainBinaryName": "AviUtl2_Catalog",
   "version": "0.3.3",
   "identifier": "aviutl2-catalog",
@@ -12,18 +12,17 @@
   },
   "bundle": {
     "active": true,
-    "externalBin": [],
     "targets": ["nsis"],
     "icon": ["icons/icon.svg"],
     "createUpdaterArtifacts": true,
-    "licenseFile": "./eula.txt",
     "windows": {
       "certificateThumbprint": null,
       "timestampUrl": null,
       "nsis": {
         "languages": ["Japanese", "English", "Korean", "SimpChinese", "TradChinese"],
         "displayLanguageSelector": true,
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "template": "./windows/installer.nsi"
       }
     },
     "resources": ["resources/UpdateChecker.aui2"]

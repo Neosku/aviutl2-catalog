@@ -1,0 +1,45 @@
+﻿End User License Agreement (EULA)
+
+Copyright (c) 2025-2026 Neosku
+
+Please read this End User License Agreement (the "Agreement") carefully before installing or using this software. By installing or using this software, you (the "User") are deemed to have agreed to be bound by the terms of this Agreement.
+
+### 1. About the Software
+
+1. This software is a utility designed to facilitate the installation of plugins and scripts for AviUtl2.
+2. This software is provided under the MIT License.
+3. This Agreement sets forth additional notices, precautions, disclaimers, and other terms regarding the use of this software.
+
+### 2. Plugins and Scripts
+
+1. This software provides functions to assist in the download and installation of plugins and scripts available on the Internet; it does not itself provide or guarantee any individual plugin or script.
+2. The User shall comply with the respective licenses, terms of use, and any other applicable terms and conditions for each plugin and script installed through this software.
+
+### 3. User Responsibility
+
+1. The User shall bear all responsibility, at their own risk and expense, for the use, modification, redistribution, and any other handling of plugins and scripts.
+2. The author of this software shall not be liable in any way if the User violates the license or other terms applicable to any plugin or script.
+
+### 4. Disclaimer
+
+1. To the maximum extent permitted by applicable law, the author shall not be liable for any damages arising from the use of or inability to use this software, regardless of the reason.
+
+### 5. Collection and Transmission of Statistical Information
+
+1. For the purpose of calculating popularity rankings, this software may transmit information regarding usage (the “Statistical Information”) to a server managed by the author.
+2. The Statistical Information may include, for example:
+   1. IDs of packages that were installed or uninstalled;
+   2. IDs of packages currently installed;
+   3. The date and time of transmission, and a randomly generated identifier.
+3. The author will not use the Statistical Information for the purpose of identifying any individual. The author may aggregate or otherwise process the Statistical Information and use it for purposes such as displaying popularity rankings.
+4. The User may enable or disable the transmission of Statistical Information through the settings screen.
+5. The author will take reasonable measures to prevent leakage, loss, or damage of the Statistical Information and otherwise maintain its security.
+6. The author will not provide the Statistical Information to any third party except where required by law.
+
+### 6. Termination
+
+If the User does not agree to this Agreement, the User must not install or use this software. If the software has already been installed, the User must immediately uninstall it.
+
+### 7. Governing Law
+
+This Agreement shall be governed by and construed in accordance with the laws of Japan.
