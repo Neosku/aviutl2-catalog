@@ -132,6 +132,7 @@ pub fn run() {
             commands::archive::extract_7z_sfx,
             commands::diagnostics::collect_device_info,
             commands::version::detect_versions_map,
+            commands::zstd::decompress_zstd_to_utf8,
             commands::logging::log_cmd,
             commands::version::calc_xxh3_hex,
             commands::installed::get_installed_map_cmd,

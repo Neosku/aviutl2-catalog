@@ -34,6 +34,7 @@ export default function RegisterPreviewSection({
       id: packageForm.id || 'preview-id',
       name: packageForm.name || t('preview.fallbackName'),
       author: packageForm.author || t('preview.fallbackAuthor'),
+      packageType: packageForm.type || t('common:labels.type'),
       type: packageForm.type || t('common:labels.type'),
       tags: currentTags,
       summary: packageForm.summary || t('preview.fallbackSummary'),

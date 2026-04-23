@@ -7,6 +7,7 @@ type NameSortable = {
 type FilterableItem = {
   tags?: string[];
   type?: string;
+  packageType?: string;
 };
 
 type SortableItem = NameSortable & {
@@ -81,6 +82,14 @@ function normalizePackageType(type: unknown): string {
   return typeof type === 'string' ? type.trim() : '';
 }
 
+function readPackageTypeValue(type: unknown, packageType?: unknown): string {
+  const normalizedPackageType = normalizePackageType(packageType);
+  if (normalizedPackageType) {
+    return normalizedPackageType;
+  }
+  return normalizePackageType(type);
+}
+
 function normalizePackageTypeKey(value: unknown): PackageTypeFilterKey | null {
   const normalized = normalizePackageType(value);
   return PACKAGE_TYPE_KEYS.has(normalized as PackageTypeFilterKey) ? (normalized as PackageTypeFilterKey) : null;
@@ -88,6 +97,14 @@ function normalizePackageTypeKey(value: unknown): PackageTypeFilterKey | null {
 
 export function getPrimaryPackageTypeMeta(type: unknown): PrimaryPackageType | null {
   const normalized = normalizePackageType(type);
+  if (!normalized) return null;
+  if (normalized === 'core') return PRIMARY_PACKAGE_TYPES[0];
+  if (normalized === 'mod') return PRIMARY_PACKAGE_TYPES[1];
+  if (normalized === 'inputPlugin' || normalized === 'input-plugin') return PRIMARY_PACKAGE_TYPES[2];
+  if (normalized === 'outputPlugin' || normalized === 'output-plugin') return PRIMARY_PACKAGE_TYPES[3];
+  if (normalized === 'generalPlugin' || normalized === 'general-plugin') return PRIMARY_PACKAGE_TYPES[4];
+  if (normalized === 'filterPlugin' || normalized === 'filter-plugin') return PRIMARY_PACKAGE_TYPES[5];
+  if (normalized === 'script') return PRIMARY_PACKAGE_TYPES[6];
   return PRIMARY_PACKAGE_TYPES_BY_LABEL[normalized] ?? null;
 }
 
@@ -127,12 +144,13 @@ export function filterByTagsAndType<T extends FilterableItem>(
   return items.filter((it) => {
     const itemTags = Array.isArray(it.tags) ? it.tags.filter((tag): tag is string => typeof tag === 'string') : [];
     const tagOk = !tags.length || itemTags.some((tag) => tags.includes(tag));
-    const itemTypeKey = packageTypeKeyFromRaw(it.type);
+    const rawType = readPackageTypeValue(it.type, it.packageType);
+    const itemTypeKey = packageTypeKeyFromRaw(rawType);
     const typeOk =
       !types.length ||
       types.some((selectedType) => {
         if (selectedType === 'all') return true;
-        if (selectedType === 'other') return isOtherPackageType(it.type);
+        if (selectedType === 'other') return isOtherPackageType(rawType);
         return itemTypeKey === selectedType;
       });
     return tagOk && typeOk;

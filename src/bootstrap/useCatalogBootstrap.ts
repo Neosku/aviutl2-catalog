@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { i18n } from '@/i18n';
-import { loadCatalogData } from '@/utils/catalog';
+import { loadBootstrapCatalog } from '@/utils/catalogClient';
+import { buildCatalogBootstrapItems, buildCatalogSearchIndexItems } from '@/utils/catalogBootstrapModel';
 import type { CatalogDispatch } from '@/utils/catalogStore';
 import { formatUnknownError } from '@/utils/errors';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '@/utils/installed-map';
@@ -45,20 +46,23 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
         const installedMap = await loadInstalledMap();
         if (!cancelled) dispatch({ type: 'SET_INSTALLED_MAP', payload: installedMap });
 
-        let catalogItems: Awaited<ReturnType<typeof loadCatalogData>>['items'] | null = null;
+        let catalogItems: ReturnType<typeof buildCatalogBootstrapItems> | null = null;
         try {
-          const { items } = await loadCatalogData({ timeoutMs: 10000 });
-          catalogItems = items;
+          const bootstrapCatalog = await loadBootstrapCatalog({
+            requestedLocale: i18n.resolvedLanguage || i18n.language,
+            timeoutMs: 10000,
+          });
+          catalogItems = buildCatalogBootstrapItems(bootstrapCatalog);
         } catch (error: unknown) {
           console.warn('Catalog load failed:', error);
-          await logBootstrapError('loadCatalogData failed', error);
+          await logBootstrapError('loadBootstrapCatalog failed', error);
         }
 
         if (Array.isArray(catalogItems) && catalogItems.length > 0) {
           const items = catalogItems;
           if (!cancelled) dispatch({ type: 'SET_ITEMS', payload: items });
           await runBootstrapStep('set_catalog_index failed', async () => {
-            await ipc.setCatalogIndex({ items });
+            await ipc.setCatalogIndex({ items: buildCatalogSearchIndexItems(items) });
           });
           try {
             const detected = await detectInstalledVersionsMap(items);

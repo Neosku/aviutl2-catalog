@@ -16,12 +16,6 @@ struct IndexItem {
 static CATALOG: Lazy<RwLock<Vec<IndexItem>>> = Lazy::new(|| RwLock::new(Vec::new()));
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct CatalogVersionInput {
-    #[serde(default)]
-    release_date: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct CatalogIndexInput {
     #[serde(default)]
     id: String,
@@ -31,12 +25,12 @@ pub struct CatalogIndexInput {
     author: String,
     #[serde(default)]
     summary: String,
-    #[serde(rename = "type", default)]
+    #[serde(rename = "packageType", alias = "package_type", alias = "type", default)]
     item_type: String,
     #[serde(default)]
     tags: Vec<String>,
-    #[serde(default, alias = "version")]
-    versions: Vec<CatalogVersionInput>,
+    #[serde(rename = "latestReleaseDate", alias = "latest_release_date", default)]
+    latest_release_date: String,
 }
 
 fn normalize(s: &str) -> String {
@@ -62,13 +56,11 @@ fn normalize(s: &str) -> String {
     out
 }
 
-fn parse_updated_at(versions: &[CatalogVersionInput]) -> Option<i64> {
-    if versions.is_empty() {
+fn parse_updated_at(release_date: &str) -> Option<i64> {
+    if release_date.trim().is_empty() {
         return None;
     }
-    let last = versions.last()?;
-    let s = &last.release_date;
-    let s = s.replace('/', "-");
+    let s = release_date.replace('/', "-");
     let parts: Vec<&str> = s.split('-').collect();
     if parts.len() < 3 {
         return None;
@@ -96,7 +88,7 @@ pub fn set_catalog_index(items: Vec<CatalogIndexInput>) -> Result<usize, String>
         let tags = it.tags;
         let author = it.author;
         let summary = it.summary;
-        let updated_at = parse_updated_at(&it.versions);
+        let updated_at = parse_updated_at(&it.latest_release_date);
         let item = IndexItem {
             id,
             name_key: normalize(&name),

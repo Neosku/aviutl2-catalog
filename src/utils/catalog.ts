@@ -153,7 +153,10 @@ export async function loadCatalogData(
 
 export function latestVersionOf(item: unknown): string {
   if (!item || typeof item !== 'object') return '';
-  const withVersions = item as { versions?: unknown; version?: unknown };
+  const withVersions = item as { latestVersion?: unknown; versions?: unknown; version?: unknown };
+  if (typeof withVersions.latestVersion === 'string') {
+    return withVersions.latestVersion;
+  }
   const arr = Array.isArray(withVersions.versions)
     ? withVersions.versions
     : Array.isArray(withVersions.version)

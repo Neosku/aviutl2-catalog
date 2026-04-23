@@ -55,21 +55,13 @@ impl UiLocale {
     }
 }
 
-static COMMON_RESOURCES_JA: Lazy<Value> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../src/i18n/resources/ja/common.json")).expect("failed to parse ja common.json")
-});
-static COMMON_RESOURCES_EN: Lazy<Value> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../src/i18n/resources/en/common.json")).expect("failed to parse en common.json")
-});
-static COMMON_RESOURCES_KO: Lazy<Value> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../src/i18n/resources/ko/common.json")).expect("failed to parse ko common.json")
-});
-static COMMON_RESOURCES_ZH_CN: Lazy<Value> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../src/i18n/resources/zh-CN/common.json")).expect("failed to parse zh-CN common.json")
-});
-static COMMON_RESOURCES_ZH_TW: Lazy<Value> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../src/i18n/resources/zh-TW/common.json")).expect("failed to parse zh-TW common.json")
-});
+static COMMON_RESOURCES_JA: Lazy<Value> = Lazy::new(|| serde_json::from_str(include_str!("../../src/i18n/resources/ja/common.json")).expect("failed to parse ja common.json"));
+static COMMON_RESOURCES_EN: Lazy<Value> = Lazy::new(|| serde_json::from_str(include_str!("../../src/i18n/resources/en/common.json")).expect("failed to parse en common.json"));
+static COMMON_RESOURCES_KO: Lazy<Value> = Lazy::new(|| serde_json::from_str(include_str!("../../src/i18n/resources/ko/common.json")).expect("failed to parse ko common.json"));
+static COMMON_RESOURCES_ZH_CN: Lazy<Value> =
+    Lazy::new(|| serde_json::from_str(include_str!("../../src/i18n/resources/zh-CN/common.json")).expect("failed to parse zh-CN common.json"));
+static COMMON_RESOURCES_ZH_TW: Lazy<Value> =
+    Lazy::new(|| serde_json::from_str(include_str!("../../src/i18n/resources/zh-TW/common.json")).expect("failed to parse zh-TW common.json"));
 
 fn common_resources(locale: UiLocale) -> &'static Value {
     match locale {
@@ -362,14 +354,7 @@ pub async fn complete_initial_setup(app: AppHandle) -> Result<(), String> {
 
 // aviutl2_rootを保存し、APP_DIRを更新
 #[tauri::command]
-pub async fn update_settings(
-    app: AppHandle,
-    aviutl2_root: String,
-    is_portable_mode: bool,
-    theme: String,
-    locale: String,
-    package_state_opt_out: bool,
-) -> Result<(), String> {
+pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_mode: bool, theme: String, locale: String, package_state_opt_out: bool) -> Result<(), String> {
     let locale = UiLocale::parse(&locale);
     let missing_root_message = common_message(locale, "backend.errors.aviutlFolderRequired");
     let trimmed = aviutl2_root.trim();
@@ -443,9 +428,5 @@ fn resolve_aviutl_root(raw: &str) -> PathBuf {
 #[tauri::command]
 pub fn resolve_aviutl2_root(raw: String) -> Result<String, String> {
     let resolved = resolve_aviutl_root(&raw);
-    if resolved.as_os_str().is_empty() {
-        Err(common_message_current("backend.errors.aviutlFolderRequired"))
-    } else {
-        Ok(pathbuf_to_string(&resolved))
-    }
+    if resolved.as_os_str().is_empty() { Err(common_message_current("backend.errors.aviutlFolderRequired")) } else { Ok(pathbuf_to_string(&resolved)) }
 }

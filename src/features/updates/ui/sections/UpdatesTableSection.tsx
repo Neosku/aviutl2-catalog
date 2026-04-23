@@ -49,7 +49,7 @@ export default function UpdatesTableSection({
                 const progress = itemProgress[item.id];
                 const paused = pausedPackageIds.has(item.id);
                 const pauseBusy = pauseBusyIds.has(item.id);
-                const packageTypeLabel = resolvePackageTypeLabel(item.type, t, '?');
+                const packageTypeLabel = resolvePackageTypeLabel(item.packageType || item.type, t, '?');
                 const installedVersionLabel =
                   getInstalledVersionLabel(
                     item.installedVersion,
@@ -72,7 +72,7 @@ export default function UpdatesTableSection({
                     <div className={cellTruncateClass}>{packageTypeLabel}</div>
                     <div className={text.bodySmMutedAlt}>{installedVersionLabel}</div>
                     <div className="text-sm font-semibold text-green-600 dark:text-green-400">
-                      {latestVersionOf(item) || ''}
+                      {item.latestVersion || latestVersionOf(item) || ''}
                     </div>
                     <div className="text-right">
                       {progress ? (

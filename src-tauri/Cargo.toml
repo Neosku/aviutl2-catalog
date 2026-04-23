@@ -53,6 +53,7 @@ windows = { version = "0.62", features = [
 ] }
 wmi = "0.18"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
+zstd = "0.13"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [features]

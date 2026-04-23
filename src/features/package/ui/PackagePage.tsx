@@ -132,7 +132,7 @@ export default function PackagePage() {
   const updated = item.updatedAt
     ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(item.updatedAt))
     : '?';
-  const latest = latestVersionOf(item) || '?';
+  const latest = item.latestVersion || latestVersionOf(item) || '?';
 
   return (
     <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col select-none')}>

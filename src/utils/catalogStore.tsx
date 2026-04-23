@@ -5,8 +5,7 @@
 // - allTags/allTypes: UI のフィルター候補（全件から抽出）
 // - installedMap/detectedMap: インストール情報（検出結果）
 import { createContext, useReducer, useContext, useMemo } from 'react';
-import { latestVersionOf } from './catalog';
-import { CatalogEntry } from './catalogSchema';
+import type { CatalogBootstrapItem } from './catalogBootstrapModel';
 import {
   getDetectedVersion,
   isDetectedResult,
@@ -28,7 +27,7 @@ type CatalogState = {
   detectedMap: DetectResultMap; // id -> detection result
 };
 
-export type CatalogEntryState = CatalogEntry & {
+export type CatalogEntryState = CatalogBootstrapItem & {
   updatedAt: number | null;
   nameKey: string;
   authorKey: string;
@@ -42,7 +41,7 @@ export type CatalogEntryState = CatalogEntry & {
 
 function applyDetectedResult(item: CatalogEntryState, result: DetectResult, forceLatest = false): CatalogEntryState {
   const detectedVersion = getDetectedVersion(result);
-  const latest = latestVersionOf(item) || '';
+  const latest = typeof item.latestVersion === 'string' ? item.latestVersion : '';
   const installed = isInstalledDetectResult(result);
   const isLatest = Boolean(forceLatest) || (isDetectedResult(result) && !!latest && detectedVersion === latest);
   return {
@@ -59,24 +58,18 @@ const CatalogStateContext = createContext<CatalogState | null>(null);
 const CatalogDispatchContext = createContext<React.Dispatch<CatalogAction> | null>(null);
 
 // 更新日のタイムスタンプを算出
-// 仕様: version[].release_date の最大値を updatedAt として使用
-function toUpdatedAt(pkg: CatalogEntry) {
+// 仕様: version[] の末尾 release_date を updatedAt として使用
+function toUpdatedAt(pkg: CatalogBootstrapItem) {
   if (!pkg.version.length) return null;
-  let maxTs = 0;
-  for (const ver of pkg.version) {
-    const dt = new Date(ver.release_date);
-    const ts = dt.getTime();
-    if (Number.isFinite(ts) && ts > maxTs) {
-      maxTs = ts;
-    }
-  }
-  return maxTs || null;
+  const lastVersion = pkg.version[pkg.version.length - 1];
+  const ts = new Date(lastVersion.release_date).getTime();
+  return Number.isFinite(ts) ? ts : null;
 }
 
 // 検索・ソート用の派生フィールドを付与
 // - updatedAt: 日付の数値化
 // - nameKey/authorKey/summaryKey: 正規化キー（部分一致検索に利用）
-function enrich(item: CatalogEntry) {
+function enrich(item: CatalogBootstrapItem) {
   return {
     ...item,
     updatedAt: toUpdatedAt(item),
@@ -101,7 +94,7 @@ export function initCatalog(): CatalogState {
 }
 
 export type CatalogAction =
-  | { type: 'SET_ITEMS'; payload: CatalogEntry[] }
+  | { type: 'SET_ITEMS'; payload: CatalogBootstrapItem[] }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_INSTALLED_IDS'; payload: string[] }
@@ -130,7 +123,7 @@ function catalogReducerInternal(state: CatalogState, action: CatalogAction): Cat
       );
       // タグ・種類の候補一覧を集計（重複排除）
       const tagSet = new Set(items.flatMap((item) => item.tags));
-      const typeSet = new Set(items.map((item) => item.type));
+      const typeSet = new Set(items.map((item) => item.packageType));
       return { ...state, items, allTags: Array.from(tagSet), allTypes: Array.from(typeSet) };
     }
     case 'SET_LOADING':

@@ -3,12 +3,28 @@ import type { PackageInstallBusyAction } from '@/utils/usePackageInstallerAction
 
 export type PackageCardItem = Pick<
   PackageItem,
-  'id' | 'name' | 'author' | 'type' | 'tags' | 'summary' | 'images' | 'updatedAt' | 'installed' | 'deprecation'
+  | 'id'
+  | 'name'
+  | 'author'
+  | 'packageType'
+  | 'type'
+  | 'tags'
+  | 'summary'
+  | 'images'
+  | 'updatedAt'
+  | 'installed'
+  | 'deprecation'
 > &
   Partial<
     Pick<
       PackageItem,
-      'description' | 'isLatest' | 'installedVersion' | 'detectedResult' | 'installer' | 'latest-version'
+      | 'description'
+      | 'isLatest'
+      | 'installedVersion'
+      | 'detectedResult'
+      | 'installer'
+      | 'latest-version'
+      | 'latestVersion'
     >
   >;
 

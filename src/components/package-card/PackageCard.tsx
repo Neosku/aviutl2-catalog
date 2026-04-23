@@ -19,7 +19,12 @@ export default function PackageCard({
   const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageCardActions(item);
 
   const thumbnail = pickThumbnail(item);
-  const category = typeof item.type === 'string' ? item.type : '';
+  const category =
+    typeof item.packageType === 'string' && item.packageType
+      ? item.packageType
+      : typeof item.type === 'string'
+        ? item.type
+        : '';
   const isInstalled = Boolean(item.installed);
   const hasUpdate = isInstalled && !item.isLatest;
   const showPausedUpdateState = isPauseStateLoaded && hasUpdate && isUpdatePaused;

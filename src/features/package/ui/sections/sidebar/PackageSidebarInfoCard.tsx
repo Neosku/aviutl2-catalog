@@ -29,7 +29,7 @@ export default function PackageSidebarInfoCard({
   onOpenLicense,
 }: PackageSidebarInfoCardProps) {
   const { t } = useTranslation('package');
-  const packageTypeLabel = resolvePackageTypeLabel(item.type, t, '?');
+  const packageTypeLabel = resolvePackageTypeLabel(item.packageType || item.type, t, '?');
   const installedVersionLabel = getInstalledVersionLabel(
     item.installedVersion,
     item.detectedResult,
