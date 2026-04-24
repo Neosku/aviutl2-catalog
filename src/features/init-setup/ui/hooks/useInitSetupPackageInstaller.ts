@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hasInstaller, runInstallerForItem } from '@/utils/installer';
-import type { CatalogEntry } from '@/utils/catalogSchema';
+import type { InstallableCatalogItem } from '@/utils/catalogInstallItem';
 import type { InstallProgressPayload } from '@/utils/installer/types';
 import { getErrorMessage } from '../../model/helpers';
 import type { PackageItemsMap, PackageState } from '../../model/types';
 
 interface UseInitSetupPackageInstallerParams {
   packageItems: PackageItemsMap;
-  ensurePackageItem: (id: string) => Promise<CatalogEntry | null>;
+  ensurePackageItem: (id: string) => Promise<InstallableCatalogItem | null>;
   updatePackageState: (
     id: string,
     updater: Partial<PackageState> | ((current: PackageState) => Partial<PackageState>),

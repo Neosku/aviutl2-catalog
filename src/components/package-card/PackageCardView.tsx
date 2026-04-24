@@ -66,7 +66,12 @@ export default function PackageCardView({
       </div>
 
       <div className="pointer-events-none relative z-10">
-        <PackageCardThumbnailSection thumbnail={thumbnail} itemName={item.name} category={category} />
+        <PackageCardThumbnailSection
+          thumbnail={thumbnail}
+          itemName={item.name}
+          category={category}
+          typeLabel={item.typeLabel}
+        />
       </div>
 
       <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-transparent group-hover:ring-blue-500/20 dark:group-hover:ring-blue-400/20 pointer-events-none transition-all"></div>

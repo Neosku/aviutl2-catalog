@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { buildPackageDetailHref } from '@/features/package/model/helpers';
-import { hasInstaller } from '@/utils/installer';
 import { formatDate } from '@/utils/text';
 import ErrorDialog from '../ErrorDialog';
 import { pickThumbnail } from './helpers';
@@ -19,16 +18,11 @@ export default function PackageCard({
   const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageCardActions(item);
 
   const thumbnail = pickThumbnail(item);
-  const category =
-    typeof item.packageType === 'string' && item.packageType
-      ? item.packageType
-      : typeof item.type === 'string'
-        ? item.type
-        : '';
+  const category = typeof item.packageType === 'string' ? item.packageType : '';
   const isInstalled = Boolean(item.installed);
   const hasUpdate = isInstalled && !item.isLatest;
   const showPausedUpdateState = isPauseStateLoaded && hasUpdate && isUpdatePaused;
-  const canInstall = hasInstaller(item);
+  const canInstall = Boolean(item.id);
   const lastUpdated = item.updatedAt ? formatDate(item.updatedAt).replace(/-/g, '/') : '?';
 
   const openDetail = () => {

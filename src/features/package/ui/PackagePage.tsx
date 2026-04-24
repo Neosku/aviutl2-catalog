@@ -4,9 +4,7 @@ import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import { APP_ROUTE_PATHS } from '@/routePaths';
 import ErrorDialog from '@/components/ErrorDialog';
-import { latestVersionOf } from '@/utils/catalog';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
-import { hasInstaller } from '@/utils/installer';
 import { buildLicenseBody, resolveCatalogLicenseTypeLabel } from '@/utils/licenseTemplates';
 import { HOME_LIST_RESTORE_STATE } from '@/layouts/app-shell/types';
 import {
@@ -73,7 +71,7 @@ export default function PackagePage() {
     dispatch,
   });
 
-  const canInstall = item ? hasInstaller(item) : false;
+  const canInstall = Boolean(item);
 
   usePackageAutoInstall({
     item,
@@ -132,7 +130,7 @@ export default function PackagePage() {
   const updated = item.updatedAt
     ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(item.updatedAt))
     : '?';
-  const latest = item.latestVersion || latestVersionOf(item) || '?';
+  const latest = item.latestVersion || '?';
 
   return (
     <div className={cn(page.container6xl, 'space-y-6 min-h-[calc(100vh-6rem)] flex flex-col select-none')}>

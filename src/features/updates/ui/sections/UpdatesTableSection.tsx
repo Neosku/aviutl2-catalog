@@ -2,7 +2,6 @@ import ProgressCircle from '@/components/ProgressCircle';
 import PackageNameLink from '@/components/PackageNameLink';
 import { useTranslation } from 'react-i18next';
 import { resolvePackageTypeLabel } from '@/features/package/model/helpers';
-import { latestVersionOf } from '@/utils/catalog';
 import { getInstalledVersionLabel } from '@/utils/detectResult';
 import type { UpdatesTableSectionProps } from '../types';
 import { surface, table, text } from '@/components/ui/_styles';
@@ -49,7 +48,7 @@ export default function UpdatesTableSection({
                 const progress = itemProgress[item.id];
                 const paused = pausedPackageIds.has(item.id);
                 const pauseBusy = pauseBusyIds.has(item.id);
-                const packageTypeLabel = resolvePackageTypeLabel(item.packageType || item.type, t, '?');
+                const packageTypeLabel = resolvePackageTypeLabel(item.packageType, t, '?', item.typeLabel);
                 const installedVersionLabel =
                   getInstalledVersionLabel(
                     item.installedVersion,
@@ -72,7 +71,7 @@ export default function UpdatesTableSection({
                     <div className={cellTruncateClass}>{packageTypeLabel}</div>
                     <div className={text.bodySmMutedAlt}>{installedVersionLabel}</div>
                     <div className="text-sm font-semibold text-green-600 dark:text-green-400">
-                      {item.latestVersion || latestVersionOf(item) || ''}
+                      {item.latestVersion || ''}
                     </div>
                     <div className="text-right">
                       {progress ? (

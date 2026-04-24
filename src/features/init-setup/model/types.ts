@@ -1,4 +1,4 @@
-import type { CatalogEntry } from '@/utils/catalogSchema';
+import type { InstallableCatalogItem } from '@/utils/catalogInstallItem';
 import type { DetectResultMap } from '@/utils/detectResult';
 import type { InstallProgressPayload } from '@/utils/installer/types';
 
@@ -22,10 +22,10 @@ export interface SetupConfig {
 
 export interface RequiredPackageRow {
   id: string;
-  item: CatalogEntry | null;
+  item: InstallableCatalogItem | null;
   state: PackageState;
 }
 
-export type PackageItemsMap = Record<string, CatalogEntry | null>;
+export type PackageItemsMap = Record<string, InstallableCatalogItem | null>;
 export type PackageStatesMap = Record<string, PackageState>;
 export type PackageVersionsMap = DetectResultMap;

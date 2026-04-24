@@ -11,7 +11,7 @@ import type { PackageHeaderSectionProps } from '../types';
 export default function PackageHeaderSection({ item, listLink, listLabel, heroImage }: PackageHeaderSectionProps) {
   const { t } = useTranslation('package');
   const heroImageStyle = useMemo(() => ({ backgroundImage: `url(${heroImage})` }), [heroImage]);
-  const packageTypeLabel = resolvePackageTypeLabel(item.packageType || item.type, t, t('header.uncategorized'));
+  const packageTypeLabel = resolvePackageTypeLabel(item.packageType, t, t('header.uncategorized'), item.typeLabel);
 
   return (
     <>

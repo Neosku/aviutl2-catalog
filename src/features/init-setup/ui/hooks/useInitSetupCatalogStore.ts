@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loadCatalogData } from '@/utils/catalog';
+import { resolveInstallableCatalogItem } from '@/utils/catalogInstallItem';
+import { useCatalog } from '@/utils/catalogStore';
 import { isInstalledDetectResult, type DetectResultMap } from '@/utils/detectResult';
 import { safeLog } from '../../model/helpers';
 import type { PackageItemsMap, PackageState, PackageStatesMap, RequiredPackageRow } from '../../model/types';
@@ -13,37 +14,48 @@ interface UseInitSetupCatalogStoreParams {
 
 export default function useInitSetupCatalogStore({ requiredPluginIds, corePackageId }: UseInitSetupCatalogStoreParams) {
   const { t } = useTranslation('initSetup');
+  const { items, loading: catalogLoading, error: catalogError } = useCatalog();
   const [packageItems, setPackageItems] = useState<PackageItemsMap>({});
   const [packageStates, setPackageStates] = useState<PackageStatesMap>({});
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState('');
 
-  const fetchCatalogList = useCallback(async () => {
-    try {
-      const result = await loadCatalogData({ timeoutMs: 10000 });
-      const items = result.items;
-      if (items.length === 0) throw new Error('catalog data unavailable');
-      return items;
-    } catch (catalogError) {
-      await safeLog('[init-window] catalog load failed', catalogError);
-      throw catalogError;
+  const fetchPackageItems = useCallback(async () => {
+    if (catalogLoading) {
+      throw new Error('catalog bootstrap is still loading');
     }
-  }, []);
+    if (catalogError) {
+      throw new Error(catalogError);
+    }
+
+    try {
+      const nextItems: PackageItemsMap = {};
+      await Promise.all(
+        requiredPluginIds.map(async (id) => {
+          const baseItem = items.find((item) => item && item.id === id);
+          nextItems[id] = await resolveInstallableCatalogItem(baseItem);
+        }),
+      );
+      return nextItems;
+    } catch (loadError) {
+      await safeLog('[init-window] catalog load failed', loadError);
+      throw loadError;
+    }
+  }, [catalogError, catalogLoading, items, requiredPluginIds]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!requiredPluginIds.length) return;
+      if (catalogLoading) return;
       setPackagesLoading(true);
       setPackagesError('');
       try {
-        const list = await fetchCatalogList();
-        const nextItems: PackageItemsMap = {};
+        const nextItems = await fetchPackageItems();
         const missing: string[] = [];
         requiredPluginIds.forEach((id) => {
-          const found = list.find((item) => item && item.id === id) || null;
+          const found = nextItems[id] || null;
           if (!found) missing.push(id);
-          nextItems[id] = found;
         });
         if (!cancelled) {
           setPackageItems(nextItems);
@@ -68,7 +80,7 @@ export default function useInitSetupCatalogStore({ requiredPluginIds, corePackag
     return () => {
       cancelled = true;
     };
-  }, [fetchCatalogList, requiredPluginIds]);
+  }, [catalogLoading, fetchPackageItems, requiredPluginIds, t]);
 
   const updatePackageState = useCallback(
     (id: string, updater: Partial<PackageState> | ((current: PackageState) => Partial<PackageState>)) => {
@@ -115,8 +127,11 @@ export default function useInitSetupCatalogStore({ requiredPluginIds, corePackag
     async (id: string) => {
       const cached = packageItems[id];
       if (cached) return cached;
-      const list = await fetchCatalogList();
-      const found = list.find((item) => item && item.id === id) || null;
+      if (catalogLoading) {
+        throw new Error(t('errors.requiredPackagesLoadFailed'));
+      }
+      const baseItem = items.find((item) => item && item.id === id);
+      const found = await resolveInstallableCatalogItem(baseItem);
       if (found) {
         setPackageItems((prev) => ({ ...prev, [id]: found }));
         setPackageStates((prev) => {
@@ -128,12 +143,12 @@ export default function useInitSetupCatalogStore({ requiredPluginIds, corePackag
       }
       throw new Error(t('errors.packageInfoMissing', { id }));
     },
-    [fetchCatalogList, packageItems, t],
+    [catalogLoading, items, packageItems, t],
   );
 
   return {
     packageItems,
-    packagesLoading,
+    packagesLoading: packagesLoading || (catalogLoading && requiredPluginIds.length > 0),
     packagesError,
     requiredPackages,
     allRequiredInstalled,

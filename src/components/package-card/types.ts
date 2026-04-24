@@ -7,7 +7,7 @@ export type PackageCardItem = Pick<
   | 'name'
   | 'author'
   | 'packageType'
-  | 'type'
+  | 'typeLabel'
   | 'tags'
   | 'summary'
   | 'images'
@@ -18,13 +18,7 @@ export type PackageCardItem = Pick<
   Partial<
     Pick<
       PackageItem,
-      | 'description'
-      | 'isLatest'
-      | 'installedVersion'
-      | 'detectedResult'
-      | 'installer'
-      | 'latest-version'
-      | 'latestVersion'
+      'description' | 'isLatest' | 'installedVersion' | 'detectedResult' | 'installer' | 'latestVersion'
     >
   >;
 

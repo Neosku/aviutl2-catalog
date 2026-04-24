@@ -11,6 +11,7 @@ interface PackageCardThumbnailSectionProps {
   thumbnail: string;
   itemName: string;
   category: string;
+  typeLabel?: string;
 }
 
 const categoryIconMap = {
@@ -22,11 +23,11 @@ const categoryIconMap = {
   'file-code-2': FileCode2,
 } as const;
 
-function PackageCardThumbnailSection({ thumbnail, itemName, category }: PackageCardThumbnailSectionProps) {
+function PackageCardThumbnailSection({ thumbnail, itemName, category, typeLabel }: PackageCardThumbnailSectionProps) {
   const { t } = useTranslation('common');
   const packageTypeMeta = getPrimaryPackageTypeMeta(category);
   const CategoryIcon = packageTypeMeta ? categoryIconMap[packageTypeMeta.icon] : Package;
-  const categoryLabel = resolvePackageTypeLabel(category, t, t('packageTypes.other'));
+  const categoryLabel = resolvePackageTypeLabel(category, t, t('packageTypes.other'), typeLabel);
 
   return (
     <div

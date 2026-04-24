@@ -115,9 +115,14 @@ export function resolvePackageTypeLabel(
   rawType: unknown,
   t: PackageTypeTranslator,
   uncategorizedLabel: string,
+  typeLabel?: unknown,
 ): string {
   const normalizedType = typeof rawType === 'string' ? rawType.trim() : '';
   if (!normalizedType) return uncategorizedLabel;
+  if (normalizedType === 'custom') {
+    const customLabel = typeof typeLabel === 'string' ? typeLabel.trim() : '';
+    if (customLabel) return customLabel;
+  }
 
   const typeKey = packageTypeKeyFromRaw(normalizedType);
   if (typeKey === 'other') return normalizedType;

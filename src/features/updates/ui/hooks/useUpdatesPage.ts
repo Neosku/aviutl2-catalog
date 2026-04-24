@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
-import { hasInstaller, runInstallerForItem } from '@/utils/installer';
+import { resolveInstallableCatalogItem } from '@/utils/catalogInstallItem';
+import { runInstallerForItem } from '@/utils/installer';
 import { logError } from '@/utils/logging';
 import usePausedPackageUpdates from '@/utils/usePausedPackageUpdates';
 import { toErrorMessage, toProgressLabel, toProgressRatio } from '../../model/helpers';
@@ -117,10 +118,7 @@ export default function useUpdatesPage() {
     patchRuntimeState({ error: nextError });
   }, []);
 
-  const updatableItems = useMemo(
-    () => items.filter((item) => item.installed && !item.isLatest && hasInstaller(item)),
-    [items],
-  );
+  const updatableItems = useMemo(() => items.filter((item) => item.installed && !item.isLatest), [items]);
   const bulkUpdatableItems = useMemo(
     () => (pausedPackageUpdatesLoaded ? updatableItems.filter((item) => !pausedPackageIdSet.has(item.id)) : []),
     [pausedPackageIdSet, pausedPackageUpdatesLoaded, updatableItems],
@@ -158,7 +156,11 @@ export default function useUpdatesPage() {
         });
 
         try {
-          await runInstallerForItem(item, dispatch, (progress: InstallerProgressPayload | null | undefined) => {
+          const resolvedItem = await resolveInstallableCatalogItem(item);
+          if (!resolvedItem) {
+            throw new Error(t('common:errors.unknown'));
+          }
+          await runInstallerForItem(resolvedItem, dispatch, (progress: InstallerProgressPayload | null | undefined) => {
             patchRuntimeState({
               bulkProgress: {
                 ratio: toProgressRatio(progress),
@@ -209,7 +211,7 @@ export default function useUpdatesPage() {
         bulkProgress: null,
       });
     }
-  }, [bulkUpdatableItems, dispatch, pausedPackageUpdatesLoaded]);
+  }, [bulkUpdatableItems, dispatch, pausedPackageUpdatesLoaded, t]);
 
   const handleUpdate = useCallback(
     async (item: UpdatesItem) => {
@@ -221,7 +223,11 @@ export default function useUpdatesPage() {
       setRuntimeItemProgress(item.id, { ratio: 0, label: t('common:status.preparing') });
 
       try {
-        await runInstallerForItem(item, dispatch, (progress: InstallerProgressPayload | null | undefined) => {
+        const resolvedItem = await resolveInstallableCatalogItem(item);
+        if (!resolvedItem) {
+          throw new Error(t('common:errors.unknown'));
+        }
+        await runInstallerForItem(resolvedItem, dispatch, (progress: InstallerProgressPayload | null | undefined) => {
           setRuntimeItemProgress(item.id, {
             ratio: toProgressRatio(progress),
             label: toProgressLabel(progress),
@@ -236,7 +242,7 @@ export default function useUpdatesPage() {
         setRuntimeItemProgress(item.id, null);
       }
     },
-    [dispatch, pausedPackageIdSet, pausedPackageUpdatesLoaded],
+    [dispatch, pausedPackageIdSet, pausedPackageUpdatesLoaded, t],
   );
 
   const handleTogglePause = useCallback(

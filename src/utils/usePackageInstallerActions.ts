@@ -1,6 +1,7 @@
 import { i18n } from '@/i18n';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { resolveInstallableCatalogItem } from './catalogInstallItem';
 import type { CatalogDispatch } from './catalogStore';
 import { runPackageInstallAction, runPackageRemoveAction } from './installer';
 import type { InstallProgressPayload, InstallerRunnableItem } from './installer/types';
@@ -68,8 +69,12 @@ export default function usePackageInstallerActions({
 
       try {
         resetProgress();
+        const resolvedItem = await resolveInstallableCatalogItem(item);
+        if (!resolvedItem) {
+          throw new Error(resolvedMissingInstallerMessage);
+        }
         await runPackageInstallAction(
-          item,
+          resolvedItem,
           dispatch,
           (nextProgress) => {
             setProgress(nextProgress ?? createInitialInstallProgress(t('common:status.preparing')));
@@ -99,7 +104,8 @@ export default function usePackageInstallerActions({
     if (!beginAction('remove')) return;
 
     try {
-      await runPackageRemoveAction(item, dispatch);
+      const resolvedItem = (await resolveInstallableCatalogItem(item)) ?? item;
+      await runPackageRemoveAction(resolvedItem, dispatch);
     } catch (removeError) {
       setError(
         t('package:errors.actionFailed', { action: t('package:actions.remove'), detail: toErrorMessage(removeError) }),

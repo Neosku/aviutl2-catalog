@@ -12,4 +12,5 @@ export const catalogInstallSchema = z.object({
   packages: z.record(catalogPackageIdSchema, catalogInstallPackageSchema),
 });
 
+export type CatalogInstallPackage = z.infer<typeof catalogInstallPackageSchema>;
 export type CatalogInstall = z.infer<typeof catalogInstallSchema>;
