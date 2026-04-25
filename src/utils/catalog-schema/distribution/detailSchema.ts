@@ -29,4 +29,5 @@ export const catalogDetailSchema = z.object({
   packages: z.record(catalogPackageIdSchema, catalogDetailPackageSchema),
 });
 
+export type CatalogDetailPackage = z.infer<typeof catalogDetailPackageSchema>;
 export type CatalogDetail = z.infer<typeof catalogDetailSchema>;

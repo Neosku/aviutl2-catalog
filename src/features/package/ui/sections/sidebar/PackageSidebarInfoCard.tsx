@@ -13,7 +13,7 @@ import { cn } from '@/lib/cn';
 
 type PackageSidebarInfoCardProps = Pick<
   PackageSidebarSectionProps,
-  'item' | 'updated' | 'latest' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
+  'item' | 'updated' | 'latest' | 'originalAuthor' | 'packagePageUrl' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
 >;
 
 const detailMetaChipVariant = { variant: 'secondary', size: 'chip', radius: 'full' } as const;
@@ -24,6 +24,8 @@ export default function PackageSidebarInfoCard({
   item,
   updated,
   latest,
+  originalAuthor,
+  packagePageUrl,
   renderableLicenses,
   licenseTypesLabel,
   onOpenLicense,
@@ -80,6 +82,12 @@ export default function PackageSidebarInfoCard({
           </span>
         )}
       </div>
+      {originalAuthor ? (
+        <div className={cn(layout.rowBetween, text.bodySmMuted)}>
+          <span>{t('sidebar.originalAuthor')}</span>
+          <span className="text-slate-800 dark:text-slate-200">{originalAuthor}</span>
+        </div>
+      ) : null}
       <div className={cn(layout.rowBetween, text.bodySmMuted)}>
         <span>{t('common:labels.type')}</span>
         <span className="text-slate-800 dark:text-slate-200">{packageTypeLabel}</span>
@@ -146,14 +154,14 @@ export default function PackageSidebarInfoCard({
           )}
         </div>
       </div>
-      {item.repoURL ? (
+      {packagePageUrl ? (
         <a
           className={cn(layout.inlineGap2, 'text-sm text-blue-600 hover:underline dark:text-blue-400 break-all')}
-          href={item.repoURL}
+          href={packagePageUrl}
           target="_blank"
           rel="noopener noreferrer"
         >
-          <ExternalLink size={16} className="shrink-0" /> {item.repoURL}
+          <ExternalLink size={16} className="shrink-0" /> {t('sidebar.packagePage')}
         </a>
       ) : null}
     </div>

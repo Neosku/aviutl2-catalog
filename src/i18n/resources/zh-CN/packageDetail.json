@@ -24,13 +24,27 @@
     "deprecatedReason": "此包因以下原因已弃用。",
     "deprecatedSimple": "此包已弃用。",
     "descriptionLoading": "正在加载详细说明...",
-    "dependencies": "依赖关系"
+    "notice": "注意事项",
+    "noticeLoading": "正在加载注意事项...",
+    "changelog": "更新日志",
+    "changelogLoading": "正在加载更新日志...",
+    "changelogEmpty": "没有可显示的更新日志。",
+    "relations": "相关包",
+    "relationsLoading": "正在加载相关包..."
   },
   "descriptionErrors": {
     "loadFailed": "无法加载详细说明。"
   },
+  "noticeErrors": {
+    "loadFailed": "无法加载注意事项。"
+  },
+  "changelogErrors": {
+    "loadFailed": "无法加载更新日志。"
+  },
   "errors": {
-    "actionFailed": "{{action}} 失败\n\n{{detail}}"
+    "actionFailed": "{{action}} 失败\n\n{{detail}}",
+    "detailLoadFailed": "无法加载包的详细数据。",
+    "relationsLoadFailed": "无法加载相关包数据。"
   },
   "header": {
     "uncategorized": "未分类"
@@ -53,8 +67,19 @@
     "updatedAt": "更新日期",
     "latestVersion": "最新版本",
     "currentVersion": "当前版本",
+    "originalAuthor": "原作者",
+    "packagePage": "打开包页面",
     "versionUnknown": "未知",
     "licenseUnknown": "未知",
     "openLicenseAria": "显示许可证 {{type}} 的正文"
+  },
+  "relations": {
+    "requires": "必需",
+    "recommends": "推荐",
+    "conflicts": "冲突",
+    "similar": "相似",
+    "replaces": "替代",
+    "forkOf": "Fork 自",
+    "missingPackages": "目录中找不到的 ID：{{ids}}"
   }
 }

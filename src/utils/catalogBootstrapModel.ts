@@ -102,6 +102,9 @@ export function buildCatalogBootstrapItems(result: CatalogBootstrapLoadResult): 
       : [];
     const latestVersion = versions.at(-1)?.version ?? '';
     const latestReleaseDate = versions.at(-1)?.release_date ?? '';
+    const changelogSource = listPackage.changelog?.markdownSource
+      ? resolveOptionalAssetPath(result.baseUrls.list, listPackage.changelog.markdownSource)
+      : '';
 
     return {
       id: listPackage.id,
@@ -119,7 +122,11 @@ export function buildCatalogBootstrapItems(result: CatalogBootstrapLoadResult): 
       latestReleaseDate,
       thumbnailUrl,
       description: listPackage.summary,
-      changelog: listPackage.changelog,
+      changelog: changelogSource
+        ? {
+            markdownSource: changelogSource,
+          }
+        : undefined,
       repoURL: '',
       licenses: [],
       niconiCommonsId: listPackage.niconiCommonsId,

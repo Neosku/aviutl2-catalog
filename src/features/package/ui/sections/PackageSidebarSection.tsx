@@ -8,6 +8,8 @@ export default function PackageSidebarSection({
   listLinkState,
   updated,
   latest,
+  originalAuthor,
+  packagePageUrl,
   canInstall,
   busyAction,
   isBusy,
@@ -26,6 +28,8 @@ export default function PackageSidebarSection({
           item={item}
           updated={updated}
           latest={latest}
+          originalAuthor={originalAuthor}
+          packagePageUrl={packagePageUrl}
           renderableLicenses={renderableLicenses}
           licenseTypesLabel={licenseTypesLabel}
           onOpenLicense={onOpenLicense}

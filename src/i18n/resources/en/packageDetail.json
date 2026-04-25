@@ -24,13 +24,27 @@
     "deprecatedReason": "This package is deprecated for the following reason.",
     "deprecatedSimple": "This package is deprecated.",
     "descriptionLoading": "Loading the description...",
-    "dependencies": "Dependencies"
+    "notice": "Notice",
+    "noticeLoading": "Loading the notice...",
+    "changelog": "Changelog",
+    "changelogLoading": "Loading the changelog...",
+    "changelogEmpty": "No changelog is available.",
+    "relations": "Related packages",
+    "relationsLoading": "Loading related packages..."
   },
   "descriptionErrors": {
     "loadFailed": "Failed to load the description."
   },
+  "noticeErrors": {
+    "loadFailed": "Failed to load the notice."
+  },
+  "changelogErrors": {
+    "loadFailed": "Failed to load the changelog."
+  },
   "errors": {
-    "actionFailed": "{{action}} failed\n\n{{detail}}"
+    "actionFailed": "{{action}} failed\n\n{{detail}}",
+    "detailLoadFailed": "Failed to load the package details.",
+    "relationsLoadFailed": "Failed to load related package data."
   },
   "header": {
     "uncategorized": "Uncategorized"
@@ -53,8 +67,19 @@
     "updatedAt": "Updated",
     "latestVersion": "Latest version",
     "currentVersion": "Current version",
+    "originalAuthor": "Original author",
+    "packagePage": "Open package page",
     "versionUnknown": "Unknown",
     "licenseUnknown": "Unknown",
     "openLicenseAria": "Open license text for {{type}}"
+  },
+  "relations": {
+    "requires": "Required",
+    "recommends": "Recommended",
+    "conflicts": "Conflicts",
+    "similar": "Similar",
+    "replaces": "Replaces",
+    "forkOf": "Forked from",
+    "missingPackages": "IDs not found in the catalog: {{ids}}"
   }
 }

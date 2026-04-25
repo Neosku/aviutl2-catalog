@@ -24,13 +24,27 @@
     "deprecatedReason": "このパッケージは以下の理由で非推奨となっています。",
     "deprecatedSimple": "このパッケージは非推奨となっています。",
     "descriptionLoading": "詳細説明を読み込み中です…",
-    "dependencies": "依存関係"
+    "notice": "注意事項",
+    "noticeLoading": "注意事項を読み込み中です…",
+    "changelog": "更新履歴",
+    "changelogLoading": "更新履歴を読み込み中です…",
+    "changelogEmpty": "更新履歴は記載されていません。",
+    "relations": "関連パッケージ",
+    "relationsLoading": "関連情報を読み込み中です…"
   },
   "descriptionErrors": {
     "loadFailed": "詳細説明を読み込めませんでした。"
   },
+  "noticeErrors": {
+    "loadFailed": "注意事項を読み込めませんでした。"
+  },
+  "changelogErrors": {
+    "loadFailed": "更新履歴を読み込めませんでした。"
+  },
   "errors": {
-    "actionFailed": "{{action}}に失敗しました\n\n{{detail}}"
+    "actionFailed": "{{action}}に失敗しました\n\n{{detail}}",
+    "detailLoadFailed": "詳細データを読み込めませんでした。",
+    "relationsLoadFailed": "関連情報を読み込めませんでした。"
   },
   "header": {
     "uncategorized": "未分類"
@@ -53,8 +67,19 @@
     "updatedAt": "更新日",
     "latestVersion": "最新バージョン",
     "currentVersion": "現在のバージョン",
+    "originalAuthor": "原作者",
+    "packagePage": "配布元ページを開く",
     "versionUnknown": "不明",
     "licenseUnknown": "不明",
     "openLicenseAria": "ライセンス {{type}} の本文を表示"
+  },
+  "relations": {
+    "requires": "必須",
+    "recommends": "推奨",
+    "conflicts": "競合",
+    "similar": "類似",
+    "replaces": "置き換え",
+    "forkOf": "fork 元",
+    "missingPackages": "カタログに見つからないID: {{ids}}"
   }
 }

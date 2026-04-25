@@ -24,13 +24,27 @@
     "deprecatedReason": "此套件因以下原因已棄用。",
     "deprecatedSimple": "此套件已棄用。",
     "descriptionLoading": "正在載入說明...",
-    "dependencies": "相依項目"
+    "notice": "注意事項",
+    "noticeLoading": "正在載入注意事項...",
+    "changelog": "更新紀錄",
+    "changelogLoading": "正在載入更新紀錄...",
+    "changelogEmpty": "沒有可顯示的更新紀錄。",
+    "relations": "相關套件",
+    "relationsLoading": "正在載入相關套件..."
   },
   "descriptionErrors": {
     "loadFailed": "載入說明失敗。"
   },
+  "noticeErrors": {
+    "loadFailed": "載入注意事項失敗。"
+  },
+  "changelogErrors": {
+    "loadFailed": "載入更新紀錄失敗。"
+  },
   "errors": {
-    "actionFailed": "{{action}} 失敗\n\n{{detail}}"
+    "actionFailed": "{{action}} 失敗\n\n{{detail}}",
+    "detailLoadFailed": "載入套件詳細資料失敗。",
+    "relationsLoadFailed": "載入相關套件資料失敗。"
   },
   "header": {
     "uncategorized": "未分類"
@@ -53,8 +67,19 @@
     "updatedAt": "更新日期",
     "latestVersion": "最新版本",
     "currentVersion": "目前版本",
+    "originalAuthor": "原作者",
+    "packagePage": "開啟套件頁面",
     "versionUnknown": "未知",
     "licenseUnknown": "未知",
     "openLicenseAria": "開啟 {{type}} 的授權文字"
+  },
+  "relations": {
+    "requires": "必需",
+    "recommends": "推薦",
+    "conflicts": "衝突",
+    "similar": "相似",
+    "replaces": "取代",
+    "forkOf": "Fork 自",
+    "missingPackages": "目錄中找不到的 ID：{{ids}}"
   }
 }

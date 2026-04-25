@@ -2,7 +2,7 @@ import type { To } from 'react-router-dom';
 import type { PackageInstallBusyAction } from '@/utils/usePackageInstallerActions';
 import type { PackageItem } from '@/utils/catalogStore';
 import type { HomeRestoreState } from '@/layouts/app-shell/types';
-import type { CarouselImage, PackageLicenseEntry } from '../model/types';
+import type { CarouselImage, PackageLicenseEntry, PackageMarkdownState, PackageRelationSection } from '../model/types';
 
 export interface PackageProgressView {
   ratio: number;
@@ -20,9 +20,13 @@ export interface PackageHeaderSectionProps {
 export interface PackageContentSectionProps {
   item: PackageItem;
   carouselImages: CarouselImage[];
-  descriptionHtml: string;
-  descriptionLoading: boolean;
-  descriptionError: string;
+  detailError: string;
+  description: PackageMarkdownState;
+  notice: PackageMarkdownState;
+  changelog: PackageMarkdownState;
+  relationSections: PackageRelationSection[];
+  relationsLoading: boolean;
+  relationsError: string;
   onOpenLink: (href: string) => Promise<void>;
 }
 
@@ -33,6 +37,8 @@ export interface PackageSidebarSectionProps {
   listLinkState?: HomeRestoreState;
   updated: string;
   latest: string;
+  originalAuthor?: string;
+  packagePageUrl?: string;
   canInstall: boolean;
   busyAction: PackageInstallBusyAction;
   isBusy: boolean;

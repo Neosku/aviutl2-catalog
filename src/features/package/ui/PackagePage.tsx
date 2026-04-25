@@ -5,24 +5,24 @@ import { useLocation, useParams } from 'react-router-dom';
 import { APP_ROUTE_PATHS } from '@/routePaths';
 import ErrorDialog from '@/components/ErrorDialog';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
+import { resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
 import { buildLicenseBody, resolveCatalogLicenseTypeLabel } from '@/utils/licenseTemplates';
 import { HOME_LIST_RESTORE_STATE } from '@/layouts/app-shell/types';
 import {
-  collectPackageImages,
   readPackageDetailSource,
   readPackageListSearchFromDetail,
   shouldOpenExternalLink,
 } from '../model/helpers';
-import type { PackageLicenseEntry } from '../model/types';
+import type { PackageLicenseEntry, PackageMarkdownState, PackageRelationSection } from '../model/types';
 import LicenseModal from './components/LicenseModal';
 import usePackageAutoInstall from './hooks/usePackageAutoInstall';
+import usePackageDetailData from './hooks/usePackageDetailData';
 import usePackageDescription from './hooks/usePackageDescription';
 import usePackageInstallActions from './hooks/usePackageInstallActions';
+import usePackageMarkdown from './hooks/usePackageMarkdown';
 import { PackageContentSection, PackageHeaderSection, PackageSidebarSection } from './sections';
 import { page } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
-
-const MARKDOWN_BASE_URL = 'https://raw.githubusercontent.com/Neosku/aviutl2-catalog-data/main/md/';
 
 function resolvePackageListState(search: string) {
   const listSearch = readPackageListSearchFromDetail(search);
@@ -58,12 +58,37 @@ export default function PackagePage() {
   const listLinkState = detailSource === 'home' ? HOME_LIST_RESTORE_STATE : undefined;
 
   const item = useMemo(() => packageItems.find((entry) => entry.id === id), [id, packageItems]);
-  const { heroImage, carouselImages } = useMemo(() => collectPackageImages(item?.images), [item?.images]);
+  const detailData = usePackageDetailData({
+    packageId: item?.id,
+    requestedLocale: i18n.resolvedLanguage || i18n.language,
+  });
+  const detailPackage = detailData.detailPackage;
+  const detailImageUrls = useMemo(() => {
+    if (!detailPackage?.images?.detailImages?.length) {
+      return [];
+    }
+    return detailPackage.images.detailImages.map((src) => resolveUrl(detailData.detailBaseUrl, src));
+  }, [detailData.detailBaseUrl, detailPackage?.images?.detailImages]);
+  const heroImage = detailImageUrls[0] || item?.thumbnailUrl || '';
+  const carouselImages = useMemo(
+    () => detailImageUrls.map((src) => ({ src, alt: item?.name || '' })),
+    [detailImageUrls, item?.name],
+  );
 
-  const descriptionSource = item?.description || '';
+  const descriptionSource = detailPackage?.description.markdownSource || '';
   const description = usePackageDescription({
     descriptionSource,
-    baseUrl: MARKDOWN_BASE_URL,
+    baseUrl: detailData.detailBaseUrl,
+  });
+  const notice = usePackageMarkdown({
+    markdownSource: detailPackage?.notice?.markdownSource,
+    baseUrl: detailData.detailBaseUrl,
+    loadFailedMessage: t('noticeErrors.loadFailed'),
+  });
+  const changelog = usePackageMarkdown({
+    markdownSource: item?.changelog?.markdownSource,
+    baseUrl: '',
+    loadFailedMessage: t('changelogErrors.loadFailed'),
   });
 
   const actions = usePackageInstallActions({
@@ -82,28 +107,92 @@ export default function PackagePage() {
   });
 
   const licenseEntries = useMemo<PackageLicenseEntry[]>(() => {
-    if (!item) return [];
-    const rawLicenses = Array.isArray(item.licenses) ? item.licenses : [];
+    if (!detailPackage) return [];
+    const rawLicenses = Array.isArray(detailPackage.licenses) ? detailPackage.licenses : [];
     const entries = rawLicenses.map((license, idx) => {
-      const typeLabel = resolveCatalogLicenseTypeLabel(license.type);
+      const normalizedLicense = {
+        type: license.type,
+        isCustom: license.type === 'custom',
+        copyrights: license.copyrights || [],
+        licenseBody: license.licenseBody ?? null,
+      };
+      const typeLabel = license.name?.trim() || resolveCatalogLicenseTypeLabel(license.type);
       return {
-        ...license,
+        ...normalizedLicense,
         type: typeLabel,
         key: `${typeLabel || 'license'}-${idx}`,
-        body: String(buildLicenseBody(license) || ''),
+        body: String(buildLicenseBody(normalizedLicense) || ''),
       };
     });
     return entries;
-  }, [item]);
+  }, [detailPackage]);
 
   const renderableLicenses = useMemo(() => licenseEntries.filter((entry) => entry.body), [licenseEntries]);
 
   const licenseTypesLabel = useMemo(() => {
-    const types = Array.isArray(item?.licenses)
-      ? item.licenses.map((license) => resolveCatalogLicenseTypeLabel(license?.type)).filter(Boolean)
+    const types = Array.isArray(detailPackage?.licenses)
+      ? detailPackage.licenses
+          .map((license) => license.name?.trim() || resolveCatalogLicenseTypeLabel(license?.type))
+          .filter(Boolean)
       : [];
     return types.length ? types.join(', ') : '?';
-  }, [item]);
+  }, [detailPackage]);
+  const relationSections = useMemo<PackageRelationSection[]>(() => {
+    if (!detailData.relations) {
+      return [];
+    }
+
+    const lookup = new Map(packageItems.map((entry) => [entry.id, entry]));
+    const sections: Array<{ key: PackageRelationSection['key']; ids: string[] }> = [
+      { key: 'requires', ids: detailData.relations.requires || [] },
+      { key: 'recommends', ids: detailData.relations.recommends || [] },
+      { key: 'conflicts', ids: detailData.relations.conflicts || [] },
+      { key: 'similar', ids: detailData.relations.similar || [] },
+      { key: 'replaces', ids: detailData.relations.replaces || [] },
+      { key: 'forkOf', ids: detailData.relations.forkOf ? [detailData.relations.forkOf] : [] },
+    ];
+
+    return sections
+      .filter((section) => section.ids.length > 0)
+      .map((section) => {
+        const relatedItems = section.ids.flatMap((packageId) => {
+          const found = lookup.get(packageId);
+          return found ? [found] : [];
+        });
+        const missingIds = section.ids.filter((packageId) => !lookup.has(packageId));
+        return {
+          key: section.key,
+          items: relatedItems,
+          missingIds,
+        };
+      });
+  }, [detailData.relations, packageItems]);
+  const relationsError = detailData.relationsError;
+  const relationsLoading = detailData.loading;
+  const contentDescription: PackageMarkdownState = useMemo(
+    () => ({
+      html: description.descriptionHtml,
+      loading: description.descriptionLoading,
+      error: description.descriptionError,
+    }),
+    [description.descriptionError, description.descriptionHtml, description.descriptionLoading],
+  );
+  const contentNotice: PackageMarkdownState = useMemo(
+    () => ({
+      html: notice.html,
+      loading: notice.loading,
+      error: notice.error,
+    }),
+    [notice.error, notice.html, notice.loading],
+  );
+  const contentChangelog: PackageMarkdownState = useMemo(
+    () => ({
+      html: changelog.html,
+      loading: changelog.loading,
+      error: changelog.error,
+    }),
+    [changelog.error, changelog.html, changelog.loading],
+  );
 
   const handleOpenDescriptionLink = useCallback(async (href: string) => {
     if (!shouldOpenExternalLink(href)) return;
@@ -140,9 +229,13 @@ export default function PackagePage() {
         <PackageContentSection
           item={item}
           carouselImages={carouselImages}
-          descriptionHtml={description.descriptionHtml}
-          descriptionLoading={description.descriptionLoading}
-          descriptionError={description.descriptionError}
+          detailError={detailData.error}
+          description={contentDescription}
+          notice={contentNotice}
+          changelog={contentChangelog}
+          relationSections={relationSections}
+          relationsLoading={relationsLoading}
+          relationsError={relationsError}
           onOpenLink={handleOpenDescriptionLink}
         />
         <PackageSidebarSection
@@ -152,6 +245,8 @@ export default function PackagePage() {
           listLinkState={listLinkState}
           updated={updated}
           latest={latest}
+          originalAuthor={detailPackage?.originalAuthor}
+          packagePageUrl={detailPackage?.packagePageUrl}
           canInstall={canInstall}
           busyAction={actions.busyAction}
           isBusy={actions.isBusy}
