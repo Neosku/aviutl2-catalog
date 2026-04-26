@@ -62,6 +62,13 @@ export interface UsePackageInstallActionsResult {
   busyAction: PackageInstallBusyAction;
   isBusy: boolean;
   progressView: PackageProgressView;
+  noticeModal: {
+    open: boolean;
+    title: string;
+    html: string;
+  };
+  closeNoticeModal: () => void;
+  confirmNoticeModal: () => Promise<void>;
   onDownload: () => Promise<void>;
   onUpdate: () => Promise<void>;
   onRemove: () => Promise<void>;

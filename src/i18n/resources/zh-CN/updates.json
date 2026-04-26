@@ -6,7 +6,8 @@
   },
   "sections": {
     "available": "可用更新",
-    "paused": "已暂停"
+    "paused": "已暂停",
+    "changelog": "更新内容"
   },
   "empty": {
     "available": "没有可更新的包",
@@ -27,5 +28,10 @@
     "bulkFailed": "有 {{count}} 个插件更新失败（例如：{{name}}：{{detail}}）",
     "updateFailed": "更新失败\n\n{{detail}}",
     "pauseSaveFailed": "无法保存更新暂停设置\n\n{{detail}}"
+  },
+  "changelog": {
+    "loading": "正在加载更新日志...",
+    "empty": "没有可显示的更新日志。",
+    "loadFailed": "无法加载更新日志。"
   }
 }

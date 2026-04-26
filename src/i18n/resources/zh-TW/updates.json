@@ -6,7 +6,8 @@
   },
   "sections": {
     "available": "可用更新",
-    "paused": "已暫停"
+    "paused": "已暫停",
+    "changelog": "更新內容"
   },
   "empty": {
     "available": "沒有可更新的套件",
@@ -27,5 +28,10 @@
     "bulkFailed": "{{count}} 個套件更新失敗（例如：{{name}}：{{detail}}）",
     "updateFailed": "更新失敗\n\n{{detail}}",
     "pauseSaveFailed": "無法儲存已暫停的更新設定\n\n{{detail}}"
+  },
+  "changelog": {
+    "loading": "正在載入更新紀錄...",
+    "empty": "沒有可顯示的更新紀錄。",
+    "loadFailed": "無法載入更新紀錄。"
   }
 }

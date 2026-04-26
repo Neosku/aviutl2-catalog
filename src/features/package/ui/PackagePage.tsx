@@ -4,6 +4,7 @@ import * as tauriShell from '@tauri-apps/plugin-shell';
 import { useLocation, useParams } from 'react-router-dom';
 import { APP_ROUTE_PATHS } from '@/routePaths';
 import ErrorDialog from '@/components/ErrorDialog';
+import PackageNoticeModal from '@/components/PackageNoticeModal';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
 import { resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
 import { buildLicenseBody, resolveCatalogLicenseTypeLabel } from '@/utils/licenseTemplates';
@@ -261,6 +262,15 @@ export default function PackagePage() {
       </div>
 
       {openLicense ? <LicenseModal license={openLicense} onClose={() => setOpenLicense(null)} /> : null}
+      <PackageNoticeModal
+        open={actions.noticeModal.open}
+        title={actions.noticeModal.title}
+        html={actions.noticeModal.html}
+        onConfirm={() => {
+          void actions.confirmNoticeModal();
+        }}
+        onClose={actions.closeNoticeModal}
+      />
       <ErrorDialog open={Boolean(actions.error)} message={actions.error} onClose={() => actions.setError('')} />
     </div>
   );

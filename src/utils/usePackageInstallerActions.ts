@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { resolveInstallableCatalogItem } from './catalogInstallItem';
 import type { CatalogDispatch } from './catalogStore';
+import { loadPackageNoticeContent } from './packageNotice';
 import { runPackageInstallAction, runPackageRemoveAction } from './installer';
 import type { InstallProgressPayload, InstallerRunnableItem } from './installer/types';
 import useExclusiveBusyAction from './useExclusiveBusyAction';
@@ -21,6 +22,13 @@ export interface UsePackageInstallerActionsResult {
   busyAction: PackageInstallBusyAction;
   isBusy: boolean;
   progress: InstallProgressPayload;
+  noticeModal: {
+    open: boolean;
+    title: string;
+    html: string;
+  };
+  closeNoticeModal: () => void;
+  confirmNoticeModal: () => Promise<void>;
   onDownload: () => Promise<void>;
   onUpdate: () => Promise<void>;
   onRemove: () => Promise<void>;
@@ -54,6 +62,12 @@ export default function usePackageInstallerActions({
   const [progress, setProgress] = useState<InstallProgressPayload>(() =>
     createInitialInstallProgress(t('common:status.preparing')),
   );
+  const [noticeModal, setNoticeModal] = useState(() => ({
+    open: false,
+    title: '',
+    html: '',
+  }));
+  const [pendingDownload, setPendingDownload] = useState<null | (() => Promise<void>)>(null);
   const { busyAction, beginAction, finishAction, isBusy } = useExclusiveBusyAction<PackageInstallBusyAction, 'idle'>(
     'idle',
   );
@@ -91,9 +105,42 @@ export default function usePackageInstallerActions({
     [beginAction, dispatch, finishAction, item, resolvedMissingInstallerMessage, resetProgress, t],
   );
 
+  const closeNoticeModal = useCallback(() => {
+    setNoticeModal({ open: false, title: '', html: '' });
+    setPendingDownload(null);
+  }, []);
+
+  const confirmNoticeModal = useCallback(async () => {
+    const nextDownload = pendingDownload;
+    closeNoticeModal();
+    if (nextDownload) {
+      await nextDownload();
+    }
+  }, [closeNoticeModal, pendingDownload]);
+
   const onDownload = useCallback(async () => {
+    if (!item) return;
+    try {
+      const notice = await loadPackageNoticeContent(item.id);
+      if (notice?.html) {
+        setPendingDownload(() => async () => {
+          await runInstall('download', t('package:actions.install'));
+        });
+        const itemName =
+          'name' in item && typeof item.name === 'string' && item.name.trim() ? item.name.trim() : item.id;
+        setNoticeModal({
+          open: true,
+          title: itemName,
+          html: notice.html,
+        });
+        return;
+      }
+    } catch (noticeError) {
+      setError(t('package:errors.actionFailed', { action: t('package:actions.install'), detail: toErrorMessage(noticeError) }));
+      return;
+    }
     await runInstall('download', t('package:actions.install'));
-  }, [runInstall, t]);
+  }, [item, runInstall, t]);
 
   const onUpdate = useCallback(async () => {
     await runInstall('update', t('package:actions.update'));
@@ -122,6 +169,9 @@ export default function usePackageInstallerActions({
     busyAction,
     isBusy,
     progress,
+    noticeModal,
+    closeNoticeModal,
+    confirmNoticeModal,
     onDownload,
     onUpdate,
     onRemove,

@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import ErrorDialog from '@/components/ErrorDialog';
 import useUpdatesPage from './hooks/useUpdatesPage';
-import { BulkProgressSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
+import useUpdatesChangelog from './hooks/useUpdatesChangelog';
+import { BulkProgressSection, UpdatesChangelogSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
 import { page, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
@@ -28,6 +29,11 @@ export default function UpdatesPage() {
   } = useUpdatesPage();
 
   const progressStyle = useMemo(() => ({ width: `${bulkPercent}%` }), [bulkPercent]);
+  const changelogItems = useMemo(
+    () => [...activeUpdatableItems, ...pausedUpdatableItems.filter((item) => !activeUpdatableItems.some((active) => active.id === item.id))],
+    [activeUpdatableItems, pausedUpdatableItems],
+  );
+  const changelogEntries = useUpdatesChangelog(changelogItems);
 
   return (
     <>
@@ -72,6 +78,16 @@ export default function UpdatesPage() {
             />
           </div>
         ) : null}
+
+        <div className="mt-6">
+          <UpdatesChangelogSection
+            items={changelogItems}
+            changelogEntries={changelogEntries}
+            title={t('sections.changelog')}
+            emptyMessage={t('changelog.empty')}
+            loadingMessage={t('changelog.loading')}
+          />
+        </div>
       </div>
       <ErrorDialog open={Boolean(error)} message={error} onClose={() => setError('')} />
     </>

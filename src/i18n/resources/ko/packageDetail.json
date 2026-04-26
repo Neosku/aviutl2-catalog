@@ -53,6 +53,11 @@
     "title": "라이선스: {{type}}",
     "bodyMissing": "라이선스 텍스트를 사용할 수 없습니다."
   },
+  "noticeModal": {
+    "title": "주의사항: {{name}}",
+    "cancel": "취소",
+    "continue": "동의하고 설치"
+  },
   "list": {
     "backToList": "{{label}}로 돌아가기"
   },

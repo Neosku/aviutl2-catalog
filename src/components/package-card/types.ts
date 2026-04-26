@@ -45,6 +45,13 @@ export interface UsePackageCardActionsResult {
   busyAction: PackageCardBusyAction;
   isBusy: boolean;
   progress: PackageCardProgressView;
+  noticeModal: {
+    open: boolean;
+    title: string;
+    html: string;
+  };
+  closeNoticeModal: () => void;
+  confirmNoticeModal: () => Promise<void>;
   onDownload: PackageCardActionHandler;
   onUpdate: PackageCardActionHandler;
   onRemove: PackageCardActionHandler;

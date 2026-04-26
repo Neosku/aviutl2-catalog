@@ -53,6 +53,11 @@
     "title": "许可证：{{type}}",
     "bodyMissing": "缺少许可证正文。"
   },
+  "noticeModal": {
+    "title": "注意事项：{{name}}",
+    "cancel": "取消",
+    "continue": "同意并安装"
+  },
   "list": {
     "backToList": "返回 {{label}}"
   },

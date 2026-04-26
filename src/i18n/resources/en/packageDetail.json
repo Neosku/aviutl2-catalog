@@ -53,6 +53,11 @@
     "title": "License: {{type}}",
     "bodyMissing": "License text is not available."
   },
+  "noticeModal": {
+    "title": "Notice: {{name}}",
+    "cancel": "Cancel",
+    "continue": "Install anyway"
+  },
   "list": {
     "backToList": "Back to {{label}}"
   },

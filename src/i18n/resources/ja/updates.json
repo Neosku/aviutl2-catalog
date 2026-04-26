@@ -6,7 +6,8 @@
   },
   "sections": {
     "available": "更新可能",
-    "paused": "一時停止中"
+    "paused": "一時停止中",
+    "changelog": "更新内容"
   },
   "empty": {
     "available": "更新可能なパッケージはありません",
@@ -27,5 +28,10 @@
     "bulkFailed": "{{count}}件のプラグインで更新に失敗しました（例: {{name}}: {{detail}}）",
     "updateFailed": "更新に失敗しました\n\n{{detail}}",
     "pauseSaveFailed": "更新の一時停止設定を保存できませんでした\n\n{{detail}}"
+  },
+  "changelog": {
+    "loading": "更新履歴を読み込み中です…",
+    "empty": "表示できる更新履歴はありません。",
+    "loadFailed": "更新履歴を読み込めませんでした。"
   }
 }

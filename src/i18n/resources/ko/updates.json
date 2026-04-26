@@ -6,7 +6,8 @@
   },
   "sections": {
     "available": "사용 가능한 업데이트",
-    "paused": "일시 중지됨"
+    "paused": "일시 중지됨",
+    "changelog": "변경 내용"
   },
   "empty": {
     "available": "업데이트할 수 있는 패키지가 없습니다",
@@ -27,5 +28,10 @@
     "bulkFailed": "{{count}}개 패키지 업데이트에 실패했습니다(예: {{name}}: {{detail}})",
     "updateFailed": "업데이트 실패\n\n{{detail}}",
     "pauseSaveFailed": "일시 중지된 업데이트 설정을 저장하지 못했습니다\n\n{{detail}}"
+  },
+  "changelog": {
+    "loading": "변경 기록을 불러오는 중...",
+    "empty": "표시할 변경 기록이 없습니다.",
+    "loadFailed": "변경 기록을 불러오지 못했습니다."
   }
 }

@@ -14,11 +14,12 @@ export default function usePackageInstallActions({
 }: UsePackageInstallActionsParams): UsePackageInstallActionsResult {
   const { t } = useTranslation(['package', 'common']);
   const idleLabel = t('common:status.preparing');
-  const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageInstallerActions({
-    item,
-    dispatch,
-    missingInstallerMessage: t('actions.missingInstaller'),
-  });
+  const { error, setError, busyAction, isBusy, progress, noticeModal, closeNoticeModal, confirmNoticeModal, onDownload, onUpdate, onRemove } =
+    usePackageInstallerActions({
+      item,
+      dispatch,
+      missingInstallerMessage: t('actions.missingInstaller'),
+    });
   const progressView =
     busyAction === 'download' || busyAction === 'update'
       ? {
@@ -34,6 +35,9 @@ export default function usePackageInstallActions({
     busyAction,
     isBusy,
     progressView,
+    noticeModal,
+    closeNoticeModal,
+    confirmNoticeModal,
     onDownload,
     onUpdate,
     onRemove,

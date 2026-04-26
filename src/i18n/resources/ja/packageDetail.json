@@ -53,6 +53,11 @@
     "title": "ライセンス: {{type}}",
     "bodyMissing": "ライセンス本文がありません。"
   },
+  "noticeModal": {
+    "title": "注意事項：{{name}}",
+    "cancel": "キャンセル",
+    "continue": "同意してインストール"
+  },
   "list": {
     "backToList": "{{label}}に戻る"
   },

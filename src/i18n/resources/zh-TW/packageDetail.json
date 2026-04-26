@@ -53,6 +53,11 @@
     "title": "授權：{{type}}",
     "bodyMissing": "沒有可用的授權文字。"
   },
+  "noticeModal": {
+    "title": "注意事項：{{name}}",
+    "cancel": "取消",
+    "continue": "同意並安裝"
+  },
   "list": {
     "backToList": "返回 {{label}}"
   },

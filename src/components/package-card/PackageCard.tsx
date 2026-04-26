@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import PackageNoticeModal from '@/components/PackageNoticeModal';
 import { buildPackageDetailHref } from '@/features/package/model/helpers';
 import { formatDate } from '@/utils/text';
 import ErrorDialog from '../ErrorDialog';
@@ -15,7 +16,8 @@ export default function PackageCard({
   onBeforeOpenDetail,
 }: PackageCardProps) {
   const navigate = useNavigate();
-  const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageCardActions(item);
+  const { error, setError, busyAction, isBusy, progress, noticeModal, closeNoticeModal, confirmNoticeModal, onDownload, onUpdate, onRemove } =
+    usePackageCardActions(item);
 
   const thumbnail = pickThumbnail(item);
   const category = typeof item.packageType === 'string' ? item.packageType : '';
@@ -51,6 +53,15 @@ export default function PackageCard({
         onRemove={onRemove}
       />
       <ErrorDialog open={Boolean(error)} message={error} onClose={() => setError('')} />
+      <PackageNoticeModal
+        open={noticeModal.open}
+        title={noticeModal.title}
+        html={noticeModal.html}
+        onConfirm={() => {
+          void confirmNoticeModal();
+        }}
+        onClose={closeNoticeModal}
+      />
     </>
   );
 }

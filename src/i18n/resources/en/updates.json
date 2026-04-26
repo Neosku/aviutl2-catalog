@@ -6,7 +6,8 @@
   },
   "sections": {
     "available": "Available updates",
-    "paused": "Paused"
+    "paused": "Paused",
+    "changelog": "What changed"
   },
   "empty": {
     "available": "No packages are ready to update",
@@ -27,5 +28,10 @@
     "bulkFailed": "Failed to update {{count}} packages (example: {{name}}: {{detail}})",
     "updateFailed": "Update failed\n\n{{detail}}",
     "pauseSaveFailed": "Could not save paused update settings\n\n{{detail}}"
+  },
+  "changelog": {
+    "loading": "Loading changelog...",
+    "empty": "No changelog entries are available.",
+    "loadFailed": "Failed to load the changelog."
   }
 }

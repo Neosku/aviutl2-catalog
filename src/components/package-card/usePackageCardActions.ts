@@ -6,11 +6,12 @@ import type { PackageCardItem, PackageCardProgressView, UsePackageCardActionsRes
 export default function usePackageCardActions(item: PackageCardItem): UsePackageCardActionsResult {
   const { t } = useTranslation(['package', 'common']);
   const dispatch = useCatalogDispatch();
-  const { error, setError, busyAction, isBusy, progress, onDownload, onUpdate, onRemove } = usePackageInstallerActions({
-    item,
-    dispatch,
-    missingInstallerMessage: t('actions.missingInstaller'),
-  });
+  const { error, setError, busyAction, isBusy, progress, noticeModal, closeNoticeModal, confirmNoticeModal, onDownload, onUpdate, onRemove } =
+    usePackageInstallerActions({
+      item,
+      dispatch,
+      missingInstallerMessage: t('actions.missingInstaller'),
+    });
   const progressView: PackageCardProgressView = {
     ratio: progress.ratio ?? 0,
     label: progress.label ?? t('common:status.preparing'),
@@ -22,6 +23,9 @@ export default function usePackageCardActions(item: PackageCardItem): UsePackage
     busyAction,
     isBusy,
     progress: progressView,
+    noticeModal,
+    closeNoticeModal,
+    confirmNoticeModal,
     onDownload,
     onUpdate,
     onRemove,
