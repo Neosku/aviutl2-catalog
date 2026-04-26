@@ -136,7 +136,9 @@ export default function usePackageInstallerActions({
         return;
       }
     } catch (noticeError) {
-      setError(t('package:errors.actionFailed', { action: t('package:actions.install'), detail: toErrorMessage(noticeError) }));
+      setError(
+        t('package:errors.actionFailed', { action: t('package:actions.install'), detail: toErrorMessage(noticeError) }),
+      );
       return;
     }
     await runInstall('download', t('package:actions.install'));

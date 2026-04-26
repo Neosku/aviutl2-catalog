@@ -9,11 +9,7 @@ interface UsePackageMarkdownParams {
   loadFailedMessage: string;
 }
 
-export default function usePackageMarkdown({
-  markdownSource,
-  baseUrl,
-  loadFailedMessage,
-}: UsePackageMarkdownParams) {
+export default function usePackageMarkdown({ markdownSource, baseUrl, loadFailedMessage }: UsePackageMarkdownParams) {
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

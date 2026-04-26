@@ -30,7 +30,10 @@ export default function UpdatesPage() {
 
   const progressStyle = useMemo(() => ({ width: `${bulkPercent}%` }), [bulkPercent]);
   const changelogItems = useMemo(
-    () => [...activeUpdatableItems, ...pausedUpdatableItems.filter((item) => !activeUpdatableItems.some((active) => active.id === item.id))],
+    () => [
+      ...activeUpdatableItems,
+      ...pausedUpdatableItems.filter((item) => !activeUpdatableItems.some((active) => active.id === item.id)),
+    ],
     [activeUpdatableItems, pausedUpdatableItems],
   );
   const changelogEntries = useUpdatesChangelog(changelogItems);

@@ -187,7 +187,9 @@ export default function PackageContentSection({
                   </div>
                 ) : null}
                 {section.missingIds.length ? (
-                  <p className={text.bodySmMuted}>{t('relations.missingPackages', { ids: section.missingIds.join(', ') })}</p>
+                  <p className={text.bodySmMuted}>
+                    {t('relations.missingPackages', { ids: section.missingIds.join(', ') })}
+                  </p>
                 ) : null}
               </div>
             ))}

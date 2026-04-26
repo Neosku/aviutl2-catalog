@@ -9,11 +9,7 @@ import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
 import { resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
 import { buildLicenseBody, resolveCatalogLicenseTypeLabel } from '@/utils/licenseTemplates';
 import { HOME_LIST_RESTORE_STATE } from '@/layouts/app-shell/types';
-import {
-  readPackageDetailSource,
-  readPackageListSearchFromDetail,
-  shouldOpenExternalLink,
-} from '../model/helpers';
+import { readPackageDetailSource, readPackageListSearchFromDetail, shouldOpenExternalLink } from '../model/helpers';
 import type { PackageLicenseEntry, PackageMarkdownState, PackageRelationSection } from '../model/types';
 import LicenseModal from './components/LicenseModal';
 import usePackageAutoInstall from './hooks/usePackageAutoInstall';

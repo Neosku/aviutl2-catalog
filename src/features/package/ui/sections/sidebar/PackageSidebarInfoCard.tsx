@@ -13,7 +13,14 @@ import { cn } from '@/lib/cn';
 
 type PackageSidebarInfoCardProps = Pick<
   PackageSidebarSectionProps,
-  'item' | 'updated' | 'latest' | 'originalAuthor' | 'packagePageUrl' | 'renderableLicenses' | 'licenseTypesLabel' | 'onOpenLicense'
+  | 'item'
+  | 'updated'
+  | 'latest'
+  | 'originalAuthor'
+  | 'packagePageUrl'
+  | 'renderableLicenses'
+  | 'licenseTypesLabel'
+  | 'onOpenLicense'
 >;
 
 const detailMetaChipVariant = { variant: 'secondary', size: 'chip', radius: 'full' } as const;

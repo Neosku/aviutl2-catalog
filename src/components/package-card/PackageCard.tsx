@@ -16,8 +16,19 @@ export default function PackageCard({
   onBeforeOpenDetail,
 }: PackageCardProps) {
   const navigate = useNavigate();
-  const { error, setError, busyAction, isBusy, progress, noticeModal, closeNoticeModal, confirmNoticeModal, onDownload, onUpdate, onRemove } =
-    usePackageCardActions(item);
+  const {
+    error,
+    setError,
+    busyAction,
+    isBusy,
+    progress,
+    noticeModal,
+    closeNoticeModal,
+    confirmNoticeModal,
+    onDownload,
+    onUpdate,
+    onRemove,
+  } = usePackageCardActions(item);
 
   const thumbnail = pickThumbnail(item);
   const category = typeof item.packageType === 'string' ? item.packageType : '';

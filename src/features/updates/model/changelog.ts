@@ -57,5 +57,8 @@ export function sliceRelevantChangelogMarkdown(item: UpdatesItem, markdown: stri
     })
     .filter((section) => targetVersions.has(section.version) && section.markdown);
 
-  return sections.map((section) => section.markdown).join('\n\n').trim();
+  return sections
+    .map((section) => section.markdown)
+    .join('\n\n')
+    .trim();
 }

@@ -6,10 +6,7 @@ interface UsePackageDescriptionParams {
   baseUrl: string;
 }
 
-export default function usePackageDescription({
-  descriptionSource,
-  baseUrl,
-}: UsePackageDescriptionParams) {
+export default function usePackageDescription({ descriptionSource, baseUrl }: UsePackageDescriptionParams) {
   const { t } = useTranslation('package');
   const { html, loading, error } = usePackageMarkdown({
     markdownSource: descriptionSource,

@@ -27,7 +27,10 @@ export default function PackageNoticeModal({ open, title, html, onConfirm, onClo
           </h3>
         </div>
         <div className="px-6 py-4">
-          <div className="prose prose-slate max-h-[60vh] max-w-none overflow-auto dark:prose-invert" dangerouslySetInnerHTML={htmlMarkup} />
+          <div
+            className="prose prose-slate max-h-[60vh] max-w-none overflow-auto dark:prose-invert"
+            dangerouslySetInnerHTML={htmlMarkup}
+          />
         </div>
         <div className={layout.footerEnd}>
           <Button type="button" variant="secondary" onClick={onClose}>

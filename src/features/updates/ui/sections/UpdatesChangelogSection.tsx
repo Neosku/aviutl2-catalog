@@ -54,7 +54,9 @@ export default function UpdatesChangelogSection({
                   {entry.error}
                 </p>
               ) : null}
-              {entry && !entry.loading && !entry.error && entry.empty ? <p className={text.mutedSm}>{emptyMessage}</p> : null}
+              {entry && !entry.loading && !entry.error && entry.empty ? (
+                <p className={text.mutedSm}>{emptyMessage}</p>
+              ) : null}
               {entry?.html ? <UpdatesChangelogBody html={entry.html} /> : null}
             </article>
           );
