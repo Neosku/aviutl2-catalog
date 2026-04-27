@@ -67,3 +67,4 @@ export type SourceMeta = z.infer<typeof sourceMetaSchema>;
 export type SourceContent = z.infer<typeof sourceContentSchema>;
 export type SourceInstall = z.infer<typeof sourceInstallSchema>;
 export type SourceVersions = z.infer<typeof sourceVersionsSchema>;
+export type SourcePackage = z.infer<typeof sourcePackageSchema>;

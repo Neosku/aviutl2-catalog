@@ -7,8 +7,16 @@ import { catalogListSchema, type CatalogList } from '@/utils/catalog-schema/dist
 import { manifestSchema, type CatalogManifest } from '@/utils/catalog-schema/distribution/manifestSchema';
 import { catalogMetricsSchema, type CatalogMetrics } from '@/utils/catalog-schema/distribution/metricsSchema';
 import { catalogVersionsSchema, type CatalogVersions } from '@/utils/catalog-schema/distribution/versionsSchema';
+import {
+  sourceContentSchema,
+  sourceInstallSchema,
+  sourceMetaSchema,
+  sourceVersionsSchema,
+  type SourcePackage,
+} from '@/utils/catalog-schema/source/sourceSchema';
 import { resolveRequestedLocale } from '@/utils/catalog-schema/utils/localeResolver';
-import { isUrlLike, resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
+import { isUrlLike, joinPath, resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
+import { resolveSourcePackagePaths, type SourcePackagePathSet } from '@/utils/catalog-schema/utils/sourcePathResolver';
 import { formatUnknownError } from '@/utils/errors';
 import { ipc } from '@/utils/invokeIpc';
 import { logError } from '@/utils/logging';
@@ -82,16 +90,30 @@ export type CatalogDetailLoadResult = {
   };
 };
 
+export type SourcePackageLoadResult = {
+  package: SourcePackage;
+  locale: string;
+  paths: SourcePackagePathSet;
+  packageBasePath: string;
+  markdown: {
+    description: string;
+    changelog: string;
+    notice: string;
+  };
+};
+
 let manifestContextPromise: Promise<ManifestContext> | null = null;
 let installCatalogPromise: Promise<CatalogInstallLoadResult> | null = null;
 const detailCatalogPromises = new Map<string, Promise<CatalogDetailLoadResult>>();
 const markdownPromises = new Map<string, Promise<string>>();
+const sourcePackagePromises = new Map<string, Promise<SourcePackageLoadResult>>();
 
 export function clearCatalogClientSessionCache(): void {
   manifestContextPromise = null;
   installCatalogPromise = null;
   detailCatalogPromises.clear();
   markdownPromises.clear();
+  sourcePackagePromises.clear();
 }
 
 export async function loadBootstrapCatalog(
@@ -285,6 +307,84 @@ export async function loadMarkdown(
   return await promise;
 }
 
+export async function loadSourcePackage(options: {
+  packageId: string;
+  requestedLocale?: string | null;
+  timeoutMs?: number;
+}): Promise<SourcePackageLoadResult> {
+  const packageId = options.packageId.trim();
+  const localeCandidates = buildSourceLocaleCandidates(options.requestedLocale);
+  const cacheKey = `${packageId}:${localeCandidates.join('|')}`;
+  const cachedPromise = sourcePackagePromises.get(cacheKey);
+  if (cachedPromise) {
+    return await cachedPromise;
+  }
+
+  const promise = loadSourcePackageInternal({
+    packageId,
+    localeCandidates,
+    timeoutMs: normalizeTimeout(options.timeoutMs),
+  }).catch((error: unknown) => {
+    sourcePackagePromises.delete(cacheKey);
+    throw error;
+  });
+  sourcePackagePromises.set(cacheKey, promise);
+  return await promise;
+}
+
+async function loadSourcePackageInternal(options: {
+  packageId: string;
+  localeCandidates: string[];
+  timeoutMs: number;
+}): Promise<SourcePackageLoadResult> {
+  const sourcePackagesRoot = getSourcePackagesRoot();
+  const basePaths = resolveSourcePackagePaths(
+    sourcePackagesRoot,
+    options.packageId,
+    options.localeCandidates[0] ?? 'ja',
+  );
+  const [meta, install, versions] = await Promise.all([
+    readSourceJson(basePaths.metaPath, sourceMetaSchema, options.timeoutMs),
+    readSourceJson(basePaths.installPath, sourceInstallSchema, options.timeoutMs),
+    readSourceJson(basePaths.versionsPath, sourceVersionsSchema, options.timeoutMs),
+  ]);
+
+  let lastError: unknown = null;
+  for (const locale of options.localeCandidates) {
+    const paths = resolveSourcePackagePaths(sourcePackagesRoot, options.packageId, locale);
+    try {
+      const content = await readSourceJson(paths.contentPath, sourceContentSchema, options.timeoutMs);
+      const [description, changelog, notice] = await Promise.all([
+        readSourceMarkdown(paths.packageBasePath, content.description.markdownSource, options.timeoutMs),
+        readOptionalSourceMarkdown(paths.packageBasePath, content.changelog?.markdownSource, options.timeoutMs),
+        readOptionalSourceMarkdown(paths.packageBasePath, content.notice?.markdownSource, options.timeoutMs),
+      ]);
+
+      return {
+        package: {
+          meta,
+          content,
+          install,
+          versions,
+        },
+        locale,
+        paths,
+        packageBasePath: paths.packageBasePath,
+        markdown: {
+          description,
+          changelog,
+          notice,
+        },
+      };
+    } catch (error: unknown) {
+      lastError = error;
+      await logError(`[catalogClient] source package ${options.packageId}/${locale}: ${formatUnknownError(error)}`);
+    }
+  }
+
+  throw new Error(`source package content is unavailable for ${options.packageId}: ${formatUnknownError(lastError)}`);
+}
+
 async function loadManifestContext(timeoutMs: number): Promise<ManifestContext> {
   if (manifestContextPromise) {
     return await manifestContextPromise;
@@ -436,6 +536,60 @@ async function fetchText(url: string, timeoutMs: number): Promise<string> {
   return await response.text();
 }
 
+async function readSourceJson<T>(location: string, schema: ZodType<T>, timeoutMs: number): Promise<T> {
+  const raw = await readTextLocation(location, timeoutMs);
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch (error: unknown) {
+    throw new Error(`failed to parse source JSON ${location}: ${formatUnknownError(error)}`, { cause: error });
+  }
+  return schema.parse(payload);
+}
+
+async function readOptionalSourceMarkdown(
+  packageBasePath: string,
+  markdownSource: string | undefined,
+  timeoutMs: number,
+): Promise<string> {
+  const source = typeof markdownSource === 'string' ? markdownSource.trim() : '';
+  if (!source) {
+    return '';
+  }
+
+  try {
+    return await readTextLocation(resolveSourceAssetPath(packageBasePath, source), timeoutMs);
+  } catch (error: unknown) {
+    await logError(`[catalogClient] source markdown ${source}: ${formatUnknownError(error)}`);
+    return '';
+  }
+}
+
+async function readSourceMarkdown(packageBasePath: string, markdownSource: string, timeoutMs: number): Promise<string> {
+  const source = markdownSource.trim();
+  if (!source) {
+    throw new Error('source markdown path is empty');
+  }
+  return await readTextLocation(resolveSourceAssetPath(packageBasePath, source), timeoutMs);
+}
+
+async function readTextLocation(location: string, timeoutMs: number): Promise<string> {
+  if (isUrlLike(location)) {
+    return await fetchText(location, timeoutMs);
+  }
+  return await tauriFs.readTextFile(location);
+}
+
+function resolveSourceAssetPath(packageBasePath: string, relativePathOrUrl: string): string {
+  if (isUrlLike(relativePathOrUrl)) {
+    return relativePathOrUrl;
+  }
+  if (isUrlLike(packageBasePath)) {
+    return resolveUrl(packageBasePath, relativePathOrUrl);
+  }
+  return joinPath(packageBasePath, relativePathOrUrl);
+}
+
 async function fetchResponse(url: string, timeoutMs: number): Promise<Response> {
   return await new Promise<Response>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -525,6 +679,34 @@ function getRemoteManifestUrl(): string {
       ? window.location.href
       : 'app://localhost/';
   return new URL(raw, origin).toString();
+}
+
+function getSourcePackagesRoot(): string {
+  const raw =
+    typeof import.meta.env.VITE_SOURCE_PACKAGES_ROOT === 'string'
+      ? import.meta.env.VITE_SOURCE_PACKAGES_ROOT.trim()
+      : '';
+  if (!raw) {
+    throw new Error('VITE_SOURCE_PACKAGES_ROOT is not configured');
+  }
+  if (isUrlLike(raw)) {
+    return raw;
+  }
+  return raw;
+}
+
+function buildSourceLocaleCandidates(requestedLocale: string | null | undefined): string[] {
+  const candidates = new Set<string>();
+  const requested = typeof requestedLocale === 'string' ? requestedLocale.trim() : '';
+  if (requested) {
+    candidates.add(requested);
+    const language = requested.split('-')[0]?.trim();
+    if (language) {
+      candidates.add(language);
+    }
+  }
+  candidates.add('ja');
+  return Array.from(candidates);
 }
 
 function normalizeTimeout(timeoutMs: number | undefined): number {

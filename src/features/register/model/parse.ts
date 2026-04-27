@@ -2,6 +2,8 @@
  * カタログデータをフォーム状態へ変換するパーサーモジュール
  */
 import type { CatalogEntry } from '@/utils/catalogSchema';
+import type { Installation } from '@/utils/catalog-schema/shared/installationSchema';
+import type { SourcePackage } from '@/utils/catalog-schema/source/sourceSchema';
 import { arrayToCommaList, buildPreviewUrl, isHttpsUrl, isMarkdownPath } from './helpers';
 import { LICENSE_TEMPLATE_TYPES } from './constants';
 import {
@@ -69,6 +71,7 @@ interface ParsedLicenseCopyrightInput {
 
 interface ParsedLicenseInput {
   type: string;
+  name: string;
   isCustom: boolean;
   licenseBody: string;
   copyrights: ParsedLicenseCopyrightInput[];
@@ -128,6 +131,55 @@ function parseInstallerInput(raw: unknown): ParsedInstallerInput {
   };
 }
 
+function parseSourceInstallerStepInput(
+  step: Installation['installSteps'][number] | Installation['uninstallSteps'][number],
+): ParsedInstallerStepInput {
+  return {
+    action:
+      step.action === 'extractSfx' ? 'extract_sfx' : step.action === 'runAuoSetup' ? 'run_auo_setup' : step.action,
+    path: 'path' in step ? step.path : '',
+    args: 'args' in step ? (step.args ?? []) : [],
+    from: 'from' in step ? (step.from ?? '') : '',
+    to: 'to' in step ? (step.to ?? '') : '',
+    elevate: 'elevate' in step ? step.elevate === true : false,
+  };
+}
+
+function parseSourceInstallerInput(installation: Installation): ParsedInstallerInput {
+  const source = installation.source;
+  const parsedSource: ParsedInstallerSourceInput = {
+    booth: '',
+    direct: '',
+    githubOwner: '',
+    githubRepo: '',
+    githubPattern: '',
+    googleDriveId: '',
+  };
+
+  switch (source.type) {
+    case 'directUrl':
+      parsedSource.direct = source.url;
+      break;
+    case 'booth':
+      parsedSource.booth = source.url;
+      break;
+    case 'githubRelease':
+      parsedSource.githubOwner = source.owner;
+      parsedSource.githubRepo = source.repo;
+      parsedSource.githubPattern = source.pattern;
+      break;
+    case 'googleDrive':
+      parsedSource.googleDriveId = source.id;
+      break;
+  }
+
+  return {
+    source: parsedSource,
+    install: installation.installSteps.map(parseSourceInstallerStepInput),
+    uninstall: installation.uninstallSteps.map(parseSourceInstallerStepInput),
+  };
+}
+
 function parseVersionInput(value: unknown): ParsedVersionInput {
   const version = asRecord(value);
   const files = asArray(version?.file).map((item) => {
@@ -158,6 +210,7 @@ function parseLicenseInput(value: unknown): ParsedLicenseInput | null {
 
   return {
     type: asString(target.type),
+    name: asString(target.name),
     isCustom: asBoolean(target.isCustom),
     licenseBody: asString(target.licenseBody),
     copyrights,
@@ -173,7 +226,10 @@ function parseImagesInput(raw: unknown): { thumbnail: string; info: string[] } {
 }
 
 export function parseInstallerSource(installer: unknown = {}) {
-  const parsed = parseInstallerInput(installer);
+  return installerInputToRegisterState(parseInstallerInput(installer));
+}
+
+function installerInputToRegisterState(parsed: ParsedInstallerInput) {
   const next = createEmptyInstaller();
   if (parsed.source.booth) {
     next.sourceType = 'booth';
@@ -209,6 +265,10 @@ export function parseInstallerSource(installer: unknown = {}) {
     elevate: step.elevate,
   }));
   return next;
+}
+
+export function parseSourceInstallation(installation: Installation) {
+  return installerInputToRegisterState(parseSourceInstallerInput(installation));
 }
 
 export function parseVersions(rawVersions: unknown): RegisterVersion[] {
@@ -257,6 +317,27 @@ export function parseImages(rawImages: unknown, baseUrl = ''): RegisterImageStat
   return { thumbnail, info };
 }
 
+export function parseSourceImages(rawImages: SourcePackage['content']['images'], baseUrl = ''): RegisterImageState {
+  const thumbnailPath = rawImages?.thumbnail ?? '';
+  const thumbnail = thumbnailPath
+    ? {
+        existingPath: thumbnailPath,
+        sourcePath: '',
+        file: null,
+        previewUrl: buildPreviewUrl(thumbnailPath, baseUrl),
+        key: generateKey(),
+      }
+    : null;
+  const info: RegisterImageEntry[] = (rawImages?.detailImages ?? []).map((src) => ({
+    existingPath: src,
+    sourcePath: '',
+    file: null,
+    previewUrl: buildPreviewUrl(src, baseUrl),
+    key: generateKey(),
+  }));
+  return { thumbnail, info };
+}
+
 export function parseLicenses(rawLicenses: unknown, legacyLicense = ''): RegisterLicense[] {
   const parsedLicenses = asArray(rawLicenses)
     .map(parseLicenseInput)
@@ -264,12 +345,13 @@ export function parseLicenses(rawLicenses: unknown, legacyLicense = ''): Registe
     .map((target) => {
       // 旧スキーマ／新スキーマの両方を吸収し、UI では一貫した編集モデルに正規化する。
       const rawType = target.type;
+      const sourceName = target.name.trim();
       const normalizedType = normalizeRegisterLicenseType(rawType);
       const isUnknown = isUnknownRegisterLicenseType(normalizedType);
       const isTemplateType = LICENSE_TEMPLATE_TYPES.has(rawType);
       const type: RegisterLicense['type'] =
         normalizedType || (isTemplateType ? (rawType as RegisterLicense['type']) : 'other');
-      const licenseName = !isUnknown && !isTemplateType ? rawType : '';
+      const licenseName = sourceName || (!isUnknown && !isTemplateType ? rawType : '');
       const licenseBody = target.licenseBody;
       const isCustom =
         target.isCustom ||
@@ -343,6 +425,46 @@ export function entryToForm(item: CatalogEntry | null | undefined, baseUrl = '')
   form.installer = parseInstallerSource(item.installer);
   form.versions = parseVersions(item.version);
   form.images = parseImages(item.images, baseUrl);
+  return form;
+}
+
+export function sourcePackageToForm(args: {
+  sourcePackage: SourcePackage;
+  packageBasePath?: string;
+  descriptionMarkdown?: string;
+}): RegisterPackageForm {
+  const { meta, content, install, versions } = args.sourcePackage;
+  const form = createEmptyPackageForm();
+  form.id = meta.id;
+  form.name = content.name;
+  form.author = content.author;
+  form.originalAuthor = content.originalAuthor ?? '';
+  form.deprecationEnabled = Boolean(content.deprecation);
+  form.deprecationMessage = content.deprecation?.message ?? '';
+  form.type = content.typeLabel || meta.packageType;
+  form.summary = content.description.summary;
+  form.niconiCommonsId = meta.niconiCommonsId ?? '';
+  form.descriptionPath = content.description.markdownSource;
+  form.descriptionMode = 'inline';
+  form.descriptionUrl = '';
+  form.descriptionText = args.descriptionMarkdown ?? '';
+  form.repoURL = meta.packagePageUrl;
+  form.licenses = parseLicenses(content.licenses, '');
+  form.tagsText = arrayToCommaList(content.tags);
+  form.dependenciesText = arrayToCommaList(install.relations?.requires ?? []);
+  form.installer = parseSourceInstallation(install.installation);
+  form.versions = versions.versions.map((version) => ({
+    key: generateKey(),
+    version: version.version,
+    release_date: version.releaseDate,
+    files: version.files.map((file) => ({
+      key: generateKey(),
+      path: file.path,
+      hash: file.xxh128,
+      fileName: '',
+    })),
+  }));
+  form.images = parseSourceImages(content.images, args.packageBasePath ?? '');
   return form;
 }
 

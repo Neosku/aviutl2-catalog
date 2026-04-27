@@ -24,7 +24,7 @@ export {
   createEmptyVersionFile,
 } from './factories';
 
-export { entryToForm, getFileExtension } from './parse';
+export { entryToForm, getFileExtension, sourcePackageToForm } from './parse';
 
 export { applyCatalogJsonPatch } from './catalogPatch';
 export {
