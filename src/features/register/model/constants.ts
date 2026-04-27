@@ -2,6 +2,7 @@
  * パッケージ登録で共有する定数群のモジュール
  */
 import { LICENSE_TEMPLATE_TYPE_VALUES } from '@/utils/licenseTemplates';
+import { catalogPackageIdPattern } from '@/utils/catalog-schema/shared/commonSchema';
 import { installActionRules, uninstallActionRules } from './installerRules';
 import type { RegisterInstallerOption } from './types';
 
@@ -14,7 +15,7 @@ export const SPECIAL_INSTALL_ACTIONS = INSTALL_ACTION_RULE_ENTRIES.filter(([, ru
   ([action]) => action,
 );
 export const UNINSTALL_ACTIONS = Object.keys(uninstallActionRules);
-export const ID_PATTERN = /^[A-Za-z0-9._-]+$/;
+export const ID_PATTERN = catalogPackageIdPattern;
 
 export const ACTION_LABELS: Record<string, string> = {
   download: 'ダウンロード',

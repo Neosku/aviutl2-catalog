@@ -86,6 +86,10 @@ export function createEmptyLicense(): RegisterLicense {
 export function createEmptyPackageForm(): RegisterPackageForm {
   return {
     id: '',
+    legacyId: '',
+    packageRole: 'primaryPackage',
+    addedAt: getTodayInTokyoISO(),
+    sourceLocale: 'ja',
     name: '',
     author: '',
     originalAuthor: '',
@@ -98,10 +102,15 @@ export function createEmptyPackageForm(): RegisterPackageForm {
     descriptionPath: '',
     descriptionMode: 'inline',
     descriptionUrl: '',
+    changelogPath: '',
+    changelogText: '',
+    noticePath: '',
+    noticeText: '',
     repoURL: '',
     licenses: [createEmptyLicense()],
     tagsText: '',
     dependenciesText: '',
+    relations: undefined,
     installer: createEmptyInstaller(),
     versions: [],
     images: {

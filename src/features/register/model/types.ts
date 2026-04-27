@@ -2,6 +2,8 @@
  * register 関連の型定義
  */
 import type { Installer, Version } from '@/utils/catalogSchema';
+import type { CatalogPackageRole } from '@/utils/catalog-schema/shared/commonSchema';
+import type { SourceInstall } from '@/utils/catalog-schema/source/sourceSchema';
 import type { RegisterLicenseType } from '@/utils/licenseTemplates';
 
 export type RegisterDescriptionMode = 'inline' | 'external';
@@ -81,6 +83,10 @@ export interface RegisterInstallerState {
 
 export interface RegisterPackageForm {
   id: string;
+  legacyId: string;
+  packageRole: CatalogPackageRole;
+  addedAt: string;
+  sourceLocale: string;
   name: string;
   author: string;
   originalAuthor: string;
@@ -93,10 +99,15 @@ export interface RegisterPackageForm {
   descriptionPath: string;
   descriptionMode: RegisterDescriptionMode;
   descriptionUrl: string;
+  changelogPath: string;
+  changelogText: string;
+  noticePath: string;
+  noticeText: string;
   repoURL: string;
   licenses: RegisterLicense[];
   tagsText: string;
   dependenciesText: string;
+  relations: SourceInstall['relations'];
   installer: RegisterInstallerState;
   versions: RegisterVersion[];
   images: RegisterImageState;

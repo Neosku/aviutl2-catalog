@@ -146,6 +146,9 @@ export default function useRegisterCatalogState({
         sourcePackage: result.package,
         packageBasePath: result.packageBasePath,
         descriptionMarkdown: result.markdown.description,
+        changelogMarkdown: result.markdown.changelog,
+        noticeMarkdown: result.markdown.notice,
+        locale: result.locale,
       });
       const nextEntry = catalogEntrySchema.parse(
         buildPackageEntry(form, commaListToArray(form.tagsText), {

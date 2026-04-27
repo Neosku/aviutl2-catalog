@@ -7,6 +7,7 @@ import { normalizeRegisterLicenseType } from '@/utils/licenseTemplates';
 import { basename, commaListToArray, computeStableTextHash, generateKey, normalizeArrayText } from './helpers';
 import { normalizeInstallStepState, normalizeUninstallStepState } from './installerRules';
 import { entryToForm, getFileExtension } from './parse';
+import { createEmptyPackageForm } from './factories';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import * as z from 'zod';
@@ -459,7 +460,9 @@ export async function restoreRegisterDraft(record: RegisterDraftRecord): Promise
     info.push(restored);
   }
   const { images: _images, ...rest } = source;
+  const defaults = createEmptyPackageForm();
   const packageForm: RegisterPackageForm = {
+    ...defaults,
     ...(rest as Omit<RegisterPackageForm, 'images'>),
     licenses: Array.isArray(rest.licenses)
       ? rest.licenses.map((license) => ({

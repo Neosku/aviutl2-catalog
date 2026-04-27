@@ -432,10 +432,17 @@ export function sourcePackageToForm(args: {
   sourcePackage: SourcePackage;
   packageBasePath?: string;
   descriptionMarkdown?: string;
+  changelogMarkdown?: string;
+  noticeMarkdown?: string;
+  locale?: string;
 }): RegisterPackageForm {
   const { meta, content, install, versions } = args.sourcePackage;
   const form = createEmptyPackageForm();
   form.id = meta.id;
+  form.legacyId = meta.legacyId;
+  form.packageRole = meta.packageRole;
+  form.addedAt = meta.addedAt;
+  form.sourceLocale = args.locale || 'ja';
   form.name = content.name;
   form.author = content.author;
   form.originalAuthor = content.originalAuthor ?? '';
@@ -448,10 +455,15 @@ export function sourcePackageToForm(args: {
   form.descriptionMode = 'inline';
   form.descriptionUrl = '';
   form.descriptionText = args.descriptionMarkdown ?? '';
+  form.changelogPath = content.changelog?.markdownSource ?? '';
+  form.changelogText = args.changelogMarkdown ?? '';
+  form.noticePath = content.notice?.markdownSource ?? '';
+  form.noticeText = args.noticeMarkdown ?? '';
   form.repoURL = meta.packagePageUrl;
   form.licenses = parseLicenses(content.licenses, '');
   form.tagsText = arrayToCommaList(content.tags);
   form.dependenciesText = arrayToCommaList(install.relations?.requires ?? []);
+  form.relations = install.relations;
   form.installer = parseSourceInstallation(install.installation);
   form.versions = versions.versions.map((version) => ({
     key: generateKey(),

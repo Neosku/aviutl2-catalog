@@ -4,9 +4,8 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as z from 'zod';
-import { catalogEntrySchema, catalogIndexSchema, type CatalogEntry } from '@/utils/catalogSchema';
-import { SUBMIT_ACTIONS, buildPackageEntry, getFileExtension, validatePackageForm } from '../../model/form';
-import { isHttpsUrl } from '../../model/helpers';
+import { catalogEntrySchema, type CatalogEntry } from '@/utils/catalogSchema';
+import { SUBMIT_ACTIONS, buildPackageEntry, buildSourceSubmitPayload, validatePackageForm } from '../../model/form';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RegisterSuccessDialogState, SubmitPackagePayload } from '../types';
 import { SubmitEndpointResponse } from '@/lib/submitEndpoint';
@@ -48,7 +47,7 @@ export default function useRegisterSubmitHandler({
   setSelectedPackageId,
   setSuccessDialog,
 }: UseRegisterSubmitHandlerArgs) {
-  const { t } = useTranslation(['register', 'common']);
+  const { t, i18n } = useTranslation(['register', 'common']);
   const submitPackage = useCallback(
     async ({
       packageForm: targetForm,
@@ -80,39 +79,17 @@ export default function useRegisterSubmitHandler({
         }
       }
       const entry: CatalogEntry = catalogEntrySchema.parse(buildPackageEntry(targetForm, tags, inherited));
-      const useExternalDescription = targetForm.descriptionMode === 'external' && isHttpsUrl(targetForm.descriptionUrl);
       const mergedCatalog =
         existingIndex >= 0
           ? targetCatalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
           : [...targetCatalogItems, entry];
-      const nextCatalog: CatalogEntry[] = catalogIndexSchema.parse(mergedCatalog);
+      const nextCatalog: CatalogEntry[] = mergedCatalog;
+      const sourceSubmitPayload = buildSourceSubmitPayload(targetForm, tags, { locale: i18n.language });
 
       const formData = new FormData();
-      let packageAttachmentCount = 0;
-      const appendAsset = (file: Blob | File, filename: string, countTowardsLimit = true) => {
-        formData.append('files[]', file, filename);
-        if (countTowardsLimit) packageAttachmentCount += 1;
-      };
-      if (!useExternalDescription) {
-        const mdBlob = new Blob([targetForm.descriptionText || ''], { type: 'text/markdown' });
-        appendAsset(mdBlob, `${entry.id || 'package'}.md`);
+      for (const sourceFile of sourceSubmitPayload.sourceFiles) {
+        formData.append('files[]', sourceFile.file, sourceFile.path);
       }
-      if (targetForm.images.thumbnail?.file) {
-        const ext = getFileExtension(targetForm.images.thumbnail.file.name) || 'png';
-        appendAsset(targetForm.images.thumbnail.file, `${entry.id}_thumbnail.${ext}`);
-      }
-      targetForm.images.info.forEach((entryInfo, idx) => {
-        if (entryInfo.file) {
-          const ext = getFileExtension(entryInfo.file.name) || 'png';
-          appendAsset(entryInfo.file, `${entry.id}_${idx + 1}.${ext}`);
-        }
-      });
-      // 外部 description 利用時のみ、md 添付ゼロを許可する。
-      if (packageAttachmentCount === 0 && !useExternalDescription) {
-        throw new Error(t('errors.attachmentsRequired'));
-      }
-      const indexJsonBlob = new Blob([JSON.stringify(nextCatalog, null, 2)], { type: 'application/json' });
-      appendAsset(indexJsonBlob, 'index.json', false);
 
       const actionLabel = existingIndex >= 0 ? t('page.submitActionUpdate') : t('page.submitActionCreate');
       const packageName = String(entry.name || entry.id || '');
@@ -125,6 +102,7 @@ export default function useRegisterSubmitHandler({
         packageName: String(entry.name || ''),
         packageAuthor: String(entry.author || ''),
         labels: ['package', 'from-client'],
+        sourcePaths: sourceSubmitPayload.sourcePaths,
       };
       if (senderName) {
         payload.sender = senderName;
@@ -178,7 +156,7 @@ export default function useRegisterSubmitHandler({
         url: successUrl,
       };
     },
-    [setCatalogItems, setSelectedPackageId, setSuccessDialog, submitEndpoint, t],
+    [i18n.language, setCatalogItems, setSelectedPackageId, setSuccessDialog, submitEndpoint, t],
   );
 
   return { submitPackage };

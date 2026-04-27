@@ -49,6 +49,7 @@ export interface SubmitPackagePayload {
   packageName: string;
   packageAuthor: string;
   labels: string[];
+  sourcePaths?: string[];
   sender?: string;
 }
 

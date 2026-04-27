@@ -40,6 +40,7 @@ export {
   buildInstallerPayload,
   buildInstallerTestItem,
   buildPackageEntry,
+  buildSourceSubmitPayload,
   computeHashFromFile,
   computeLatestVersion,
 } from './build';
