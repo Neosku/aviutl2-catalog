@@ -12,6 +12,7 @@ import {
 import { computeRegisterRelevantHash } from '../../model/registerTestRequirement';
 import type { CatalogEntry } from '@/utils/catalogSchema';
 import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterMarkdownTab } from '../types';
 import useRegisterDraftPersistence from './useRegisterDraftPersistence';
 import useRegisterDraftRestore from './useRegisterDraftRestore';
 
@@ -29,7 +30,7 @@ interface UseRegisterDraftStateArgs {
   applyTagList: (list: string[]) => void;
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
   setPackageSender: React.Dispatch<React.SetStateAction<string>>;
-  setDescriptionTab: React.Dispatch<React.SetStateAction<string>>;
+  setDescriptionTab: React.Dispatch<React.SetStateAction<RegisterMarkdownTab>>;
   setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   setError: React.Dispatch<React.SetStateAction<string>>;
 }

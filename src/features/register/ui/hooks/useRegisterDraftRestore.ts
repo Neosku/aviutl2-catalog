@@ -9,13 +9,14 @@ import {
 import { cleanupImagePreviews } from '../../model/helpers';
 import type { RegisterDraftRecord } from '../../model/draft';
 import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterMarkdownTab } from '../types';
 
 interface UseRegisterDraftRestoreArgs {
   selectedPackageId: string;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
   setPackageSender: React.Dispatch<React.SetStateAction<string>>;
-  setDescriptionTab: React.Dispatch<React.SetStateAction<string>>;
+  setDescriptionTab: React.Dispatch<React.SetStateAction<RegisterMarkdownTab>>;
   setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   setError: React.Dispatch<React.SetStateAction<string>>;
   applyTagList: (list: string[]) => void;

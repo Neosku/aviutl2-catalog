@@ -1,15 +1,16 @@
 /**
  * 詳細説明入力の状態とプレビュー生成を扱う hook
  */
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { renderMarkdown } from '@/utils/markdown';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getDescriptionSourceUrl, isHttpsUrl } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterMarkdownTab } from '../types';
+import useMarkdownPreview from './useMarkdownPreview';
 
 interface UseRegisterDescriptionStateArgs {
   packageForm: RegisterPackageForm;
   catalogBaseUrl: string;
-  descriptionTab: string;
+  descriptionTab: RegisterMarkdownTab;
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
 }
 
@@ -20,14 +21,13 @@ export default function useRegisterDescriptionState({
   setPackageForm,
 }: UseRegisterDescriptionStateArgs) {
   const [descriptionLoading, setDescriptionLoading] = useState(false);
-  const [descriptionPreviewHtml, setDescriptionPreviewHtml] = useState('');
   const [externalDescriptionText, setExternalDescriptionText] = useState('');
   const [externalDescriptionStatus, setExternalDescriptionStatus] = useState('idle');
   const latestDescriptionTextRef = useRef(packageForm.descriptionText);
 
   const isExternalDescription = packageForm.descriptionMode === 'external';
   const descriptionPreviewSource = isExternalDescription ? externalDescriptionText : packageForm.descriptionText;
-  const deferredDescriptionText = useDeferredValue(descriptionTab === 'preview' ? descriptionPreviewSource : '');
+  const descriptionPreviewHtml = useMarkdownPreview(descriptionPreviewSource, descriptionTab);
   const hasExternalDescriptionUrl = isExternalDescription && isHttpsUrl(packageForm.descriptionUrl);
   const isExternalDescriptionLoaded = hasExternalDescriptionUrl && externalDescriptionStatus === 'success';
 
@@ -39,34 +39,6 @@ export default function useRegisterDescriptionState({
   useEffect(() => {
     latestDescriptionTextRef.current = packageForm.descriptionText;
   }, [packageForm.descriptionText]);
-
-  useEffect(() => {
-    if (descriptionTab !== 'preview') {
-      setDescriptionPreviewHtml('');
-      return;
-    }
-    const text = deferredDescriptionText;
-    let cancelled = false;
-    let idleId: number | null = null;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const run = () => {
-      if (cancelled) return;
-      setDescriptionPreviewHtml(renderMarkdown(text));
-    };
-    // 変換はアイドル時に遅延実行し、入力中の体感遅延を抑える。
-    if (typeof requestIdleCallback === 'function') {
-      idleId = requestIdleCallback(run, { timeout: 500 });
-    } else {
-      timeoutId = setTimeout(run, 200);
-    }
-    return () => {
-      cancelled = true;
-      if (idleId != null && typeof cancelIdleCallback === 'function') {
-        cancelIdleCallback(idleId);
-      }
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [descriptionTab, deferredDescriptionText]);
 
   useEffect(() => {
     if (!descriptionSourceUrl) {

@@ -130,6 +130,7 @@
     "summaryTooLong": "요약은 35자 이하로 입력해 주세요.",
     "repoRequired": "패키지 사이트가 필요합니다.",
     "descriptionUrlInvalid": "외부 Markdown URL은 https://로 시작해야 합니다.",
+    "changelogUrlInvalid": "변경 이력의 외부 Markdown URL은 https://로 시작해야 합니다.",
     "descriptionRequired": "설명을 입력해 주세요.",
     "licenseRequired": "최소 하나의 라이선스를 추가해 주세요.",
     "licenseTypeRequired": "라이선스 유형을 선택해 주세요.",

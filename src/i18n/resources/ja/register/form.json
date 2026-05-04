@@ -12,8 +12,12 @@
     "repoUrl": "パッケージのサイト",
     "repoUrlPlaceholder": "パッケージのことが分かるURL",
     "niconiCommonsId": "ニコニ・コモンズID (任意)",
-    "dependencies": "依存パッケージ (現在非対応)",
-    "dependenciesPlaceholder": "パッケージID (カンマ区切り)",
+    "packageRole": "パッケージの分類",
+    "packageRoleHint": "AviUtl2本体に機能を追加せず、他のパッケージの動作にのみ必要なパッケージは「補助パッケージ」を選択してください。",
+    "packageRoleOptions": {
+      "primaryPackage": "メインパッケージ",
+      "supportPackage": "補助パッケージ"
+    },
     "deprecationEnabled": "非推奨として表示する",
     "deprecationMessage": "非推奨メッセージ",
     "deprecationHint": "何らかの理由で非推奨としたい場合に、ここに理由や代替パッケージなどの情報を入力してください。",
@@ -45,6 +49,35 @@
     "externalLoaded": "Markdown読み込み済み",
     "externalError": "Markdownを読み込めませんでした",
     "bodyPlaceholder": "パッケージの詳細情報を入力してください。Markdown形式で記入できます。どこから呼び出せるか（メニュー位置など）や、UIの説明もあわせて記入していただけると助かります。外部サイトの画像も貼り付けることができます。"
+  },
+  "changelog": {
+    "title": "更新履歴",
+    "body": "任意項目です。設定することでアップデートセンター、詳細画面にて更新内容を確認できます。",
+    "formatTitle": "更新履歴の形式",
+    "formatBody": "バージョンごとに `## バージョン名 日付(YYYY-MM-DD)` の見出しを作り、バージョン名は上記のバージョン履歴と合わせてください。\n各バージョンの中では `###` 以降の見出しを使用できます。\n変更内容は箇条書きで書くことを推奨します。\n\n例:",
+    "formatExample": "# 更新履歴\n\n## 2.0.0 2025-07-07\n### 新機能\n- 機能を追加1\n- 機能を追加2\n\n### 修正\n- 修正1",
+    "externalUrl": "外部 Markdown URL"
+  },
+  "noticeMarkdown": {
+    "title": "注意事項",
+    "body": "任意項目です。ダウンロード時にユーザーに表示される注意事項を入力してください。",
+    "placeholder": "注意事項を Markdown で入力してください。"
+  },
+  "markdownControls": {
+    "modeInline": "アプリ内入力",
+    "modeExternal": "外部MDリンク"
+  },
+  "relations": {
+    "title": "関連パッケージ",
+    "description": "いずれも任意項目です。複数ある場合はカンマ区切りで入力してください。",
+    "requires": "必須依存パッケージ",
+    "recommends": "推奨パッケージ",
+    "conflicts": "競合パッケージ",
+    "similar": "類似パッケージ",
+    "replaces": "置き換え対象パッケージ",
+    "forkOf": "fork 元パッケージ",
+    "placeholder": "パッケージID (カンマ区切り)",
+    "forkOfPlaceholder": "パッケージID"
   },
   "license": {
     "title": "ライセンス",

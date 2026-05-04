@@ -130,6 +130,7 @@
     "summaryTooLong": "摘要最多只能為 35 個字元。",
     "repoRequired": "套件網站為必填項目。",
     "descriptionUrlInvalid": "外部 Markdown URL 必須以 https:// 開頭。",
+    "changelogUrlInvalid": "變更記錄的外部 Markdown URL 必須以 https:// 開頭。",
     "descriptionRequired": "請輸入說明。",
     "licenseRequired": "請至少新增一個授權。",
     "licenseTypeRequired": "請選擇授權類型。",

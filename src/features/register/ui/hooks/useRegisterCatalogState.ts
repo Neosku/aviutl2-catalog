@@ -8,13 +8,14 @@ import { applyCatalogJsonPatch as applyCatalogJsonPatchModel } from '../../model
 import { buildPackageEntry, createEmptyPackageForm, sourcePackageToForm } from '../../model/form';
 import { cleanupImagePreviews, commaListToArray, getErrorMessage, normalizeArrayText } from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterMarkdownTab } from '../types';
 import { catalogEntrySchema, type CatalogEntry } from '@/utils/catalogSchema';
 import { loadSourcePackage } from '@/utils/catalogClient';
 import type { PackageItem } from '@/utils/catalogStore';
 
 interface UseRegisterCatalogStateArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
-  setDescriptionTab: React.Dispatch<React.SetStateAction<string>>;
+  setDescriptionTab: React.Dispatch<React.SetStateAction<RegisterMarkdownTab>>;
   setExpandedVersionKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   setError: React.Dispatch<React.SetStateAction<string>>;
   onUserEdit?: () => void;

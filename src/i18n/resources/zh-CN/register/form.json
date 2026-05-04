@@ -12,8 +12,12 @@
     "repoUrl": "包网站",
     "repoUrlPlaceholder": "用于说明该包的 URL",
     "niconiCommonsId": "ニコニ・コモンズID（可选）",
-    "dependencies": "依赖包（暂不支持）",
-    "dependenciesPlaceholder": "包ID（逗号分隔）",
+    "packageRole": "包角色",
+    "packageRoleHint": "若包本身不向 AviUtl2 添加功能，只是其他包运行所必需的包，请选择“辅助包”。",
+    "packageRoleOptions": {
+      "primaryPackage": "主包",
+      "supportPackage": "辅助包"
+    },
     "deprecationEnabled": "显示为已弃用",
     "deprecationMessage": "弃用消息",
     "deprecationHint": "若因某些原因希望将其标记为弃用，请在此处填写原因或替代包等信息。",
@@ -45,6 +49,35 @@
     "externalLoaded": "Markdown已加载",
     "externalError": "无法加载Markdown",
     "bodyPlaceholder": "请输入包的详细信息。支持Markdown格式。若能同时写明调用位置（如菜单位置等）以及UI说明，将大有帮助。也可粘贴外部网站的图片。"
+  },
+  "changelog": {
+    "title": "更新历史",
+    "body": "可选项。设置后，可在更新中心和详情页面查看更新内容。",
+    "formatTitle": "更新历史格式",
+    "formatBody": "请为每个版本创建 `## 版本名 日期(YYYY-MM-DD)` 标题，并确保版本名与上方版本历史一致。\n每个版本内部可使用 `###` 及之后级别的标题。\n建议用项目符号列表填写变更内容。\n\n示例:",
+    "formatExample": "# 更新履歴\n\n## 2.0.0 2025-07-07\n### 新功能\n- 添加功能1\n- 添加功能2\n\n### 修复\n- 修复1",
+    "externalUrl": "外部 Markdown URL"
+  },
+  "noticeMarkdown": {
+    "title": "注意事项",
+    "body": "可选项。请输入下载时向用户显示的注意事项。",
+    "placeholder": "请用 Markdown 输入注意事项。"
+  },
+  "markdownControls": {
+    "modeInline": "应用内输入",
+    "modeExternal": "外部MD链接"
+  },
+  "relations": {
+    "title": "相关包",
+    "description": "均为可选项。多个包 ID 请用逗号分隔。",
+    "requires": "必需依赖包",
+    "recommends": "推荐包",
+    "conflicts": "冲突包",
+    "similar": "相似包",
+    "replaces": "替代对象包",
+    "forkOf": "fork 来源包",
+    "placeholder": "包ID（逗号分隔）",
+    "forkOfPlaceholder": "包ID"
   },
   "license": {
     "title": "许可证",

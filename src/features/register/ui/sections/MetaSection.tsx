@@ -2,6 +2,7 @@
  * パッケージ基本情報登録セクションのコンポーネント
  */
 import { useTranslation } from 'react-i18next';
+import { catalogPackageRoleValues, type CatalogPackageRole } from '@/utils/catalog-schema/shared/commonSchema';
 import type { RegisterMetaSectionProps } from '../types';
 import PackageTypeEditor from './PackageTypeEditor';
 import TagEditor from './TagEditor';
@@ -15,6 +16,7 @@ export default function RegisterMetaSection({
   onTagsChange,
 }: RegisterMetaSectionProps) {
   const { t } = useTranslation(['register', 'common']);
+
   return (
     <section className={surface.cardSection}>
       <div className={layout.rowBetweenWrapGap2}>
@@ -81,6 +83,24 @@ export default function RegisterMetaSection({
             <PackageTypeEditor value={packageForm.type} onChange={(value) => onUpdatePackageField('type', value)} />
           </div>
           <div className="space-y-2">
+            <label className={text.labelSm} htmlFor="package-role">
+              {t('meta.packageRole')}
+            </label>
+            <select
+              id="package-role"
+              name="packageRole"
+              value={packageForm.packageRole}
+              onChange={(e) => onUpdatePackageField('packageRole', e.target.value as CatalogPackageRole)}
+            >
+              {catalogPackageRoleValues.map((role) => (
+                <option key={role} value={role}>
+                  {t(`meta.packageRoleOptions.${role}`)}
+                </option>
+              ))}
+            </select>
+            <p className={text.mutedXs}>{t('meta.packageRoleHint')}</p>
+          </div>
+          <div className="space-y-2">
             <label className={text.labelSm} htmlFor="package-repo-url">
               {t('meta.repoUrl')} <span className="text-red-500">*</span>
             </label>
@@ -104,21 +124,6 @@ export default function RegisterMetaSection({
               value={packageForm.niconiCommonsId}
               onChange={(e) => onUpdatePackageField('niconiCommonsId', e.target.value)}
               placeholder=""
-            />
-          </div>
-        </div>
-
-        <div className={grid.twoColWideGap}>
-          <div className="space-y-2">
-            <label className={text.labelSm} htmlFor="package-dependencies">
-              {t('meta.dependencies')}
-            </label>
-            <input
-              id="package-dependencies"
-              name="dependencies"
-              value={packageForm.dependenciesText}
-              onChange={(e) => onUpdatePackageField('dependenciesText', e.target.value)}
-              placeholder={t('meta.dependenciesPlaceholder')}
             />
           </div>
         </div>

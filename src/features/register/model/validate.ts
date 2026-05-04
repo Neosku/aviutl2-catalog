@@ -124,6 +124,11 @@ export function validatePackageForm(form: RegisterPackageForm): string {
   } else if (!form.descriptionText.trim()) {
     return i18n.t('register:validation.descriptionRequired');
   }
+  const changelogMode = form.changelogMode === 'external' ? 'external' : 'inline';
+  if (changelogMode === 'external') {
+    const externalUrl = String(form.changelogUrl || '').trim();
+    if (!isHttpsUrl(externalUrl)) return i18n.t('register:validation.changelogUrlInvalid');
+  }
   if (!form.licenses.length) return i18n.t('register:validation.licenseRequired');
   // ライセンスは UI 表示都合ではなく、最終 payload の成立条件で検証する。
   for (const license of form.licenses) {

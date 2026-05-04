@@ -392,7 +392,7 @@ export function buildPackageEntry(
     licenses: buildLicensesPayload(form),
     ...(niconiCommonsId ? { niconiCommonsId } : {}),
     tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
-    dependencies: commaListToArray(form.dependenciesText),
+    dependencies: commaListToArray(form.relationRequiresText),
     images: buildImagesPayload(form),
     installer: buildInstallerPayload(form),
     version: buildVersionPayload(form),
@@ -420,14 +420,31 @@ export function buildSourceSubmitPayload(
   const niconiCommonsId = String(form.niconiCommonsId || '').trim();
   const originalAuthor = String(form.originalAuthor || '').trim();
   const deprecationMessage = form.deprecationEnabled ? String(form.deprecationMessage || '').trim() : '';
-  const relationRequires = commaListToArray(form.dependenciesText);
-  const { requires: _previousRequires, ...baseRelations } = form.relations ?? {};
+  const relationRequires = commaListToArray(form.relationRequiresText);
+  const relationRecommends = commaListToArray(form.relationRecommendsText);
+  const relationConflicts = commaListToArray(form.relationConflictsText);
+  const relationSimilar = commaListToArray(form.relationSimilarText);
+  const relationReplaces = commaListToArray(form.relationReplacesText);
+  const relationForkOf = form.relationForkOfText.trim();
   const relations = {
-    ...baseRelations,
     ...(relationRequires.length ? { requires: relationRequires } : {}),
+    ...(relationRecommends.length ? { recommends: relationRecommends } : {}),
+    ...(relationConflicts.length ? { conflicts: relationConflicts } : {}),
+    ...(relationSimilar.length ? { similar: relationSimilar } : {}),
+    ...(relationReplaces.length ? { replaces: relationReplaces } : {}),
+    ...(relationForkOf ? { forkOf: relationForkOf } : {}),
   };
-  const changelogMarkdownSource = form.changelogPath.trim();
-  const noticeMarkdownSource = form.noticePath.trim();
+  const changelogMode = form.changelogMode === 'external' ? 'external' : 'inline';
+  const externalChangelogUrl = String(form.changelogUrl || '').trim();
+  const useExternalChangelog = changelogMode === 'external' && isHttpsUrl(externalChangelogUrl);
+  const inlineChangelogPath = form.changelogPath.trim();
+  const existingInlineChangelogPath = inlineChangelogPath && !isUrlLike(inlineChangelogPath) ? inlineChangelogPath : '';
+  const changelogMarkdownSource = useExternalChangelog
+    ? externalChangelogUrl
+    : changelogMode === 'external'
+      ? ''
+      : existingInlineChangelogPath || (form.changelogText.trim() ? `./changelog/${locale}.md` : '');
+  const noticeMarkdownSource = form.noticePath.trim() || (form.noticeText.trim() ? `./notice/${locale}.md` : '');
   const descriptionUploadPath = resolveSourceMarkdownUploadPath(basePath, descriptionMarkdownSource);
   const changelogUploadPath = resolveSourceMarkdownUploadPath(basePath, changelogMarkdownSource);
   const noticeUploadPath = resolveSourceMarkdownUploadPath(basePath, noticeMarkdownSource);
@@ -480,10 +497,10 @@ export function buildSourceSubmitPayload(
   if (!useExternalDescription && descriptionUploadPath) {
     appendSourceFile(sourceFiles, descriptionUploadPath, createMarkdownFile(form.descriptionText || ''));
   }
-  if (changelogUploadPath && form.changelogText) {
+  if (!useExternalChangelog && changelogUploadPath && changelogMarkdownSource) {
     appendSourceFile(sourceFiles, changelogUploadPath, createMarkdownFile(form.changelogText));
   }
-  if (noticeUploadPath && form.noticeText) {
+  if (noticeUploadPath && noticeMarkdownSource) {
     appendSourceFile(sourceFiles, noticeUploadPath, createMarkdownFile(form.noticeText));
   }
 

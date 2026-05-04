@@ -12,8 +12,12 @@
     "repoUrl": "套件網站",
     "repoUrlPlaceholder": "用來說明此套件的 URL",
     "niconiCommonsId": "Niconi Commons ID（選填）",
-    "dependencies": "相依項目（尚未支援）",
-    "dependenciesPlaceholder": "套件 ID（以逗號分隔）",
+    "packageRole": "套件角色",
+    "packageRoleHint": "若套件本身不向 AviUtl2 新增功能，只是其他套件運作所必需的套件，請選擇「輔助套件」。",
+    "packageRoleOptions": {
+      "primaryPackage": "主要套件",
+      "supportPackage": "輔助套件"
+    },
     "deprecationEnabled": "標記為已棄用",
     "deprecationMessage": "棄用訊息",
     "deprecationHint": "如果你想將此套件標記為已棄用，請在這裡說明原因以及可替代的套件。",
@@ -45,6 +49,35 @@
     "externalLoaded": "Markdown 已載入",
     "externalError": "載入 Markdown 失敗",
     "bodyPlaceholder": "請輸入套件的詳細說明。支援 Markdown。建議說明它在 UI 中出現的位置、如何存取以及如何使用。也可以嵌入外部圖片。"
+  },
+  "changelog": {
+    "title": "變更記錄",
+    "body": "選填項目。設定後，可在更新中心與詳細畫面確認更新內容。",
+    "formatTitle": "變更記錄格式",
+    "formatBody": "請為每個版本建立 `## 版本名 日期(YYYY-MM-DD)` 標題，並確保版本名與上方版本歷史一致。\n每個版本內可使用 `###` 及之後層級的標題。\n建議用項目符號列表撰寫變更內容。\n\n範例:",
+    "formatExample": "# 更新履歴\n\n## 2.0.0 2025-07-07\n### 新功能\n- 新增功能1\n- 新增功能2\n\n### 修正\n- 修正1",
+    "externalUrl": "外部 Markdown URL"
+  },
+  "noticeMarkdown": {
+    "title": "注意事項",
+    "body": "選填項目。請輸入下載時要顯示給使用者的注意事項。",
+    "placeholder": "請用 Markdown 輸入注意事項。"
+  },
+  "markdownControls": {
+    "modeInline": "內嵌輸入",
+    "modeExternal": "外部 MD 連結"
+  },
+  "relations": {
+    "title": "相關套件",
+    "description": "全部都是選填項目。多個套件 ID 請用逗號分隔。",
+    "requires": "必要相依套件",
+    "recommends": "建議套件",
+    "conflicts": "衝突套件",
+    "similar": "類似套件",
+    "replaces": "取代目標套件",
+    "forkOf": "fork 來源套件",
+    "placeholder": "套件 ID（以逗號分隔）",
+    "forkOfPlaceholder": "套件 ID"
   },
   "license": {
     "title": "授權",

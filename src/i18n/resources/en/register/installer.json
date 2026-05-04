@@ -130,6 +130,7 @@
     "summaryTooLong": "Summary must be 35 characters or fewer.",
     "repoRequired": "Package site is required.",
     "descriptionUrlInvalid": "External Markdown URL must start with https://.",
+    "changelogUrlInvalid": "Changelog external Markdown URL must start with https://.",
     "descriptionRequired": "Enter a description.",
     "licenseRequired": "Add at least one license.",
     "licenseTypeRequired": "Select a license type.",

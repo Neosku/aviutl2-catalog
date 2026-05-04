@@ -109,7 +109,7 @@ function toDraftImageSnapshot(entry: RegisterImageEntry): RegisterDraftImageSnap
 }
 
 function toDraftFormSnapshot(form: RegisterPackageForm): RegisterDraftFormSnapshot {
-  const { images: _images, ...rest } = form;
+  const { images: _images, relations: _relations, ...rest } = form as RegisterPackageForm & { relations?: unknown };
   return {
     ...(rest as Omit<RegisterPackageForm, 'images'>),
     images: {
@@ -130,8 +130,12 @@ function normalizeDraftImageSnapshot(
 }
 
 function normalizeDraftFormSnapshot(form: RegisterDraftFormSnapshot) {
+  const { relations: _relations, ...rest } = form as RegisterDraftFormSnapshot & {
+    relations?: { forkOf?: unknown };
+  };
   return {
-    ...form,
+    ...rest,
+    relationForkOfText: String(rest.relationForkOfText || _relations?.forkOf || ''),
     licenses: form.licenses.map((license) => ({
       type: normalizeRegisterLicenseType(license.type),
       licenseName: license.licenseName,
@@ -459,11 +463,18 @@ export async function restoreRegisterDraft(record: RegisterDraftRecord): Promise
     );
     info.push(restored);
   }
-  const { images: _images, ...rest } = source;
+  const {
+    images: _images,
+    relations: legacyRelations,
+    ...rest
+  } = source as RegisterDraftFormSnapshot & {
+    relations?: { forkOf?: unknown };
+  };
   const defaults = createEmptyPackageForm();
   const packageForm: RegisterPackageForm = {
     ...defaults,
     ...(rest as Omit<RegisterPackageForm, 'images'>),
+    relationForkOfText: String(rest.relationForkOfText || legacyRelations?.forkOf || ''),
     licenses: Array.isArray(rest.licenses)
       ? rest.licenses.map((license) => ({
           ...license,

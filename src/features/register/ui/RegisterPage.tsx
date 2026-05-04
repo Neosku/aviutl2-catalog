@@ -8,7 +8,7 @@ import { saveRegisterDraftFromCatalogEntry } from '../model/draft';
 import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm } from '../model/form';
 import { getErrorMessage } from '../model/helpers';
 import type { RegisterPackageForm } from '../model/types';
-import type { DragHandleState, RegisterSuccessDialogState } from './types';
+import type { DragHandleState, RegisterMarkdownTab, RegisterSuccessDialogState } from './types';
 import useRegisterBatchSubmit from './hooks/useRegisterBatchSubmit';
 import useRegisterCatalogState from './hooks/useRegisterCatalogState';
 import useRegisterDescriptionState from './hooks/useRegisterDescriptionState';
@@ -34,7 +34,7 @@ export default function Register() {
   const [packageForm, setPackageForm] = useState<RegisterPackageForm>(createEmptyPackageForm());
   const [packageSender, setPackageSender] = useState('');
   const [userEditToken, setUserEditToken] = useState(0);
-  const [descriptionTab, setDescriptionTab] = useState('edit');
+  const [descriptionTab, setDescriptionTab] = useState<RegisterMarkdownTab>('edit');
   const [expandedVersionKeys, setExpandedVersionKeys] = useState<Set<string>>(() => new Set());
   const [successDialog, setSuccessDialog] = useState<RegisterSuccessDialogState>({
     open: false,
@@ -330,6 +330,13 @@ export default function Register() {
       formHandlers.updatePackageField,
     ],
   );
+  const relationsProps = useMemo(
+    () => ({
+      packageForm,
+      onUpdatePackageField: formHandlers.updatePackageField,
+    }),
+    [packageForm, formHandlers.updatePackageField],
+  );
   const licenseProps = useMemo(
     () => ({
       license: packageForm.licenses[0],
@@ -343,6 +350,20 @@ export default function Register() {
       formHandlers.toggleLicenseTemplate,
       formHandlers.updateCopyright,
     ],
+  );
+  const changelogProps = useMemo(
+    () => ({
+      packageForm,
+      onUpdatePackageField: formHandlers.updatePackageField,
+    }),
+    [packageForm, formHandlers.updatePackageField],
+  );
+  const noticeMarkdownProps = useMemo(
+    () => ({
+      packageForm,
+      onUpdatePackageField: formHandlers.updatePackageField,
+    }),
+    [packageForm, formHandlers.updatePackageField],
   );
   const imagesProps = useMemo(
     () => ({
@@ -532,11 +553,14 @@ export default function Register() {
         onSubmit={batchSubmit.handleSubmitAllDrafts}
         sidebar={sidebarProps}
         meta={metaProps}
+        relations={relationsProps}
         description={descriptionProps}
         license={licenseProps}
+        noticeMarkdown={noticeMarkdownProps}
         images={imagesProps}
         installer={installerProps}
         versions={versionsProps}
+        changelog={changelogProps}
         preview={previewProps}
         tests={testsProps}
         submitBar={submitBarProps}

@@ -8,10 +8,13 @@ import {
   PackageInstallerSection,
   PackageLicenseSection,
   PackageVersionSection,
+  RegisterChangelogSection,
   RegisterDescriptionSection,
   RegisterMetaSection,
+  RegisterNoticeMarkdownSection,
   RegisterNoticeSection,
   RegisterPreviewSection,
+  RegisterRelationsSection,
   RegisterSidebar,
   RegisterSubmitBar,
   RegisterTestSection,
@@ -25,11 +28,14 @@ export default function RegisterFormLayout({
   onSubmit,
   sidebar,
   meta,
+  relations,
   description,
   license,
+  noticeMarkdown,
   images,
   installer,
   versions,
+  changelog,
   preview,
   tests,
   submitBar,
@@ -56,11 +62,14 @@ export default function RegisterFormLayout({
           <div className="space-y-8">
             <RegisterNoticeSection />
             <RegisterMetaSection {...meta} />
+            <RegisterRelationsSection {...relations} />
             <RegisterDescriptionSection {...description} />
             <PackageLicenseSection {...license} />
+            <RegisterNoticeMarkdownSection {...noticeMarkdown} />
             <PackageImagesSection {...images} />
             <PackageInstallerSection {...installer} />
             <PackageVersionSection {...versions} />
+            <RegisterChangelogSection {...changelog} />
             <RegisterPreviewSection {...preview} />
             <RegisterTestSection {...tests} />
             <RegisterSubmitBar {...submitBar} />

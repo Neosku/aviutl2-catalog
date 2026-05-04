@@ -130,6 +130,7 @@
     "summaryTooLong": "概要请控制在35字以内",
     "repoRequired": "包网站为必填项",
     "descriptionUrlInvalid": "外部Markdown的URL请按照 https:// 为开头的格式输入",
+    "changelogUrlInvalid": "更新历史的外部 Markdown URL 请按照 https:// 为开头的格式输入",
     "descriptionRequired": "请输入详细信息",
     "licenseRequired": "请至少添加一个许可证",
     "licenseTypeRequired": "请选择许可证类型",

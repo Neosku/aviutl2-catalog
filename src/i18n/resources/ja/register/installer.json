@@ -130,6 +130,7 @@
     "summaryTooLong": "概要は35文字以内で入力してください",
     "repoRequired": "パッケージのサイトは必須です",
     "descriptionUrlInvalid": "外部Markdown のURLは https:// で始まる形式で入力してください",
+    "changelogUrlInvalid": "更新履歴の外部Markdown URLは https:// で始まる形式で入力してください",
     "descriptionRequired": "詳細を入力してください",
     "licenseRequired": "ライセンスを1件以上追加してください",
     "licenseTypeRequired": "ライセンスの種類を選択してください",

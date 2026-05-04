@@ -17,6 +17,7 @@ import type {
 } from '../model/types';
 
 export type RegisterStepType = 'install' | 'uninstall';
+export type RegisterMarkdownTab = 'edit' | 'preview';
 export interface RefCell<T> {
   current: T;
 }
@@ -217,7 +218,7 @@ export interface RegisterMetaSectionProps {
 
 export interface RegisterDescriptionSectionProps {
   packageForm: RegisterPackageForm;
-  descriptionTab: string;
+  descriptionTab: RegisterMarkdownTab;
   descriptionLoading: boolean;
   descriptionPreviewHtml: string;
   isExternalDescription: boolean;
@@ -225,7 +226,22 @@ export interface RegisterDescriptionSectionProps {
   isExternalDescriptionLoaded: boolean;
   externalDescriptionStatus: string;
   onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
-  onSetDescriptionTab: (tab: string) => void;
+  onSetDescriptionTab: (tab: RegisterMarkdownTab) => void;
+}
+
+export interface RegisterChangelogSectionProps {
+  packageForm: RegisterPackageForm;
+  onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
+}
+
+export interface RegisterNoticeMarkdownSectionProps {
+  packageForm: RegisterPackageForm;
+  onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
+}
+
+export interface RegisterRelationsSectionProps {
+  packageForm: RegisterPackageForm;
+  onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
 }
 
 export interface RegisterPreviewSectionProps {
@@ -276,11 +292,14 @@ export interface RegisterFormLayoutProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   sidebar: RegisterSidebarProps;
   meta: RegisterMetaSectionProps;
+  relations: RegisterRelationsSectionProps;
   description: RegisterDescriptionSectionProps;
   license: PackageLicenseSectionProps;
+  noticeMarkdown: RegisterNoticeMarkdownSectionProps;
   images: PackageImagesSectionProps;
   installer: PackageInstallerSectionProps;
   versions: PackageVersionSectionProps;
+  changelog: RegisterChangelogSectionProps;
   preview: RegisterPreviewSectionProps;
   tests: RegisterTestSectionProps;
   submitBar: RegisterSubmitBarProps;
