@@ -2,7 +2,10 @@
  * パッケージ基本情報登録セクションのコンポーネント
  */
 import { useTranslation } from 'react-i18next';
+import { useMemo } from 'react';
 import { catalogPackageRoleValues, type CatalogPackageRole } from '@/utils/catalog-schema/shared/commonSchema';
+import { SUPPORTED_SOURCE_LOCALES } from '../../model/form';
+import SegmentedOptionGroup from '../components/SegmentedOptionGroup';
 import type { RegisterMetaSectionProps } from '../types';
 import PackageTypeEditor from './PackageTypeEditor';
 import TagEditor from './TagEditor';
@@ -12,10 +15,19 @@ export default function RegisterMetaSection({
   packageForm,
   initialTags,
   tagCandidates,
+  onSwitchSourceLocale,
   onUpdatePackageField,
   onTagsChange,
 }: RegisterMetaSectionProps) {
   const { t } = useTranslation(['register', 'common']);
+  const sourceLocaleOptions = useMemo(
+    () =>
+      SUPPORTED_SOURCE_LOCALES.map((locale) => ({
+        value: locale,
+        label: t(`meta.sourceLocaleOptions.${locale}`),
+      })),
+    [t],
+  );
 
   return (
     <section className={surface.cardSection}>
@@ -23,6 +35,21 @@ export default function RegisterMetaSection({
         <h2 className={text.titleLg}>{t('meta.title')}</h2>
       </div>
       <div className="grid gap-6">
+        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/60 dark:bg-blue-950/25">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <div className={text.labelSm}>{t('meta.sourceLocale')}</div>
+              <p className={text.mutedXs}>{t('meta.sourceLocaleHint')}</p>
+            </div>
+            <SegmentedOptionGroup
+              value={packageForm.sourceLocale}
+              options={sourceLocaleOptions}
+              onChange={onSwitchSourceLocale}
+              ariaLabel={t('meta.sourceLocale')}
+            />
+          </div>
+        </div>
+
         <div className={grid.twoColWideGap}>
           <div className="space-y-2">
             <label className={text.labelSm} htmlFor="package-id">

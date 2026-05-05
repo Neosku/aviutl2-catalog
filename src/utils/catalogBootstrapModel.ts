@@ -31,7 +31,20 @@ type CatalogLicenseCompat = {
   licenseBody: string | null;
 };
 
-export type CatalogBootstrapItem = {
+type CatalogLegacyPackageCompat = {
+  type: string;
+  description: string;
+  repoURL: string;
+  originalAuthor?: string;
+  licenses: CatalogLicenseCompat[];
+  dependencies: string[];
+  images: CatalogImageCompat[];
+  installer?: Installer;
+  version: CatalogVersionCompat[];
+  'latest-version': string;
+};
+
+export type CatalogBootstrapPackage = CatalogLegacyPackageCompat & {
   id: string;
   legacyId: string;
   packageType: string;
@@ -40,25 +53,15 @@ export type CatalogBootstrapItem = {
   name: string;
   author: string;
   typeLabel?: string;
-  type: string;
   tags: string[];
   summary: string;
   latestVersion: string;
   latestReleaseDate: string;
   thumbnailUrl: string;
-  description: string;
   changelog?: {
     markdownSource: string;
   };
-  repoURL: string;
-  originalAuthor?: string;
-  licenses: CatalogLicenseCompat[];
   niconiCommonsId?: string;
-  dependencies: string[];
-  images: CatalogImageCompat[];
-  installer?: Installer;
-  version: CatalogVersionCompat[];
-  'latest-version': string;
   popularity: number;
   trend: number;
   deprecation?: {
@@ -85,7 +88,7 @@ export type CatalogSearchIndexItem = {
   latestReleaseDate: string;
 };
 
-export function buildCatalogBootstrapItems(result: CatalogBootstrapLoadResult): CatalogBootstrapItem[] {
+export function buildCatalogBootstrapPackages(result: CatalogBootstrapLoadResult): CatalogBootstrapPackage[] {
   return result.list.packages.map((listPackage) => {
     const versionEntry = result.versions.packages[listPackage.id];
     const metricEntry = result.metrics.packages[listPackage.id];
@@ -142,7 +145,7 @@ export function buildCatalogBootstrapItems(result: CatalogBootstrapLoadResult): 
   });
 }
 
-export function buildCatalogSearchIndexItems(items: CatalogBootstrapItem[]): CatalogSearchIndexItem[] {
+export function buildCatalogSearchIndexItems(items: CatalogBootstrapPackage[]): CatalogSearchIndexItem[] {
   return items.map((item) => ({
     id: item.id,
     name: item.name,

@@ -4,9 +4,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getSettings } from '@/utils/settings';
-import { saveRegisterDraftFromCatalogEntry } from '../model/draft';
-import { PACKAGE_GUIDE_FALLBACK_URL, createEmptyPackageForm } from '../model/form';
-import { getErrorMessage } from '../model/helpers';
+import { saveRegisterDraft } from '../model/draft';
+import {
+  PACKAGE_GUIDE_FALLBACK_URL,
+  SUPPORTED_SOURCE_LOCALES,
+  captureLocalizedContent,
+  createEmptyPackageForm,
+  importSourceBundleJson,
+  sourcePackageToForm,
+  storeCurrentLocalizedContent,
+  switchRegisterSourceLocale,
+} from '../model/form';
+import { commaListToArray, getErrorMessage } from '../model/helpers';
 import type { RegisterPackageForm } from '../model/types';
 import type { DragHandleState, RegisterMarkdownTab, RegisterSuccessDialogState } from './types';
 import useRegisterBatchSubmit from './hooks/useRegisterBatchSubmit';
@@ -22,9 +31,10 @@ import useRegisterTestState from './hooks/useRegisterTestState';
 import useRegisterVersionHandlers from './hooks/useRegisterVersionHandlers';
 import RegisterFormLayout from './layouts/RegisterFormLayout';
 import { RegisterJsonImportDialog, RegisterSuccessDialog } from './sections';
+import { loadSourcePackage } from '@/utils/catalogClient';
 
 export default function Register() {
-  const { t } = useTranslation(['register', 'common']);
+  const { t, i18n } = useTranslation(['register', 'common']);
   const submitEndpoint = (import.meta.env.VITE_SUBMIT_ENDPOINT || '').trim();
   const packageGuideUrl = (import.meta.env.VITE_PACKAGE_GUIDE_URL || PACKAGE_GUIDE_FALLBACK_URL).trim();
 
@@ -51,10 +61,16 @@ export default function Register() {
   const installListRef = useRef<HTMLDivElement | null>(null);
   const uninstallListRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<DragHandleState>({ active: false, type: '', index: -1 });
+  const packageFormRef = useRef(packageForm);
+  const localeSwitchSeqRef = useRef(0);
 
   const markUserEdit = useCallback(() => {
     setUserEditToken((prev) => prev + 1);
   }, []);
+
+  useEffect(() => {
+    packageFormRef.current = packageForm;
+  }, [packageForm]);
 
   const catalog = useRegisterCatalogState({
     setPackageForm,
@@ -215,35 +231,40 @@ export default function Register() {
 
   const applyCatalogJsonPatch = useCallback(async () => {
     try {
-      const { changedItems } = catalog.applyCatalogJsonPatch(jsonDialogText);
-      if (changedItems.length === 0) {
+      const { packages } = importSourceBundleJson({
+        jsonText: jsonDialogText,
+        requestedLocale: i18n.language,
+      });
+      if (packages.length === 0) {
         setJsonDialogError(t('page.jsonNoChanges'));
         return;
       }
 
-      changedItems.forEach((item) => {
-        saveRegisterDraftFromCatalogEntry({
-          item,
-          catalogBaseUrl: catalog.catalogBaseUrl,
+      packages.forEach(({ packageForm: importedForm, tags }) => {
+        saveRegisterDraft({
+          packageForm: importedForm,
+          tags,
           packageSender,
         });
       });
       draftState.reloadDraftPackages();
       const selectedPackageId = String(catalog.selectedPackageId || '').trim();
-      if (selectedPackageId && changedItems.some((item) => item.id === selectedPackageId)) {
-        await draftState.reapplyDraftForPackage(selectedPackageId);
+      const importedPackageIds = packages.map(({ packageForm: importedForm }) => importedForm.id);
+      const packageIdToRestore =
+        selectedPackageId && importedPackageIds.includes(selectedPackageId) ? selectedPackageId : importedPackageIds[0];
+      if (packageIdToRestore) {
+        await draftState.reapplyDraftForPackage(packageIdToRestore);
       }
       closeJsonDialog();
     } catch (e: unknown) {
       setJsonDialogError(getErrorMessage(e));
     }
   }, [
-    catalog.applyCatalogJsonPatch,
-    catalog.catalogBaseUrl,
     catalog.selectedPackageId,
     closeJsonDialog,
     draftState.reapplyDraftForPackage,
     draftState.reloadDraftPackages,
+    i18n.language,
     jsonDialogText,
     packageSender,
     t,
@@ -262,6 +283,84 @@ export default function Register() {
       setPackageSender(value);
     },
     [markUserEdit],
+  );
+  const switchSourceLocale = useCallback(
+    (locale: string) => {
+      void (async () => {
+        const normalizedLocale = String(locale || '').trim();
+        if (
+          !normalizedLocale ||
+          normalizedLocale === packageForm.sourceLocale ||
+          !SUPPORTED_SOURCE_LOCALES.includes(normalizedLocale as (typeof SUPPORTED_SOURCE_LOCALES)[number])
+        ) {
+          return;
+        }
+        const packageId = packageForm.id.trim();
+        const requestSeq = localeSwitchSeqRef.current + 1;
+        localeSwitchSeqRef.current = requestSeq;
+        const isExistingCatalogPackage =
+          packageId &&
+          packageId === catalog.selectedPackageId &&
+          catalog.catalogItems.some((item) => item.id === packageId);
+        const hasStoredLocale = Boolean(packageForm.localizedContents?.[normalizedLocale]);
+
+        markUserEdit();
+        setDescriptionTab('edit');
+        if (isExistingCatalogPackage && !hasStoredLocale) {
+          try {
+            const result = await loadSourcePackage({
+              packageId,
+              requestedLocale: normalizedLocale,
+            });
+            if (localeSwitchSeqRef.current !== requestSeq) {
+              return;
+            }
+            const latestForm = packageFormRef.current;
+            if (latestForm.id.trim() !== packageId || latestForm.sourceLocale === normalizedLocale) {
+              return;
+            }
+            if (result.locale !== normalizedLocale) {
+              const next = switchRegisterSourceLocale(latestForm, normalizedLocale);
+              setPackageForm(next);
+              catalog.applyTagList(commaListToArray(next.tagsText));
+              return;
+            }
+            const localeForm = sourcePackageToForm({
+              sourcePackage: result.package,
+              packageBasePath: result.packageBasePath,
+              descriptionMarkdown: result.markdown.description,
+              changelogMarkdown: result.markdown.changelog,
+              noticeMarkdown: result.markdown.notice,
+              locale: result.locale,
+            });
+            const stored = storeCurrentLocalizedContent(latestForm);
+            const next = switchRegisterSourceLocale(
+              {
+                ...stored,
+                localizedContents: {
+                  ...stored.localizedContents,
+                  [normalizedLocale]: captureLocalizedContent(localeForm),
+                },
+              },
+              normalizedLocale,
+            );
+            setPackageForm(next);
+            catalog.applyTagList(commaListToArray(next.tagsText));
+          } catch (localeLoadError: unknown) {
+            if (localeSwitchSeqRef.current !== requestSeq) {
+              return;
+            }
+            setError(t('errors.catalogFetch', { detail: getErrorMessage(localeLoadError) }));
+          }
+          return;
+        }
+
+        const next = switchRegisterSourceLocale(packageForm, normalizedLocale);
+        setPackageForm(next);
+        catalog.applyTagList(commaListToArray(next.tagsText));
+      })();
+    },
+    [catalog, markUserEdit, packageForm, setError, t],
   );
   const sidebarProps = useMemo(
     () => ({
@@ -294,6 +393,7 @@ export default function Register() {
       packageForm,
       initialTags: catalog.initialTags,
       tagCandidates: catalog.tagCandidates,
+      onSwitchSourceLocale: switchSourceLocale,
       onUpdatePackageField: formHandlers.updatePackageField,
       onTagsChange: catalog.handleTagsChange,
     }),
@@ -301,6 +401,7 @@ export default function Register() {
       packageForm,
       catalog.initialTags,
       catalog.tagCandidates,
+      switchSourceLocale,
       formHandlers.updatePackageField,
       catalog.handleTagsChange,
     ],

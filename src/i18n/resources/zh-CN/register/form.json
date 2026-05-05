@@ -9,6 +9,15 @@
     "authorPlaceholder": "KENくん",
     "originalAuthor": "原作者名（可选）",
     "originalAuthorPlaceholder": "若存在原始版本，请填写此项",
+    "sourceLocale": "要编辑的语言",
+    "sourceLocaleHint": "编辑此处选择的语言。支持语言为日语、英语、韩语、简体中文和繁体中文。",
+    "sourceLocaleOptions": {
+      "ja": "日语",
+      "en": "英语",
+      "ko": "韩语",
+      "zh-CN": "简体中文",
+      "zh-TW": "繁体中文"
+    },
     "repoUrl": "包网站",
     "repoUrlPlaceholder": "用于说明该包的 URL",
     "niconiCommonsId": "ニコニ・コモンズID（可选）",

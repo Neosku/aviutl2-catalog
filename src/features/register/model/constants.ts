@@ -34,6 +34,8 @@ export const INSTALLER_SOURCES: RegisterInstallerOption[] = [
   { value: 'booth', label: 'BOOTH' },
 ];
 
+export const SUPPORTED_SOURCE_LOCALES = ['ja', 'en', 'ko', 'zh-CN', 'zh-TW'] as const;
+
 export const SUBMIT_ACTIONS = {
   package: 'plugin',
 };

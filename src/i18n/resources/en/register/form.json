@@ -9,6 +9,15 @@
     "authorPlaceholder": "KEN-kun",
     "originalAuthor": "Original author (optional)",
     "originalAuthorPlaceholder": "Enter this when there is an original version",
+    "sourceLocale": "Language to edit",
+    "sourceLocaleHint": "Edit the language selected here. Supported languages are Japanese, English, Korean, Simplified Chinese, and Traditional Chinese.",
+    "sourceLocaleOptions": {
+      "ja": "Japanese",
+      "en": "English",
+      "ko": "Korean",
+      "zh-CN": "Chinese (Simplified)",
+      "zh-TW": "Chinese (Traditional)"
+    },
     "repoUrl": "Package site",
     "repoUrlPlaceholder": "A URL that explains the package",
     "niconiCommonsId": "Niconi Commons ID (optional)",

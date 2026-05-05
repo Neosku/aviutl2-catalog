@@ -9,6 +9,15 @@
     "authorPlaceholder": "KENくん",
     "originalAuthor": "オリジナル作者名 (任意)",
     "originalAuthorPlaceholder": "オリジナル版がある場合に入力",
+    "sourceLocale": "編集を行う言語",
+    "sourceLocaleHint": "ここで選択した言語を編集します。対応言語は日本語・英語・韓国語・中国語 (簡体字/繁体字) です。",
+    "sourceLocaleOptions": {
+      "ja": "日本語",
+      "en": "英語",
+      "ko": "韓国語",
+      "zh-CN": "中国語 (簡体字)",
+      "zh-TW": "中国語 (繁体字)"
+    },
     "repoUrl": "パッケージのサイト",
     "repoUrlPlaceholder": "パッケージのことが分かるURL",
     "niconiCommonsId": "ニコニ・コモンズID (任意)",

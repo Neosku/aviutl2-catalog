@@ -1,10 +1,17 @@
 /**
  * 入力状態を API 送信用ペイロードへ構築するモジュール
  */
-import { commaListToArray, isHttpsUrl, normalizeArrayText } from './helpers';
+import { arrayToCommaList, commaListToArray, isHttpsUrl, normalizeArrayText } from './helpers';
+import { SUPPORTED_SOURCE_LOCALES } from './constants';
 import { buildInstallerSource, serializeInstallStep, serializeUninstallStep } from './installerRules';
 import { getFileExtension } from './parse';
-import type { RegisterInstallerTestItem, RegisterPackageForm } from './types';
+import { captureLocalizedContent } from './localizedContent';
+import type {
+  RegisterInstallerTestItem,
+  RegisterLicense,
+  RegisterLocalizedContentForm,
+  RegisterPackageForm,
+} from './types';
 import type { CatalogEntry, Image, Installer, License, Version } from '@/utils/catalogSchema';
 import { catalogPackageTypeSchema, type CatalogPackageType } from '@/utils/catalog-schema/shared/commonSchema';
 import type { CatalogLicense } from '@/utils/catalog-schema/shared/licenseSchema';
@@ -14,6 +21,7 @@ import {
   sourceInstallSchema,
   sourceMetaSchema,
   sourceVersionsSchema,
+  type SourceContent,
 } from '@/utils/catalog-schema/source/sourceSchema';
 import { splitPackageId } from '@/utils/catalog-schema/utils/packageId';
 import { isUrlLike, joinPath } from '@/utils/catalog-schema/utils/pathUtils';
@@ -119,8 +127,8 @@ function buildVersionPayload(form: RegisterPackageForm): Version[] {
   }));
 }
 
-function buildSourceLicensesPayload(form: RegisterPackageForm): CatalogLicense[] {
-  return (form.licenses || [])
+function buildSourceLicensesPayload(licenses: RegisterLicense[]): CatalogLicense[] {
+  return (licenses || [])
     .map((license): CatalogLicense | null => {
       const rawType = String(license.type || '').trim();
       const licenseName = String(license.licenseName || '').trim();
@@ -262,9 +270,10 @@ function normalizeSourcePackageType(value: unknown): CatalogPackageType {
 
 function resolveSourceLocale(form: RegisterPackageForm, fallbackLocale: string): string {
   const sourceLocale = String(form.sourceLocale || '').trim();
-  if (sourceLocale) return sourceLocale;
+  if (SUPPORTED_SOURCE_LOCALES.includes(sourceLocale as (typeof SUPPORTED_SOURCE_LOCALES)[number])) return sourceLocale;
   const locale = String(fallbackLocale || '').trim();
-  return locale || 'ja';
+  if (SUPPORTED_SOURCE_LOCALES.includes(locale as (typeof SUPPORTED_SOURCE_LOCALES)[number])) return locale;
+  return 'ja';
 }
 
 function buildPackageSourceBasePath(packageId: string): string {
@@ -349,6 +358,80 @@ export function computeLatestVersion(form: RegisterPackageForm): string {
   return last?.version?.trim() || '';
 }
 
+function getCurrentLocalizedContent(form: RegisterPackageForm, tags: string[]): RegisterLocalizedContentForm {
+  return {
+    ...captureLocalizedContent(form),
+    tagsText: arrayToCommaList(Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText)),
+  };
+}
+
+function buildLocalizedSourceContent(args: {
+  localized: RegisterLocalizedContentForm;
+  locale: string;
+  imagePayload: { thumbnail?: string; detailImages?: string[] } | undefined;
+}): SourceContent {
+  const { localized, locale, imagePayload } = args;
+  const packageType = normalizeSourcePackageType(localized.type);
+  const typeLabel = packageType === 'custom' ? localized.type.trim() : '';
+  const descriptionMode = localized.descriptionMode === 'external' ? 'external' : 'inline';
+  const externalDescriptionUrl = String(localized.descriptionUrl || '').trim();
+  const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
+  const descriptionMarkdownSource = useExternalDescription ? externalDescriptionUrl : `./docs/${locale}.md`;
+  const originalAuthor = String(localized.originalAuthor || '').trim();
+  const deprecationMessage = localized.deprecationEnabled ? String(localized.deprecationMessage || '').trim() : '';
+  const changelogMode = localized.changelogMode === 'external' ? 'external' : 'inline';
+  const externalChangelogUrl = String(localized.changelogUrl || '').trim();
+  const useExternalChangelog = changelogMode === 'external' && isHttpsUrl(externalChangelogUrl);
+  const inlineChangelogPath = String(localized.changelogPath || '').trim();
+  const existingInlineChangelogPath = inlineChangelogPath && !isUrlLike(inlineChangelogPath) ? inlineChangelogPath : '';
+  const changelogMarkdownSource = useExternalChangelog
+    ? externalChangelogUrl
+    : changelogMode === 'external'
+      ? ''
+      : existingInlineChangelogPath || (localized.changelogText.trim() ? `./changelog/${locale}.md` : '');
+  const noticeMarkdownSource =
+    String(localized.noticePath || '').trim() || (localized.noticeText.trim() ? `./notice/${locale}.md` : '');
+
+  return sourceContentSchema.parse({
+    name: localized.name.trim(),
+    author: localized.author.trim(),
+    ...(originalAuthor ? { originalAuthor } : {}),
+    tags: commaListToArray(localized.tagsText),
+    ...(typeLabel ? { typeLabel } : {}),
+    description: {
+      summary: localized.summary.trim(),
+      markdownSource: descriptionMarkdownSource,
+    },
+    ...(changelogMarkdownSource ? { changelog: { markdownSource: changelogMarkdownSource } } : {}),
+    ...(noticeMarkdownSource ? { notice: { markdownSource: noticeMarkdownSource } } : {}),
+    ...(deprecationMessage ? { deprecation: { message: deprecationMessage } } : {}),
+    licenses: buildSourceLicensesPayload(localized.licenses),
+    ...(imagePayload ? { images: imagePayload } : {}),
+  });
+}
+
+function appendLocalizedMarkdownFiles(args: {
+  sourceFiles: RegisterSourceSubmitFile[];
+  basePath: string;
+  content: SourceContent;
+  localized: RegisterLocalizedContentForm;
+}): void {
+  const descriptionUploadPath = resolveSourceMarkdownUploadPath(args.basePath, args.content.description.markdownSource);
+  if (descriptionUploadPath) {
+    appendSourceFile(args.sourceFiles, descriptionUploadPath, createMarkdownFile(args.localized.descriptionText || ''));
+  }
+  const changelogMarkdownSource = args.content.changelog?.markdownSource ?? '';
+  const changelogUploadPath = resolveSourceMarkdownUploadPath(args.basePath, changelogMarkdownSource);
+  if (changelogUploadPath && changelogMarkdownSource) {
+    appendSourceFile(args.sourceFiles, changelogUploadPath, createMarkdownFile(args.localized.changelogText));
+  }
+  const noticeMarkdownSource = args.content.notice?.markdownSource ?? '';
+  const noticeUploadPath = resolveSourceMarkdownUploadPath(args.basePath, noticeMarkdownSource);
+  if (noticeUploadPath && noticeMarkdownSource) {
+    appendSourceFile(args.sourceFiles, noticeUploadPath, createMarkdownFile(args.localized.noticeText));
+  }
+}
+
 function toFiniteNumber(value: unknown, fallback = 0): number {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -412,14 +495,7 @@ export function buildSourceSubmitPayload(
   const basePath = buildPackageSourceBasePath(id);
   const sourceFiles: RegisterSourceSubmitFile[] = [];
   const packageType = normalizeSourcePackageType(form.type);
-  const typeLabel = packageType === 'custom' ? form.type.trim() : '';
-  const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
-  const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
-  const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
-  const descriptionMarkdownSource = useExternalDescription ? externalDescriptionUrl : `./docs/${locale}.md`;
   const niconiCommonsId = String(form.niconiCommonsId || '').trim();
-  const originalAuthor = String(form.originalAuthor || '').trim();
-  const deprecationMessage = form.deprecationEnabled ? String(form.deprecationMessage || '').trim() : '';
   const relationRequires = commaListToArray(form.relationRequiresText);
   const relationRecommends = commaListToArray(form.relationRecommendsText);
   const relationConflicts = commaListToArray(form.relationConflictsText);
@@ -434,21 +510,6 @@ export function buildSourceSubmitPayload(
     ...(relationReplaces.length ? { replaces: relationReplaces } : {}),
     ...(relationForkOf ? { forkOf: relationForkOf } : {}),
   };
-  const changelogMode = form.changelogMode === 'external' ? 'external' : 'inline';
-  const externalChangelogUrl = String(form.changelogUrl || '').trim();
-  const useExternalChangelog = changelogMode === 'external' && isHttpsUrl(externalChangelogUrl);
-  const inlineChangelogPath = form.changelogPath.trim();
-  const existingInlineChangelogPath = inlineChangelogPath && !isUrlLike(inlineChangelogPath) ? inlineChangelogPath : '';
-  const changelogMarkdownSource = useExternalChangelog
-    ? externalChangelogUrl
-    : changelogMode === 'external'
-      ? ''
-      : existingInlineChangelogPath || (form.changelogText.trim() ? `./changelog/${locale}.md` : '');
-  const noticeMarkdownSource = form.noticePath.trim() || (form.noticeText.trim() ? `./notice/${locale}.md` : '');
-  const descriptionUploadPath = resolveSourceMarkdownUploadPath(basePath, descriptionMarkdownSource);
-  const changelogUploadPath = resolveSourceMarkdownUploadPath(basePath, changelogMarkdownSource);
-  const noticeUploadPath = resolveSourceMarkdownUploadPath(basePath, noticeMarkdownSource);
-
   const imagePayload = buildSourceImagePayload(form, basePath, sourceFiles);
   const meta = sourceMetaSchema.parse({
     id,
@@ -458,22 +519,6 @@ export function buildSourceSubmitPayload(
     addedAt: form.addedAt.trim(),
     packagePageUrl: form.repoURL.trim(),
     ...(niconiCommonsId ? { niconiCommonsId } : {}),
-  });
-  const content = sourceContentSchema.parse({
-    name: form.name.trim(),
-    author: form.author.trim(),
-    ...(originalAuthor ? { originalAuthor } : {}),
-    tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
-    ...(typeLabel ? { typeLabel } : {}),
-    description: {
-      summary: form.summary.trim(),
-      markdownSource: descriptionMarkdownSource,
-    },
-    ...(changelogMarkdownSource ? { changelog: { markdownSource: changelogMarkdownSource } } : {}),
-    ...(noticeMarkdownSource ? { notice: { markdownSource: noticeMarkdownSource } } : {}),
-    ...(deprecationMessage ? { deprecation: { message: deprecationMessage } } : {}),
-    licenses: buildSourceLicensesPayload(form),
-    ...(imagePayload ? { images: imagePayload } : {}),
   });
   const install = sourceInstallSchema.parse({
     ...(Object.keys(relations).length ? { relations } : {}),
@@ -491,17 +536,27 @@ export function buildSourceSubmitPayload(
   });
 
   appendSourceFile(sourceFiles, `${basePath}/meta.json`, createJsonFile(meta));
-  appendSourceFile(sourceFiles, `${basePath}/content/${locale}.json`, createJsonFile(content));
   appendSourceFile(sourceFiles, `${basePath}/install.json`, createJsonFile(install));
   appendSourceFile(sourceFiles, `${basePath}/versions.json`, createJsonFile(versions));
-  if (!useExternalDescription && descriptionUploadPath) {
-    appendSourceFile(sourceFiles, descriptionUploadPath, createMarkdownFile(form.descriptionText || ''));
-  }
-  if (!useExternalChangelog && changelogUploadPath && changelogMarkdownSource) {
-    appendSourceFile(sourceFiles, changelogUploadPath, createMarkdownFile(form.changelogText));
-  }
-  if (noticeUploadPath && noticeMarkdownSource) {
-    appendSourceFile(sourceFiles, noticeUploadPath, createMarkdownFile(form.noticeText));
+  const localizedContents: Record<string, RegisterLocalizedContentForm> = {
+    ...form.localizedContents,
+    [locale]: getCurrentLocalizedContent(form, tags),
+  };
+  for (const [contentLocale, localized] of Object.entries(localizedContents)) {
+    const normalizedLocale = String(contentLocale || '').trim();
+    if (!SUPPORTED_SOURCE_LOCALES.includes(normalizedLocale as (typeof SUPPORTED_SOURCE_LOCALES)[number])) continue;
+    const content = buildLocalizedSourceContent({
+      localized,
+      locale: normalizedLocale,
+      imagePayload,
+    });
+    appendSourceFile(sourceFiles, `${basePath}/content/${normalizedLocale}.json`, createJsonFile(content));
+    appendLocalizedMarkdownFiles({
+      sourceFiles,
+      basePath,
+      content,
+      localized,
+    });
   }
 
   return {

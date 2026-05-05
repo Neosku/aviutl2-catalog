@@ -1,6 +1,6 @@
-import type { CatalogEntryState } from '@/utils/catalogStore';
+import type { CatalogStorePackage } from '@/utils/catalogStore';
 
-export type UpdatesItem = CatalogEntryState;
+export type UpdatesItem = CatalogStorePackage;
 
 export interface ItemUpdateProgress {
   ratio: number;

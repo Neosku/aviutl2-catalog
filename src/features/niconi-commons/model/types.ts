@@ -1,6 +1,6 @@
-import type { CatalogEntryState } from '@/utils/catalogStore';
+import type { CatalogStorePackage } from '@/utils/catalogStore';
 
-export type EligibleItem = CatalogEntryState & {
+export type EligibleItem = CatalogStorePackage & {
   niconiCommonsId: string;
 };
 

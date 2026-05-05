@@ -140,8 +140,3 @@ export const catalogEntrySchema = z.object({
     .optional(),
 });
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
-
-/* ---------- root ---------- */
-
-export const catalogIndexSchema = z.array(catalogEntrySchema);
-export type CatalogIndex = z.infer<typeof catalogIndexSchema>;

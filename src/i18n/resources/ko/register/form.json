@@ -9,6 +9,15 @@
     "authorPlaceholder": "KEN-kun",
     "originalAuthor": "원저작자 (선택 사항)",
     "originalAuthorPlaceholder": "원본 버전이 있는 경우 입력해 주세요",
+    "sourceLocale": "편집할 언어",
+    "sourceLocaleHint": "여기에서 선택한 언어를 편집합니다. 지원 언어는 일본어, 영어, 한국어, 중국어 간체, 중국어 번체입니다.",
+    "sourceLocaleOptions": {
+      "ja": "일본어",
+      "en": "영어",
+      "ko": "한국어",
+      "zh-CN": "중국어 간체",
+      "zh-TW": "중국어 번체"
+    },
     "repoUrl": "패키지 사이트",
     "repoUrlPlaceholder": "패키지를 설명하는 URL",
     "niconiCommonsId": "Niconi Commons ID (선택 사항)",

@@ -9,6 +9,15 @@
     "authorPlaceholder": "KEN-kun",
     "originalAuthor": "原作者（選填）",
     "originalAuthorPlaceholder": "如果存在原始版本，請填寫此項",
+    "sourceLocale": "要編輯的語言",
+    "sourceLocaleHint": "編輯在此選擇的語言。支援語言為日文、英文、韓文、簡體中文與繁體中文。",
+    "sourceLocaleOptions": {
+      "ja": "日文",
+      "en": "英文",
+      "ko": "韓文",
+      "zh-CN": "簡體中文",
+      "zh-TW": "繁體中文"
+    },
     "repoUrl": "套件網站",
     "repoUrlPlaceholder": "用來說明此套件的 URL",
     "niconiCommonsId": "Niconi Commons ID（選填）",

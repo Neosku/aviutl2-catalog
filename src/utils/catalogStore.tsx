@@ -5,7 +5,7 @@
 // - allTags/allTypes: UI のフィルター候補（全件から抽出）
 // - installedMap/detectedMap: インストール情報（検出結果）
 import { createContext, useReducer, useContext, useMemo } from 'react';
-import type { CatalogBootstrapItem } from './catalogBootstrapModel';
+import type { CatalogBootstrapPackage } from './catalogBootstrapModel';
 import {
   getDetectedVersion,
   isDetectedResult,
@@ -17,7 +17,7 @@ import {
 import { normalize } from './text';
 
 type CatalogState = {
-  items: CatalogEntryState[];
+  items: CatalogStorePackage[];
   loading: boolean;
   error: string | null;
   allTags: string[];
@@ -27,7 +27,7 @@ type CatalogState = {
   detectedMap: DetectResultMap; // id -> detection result
 };
 
-export type CatalogEntryState = CatalogBootstrapItem & {
+export type CatalogStorePackage = CatalogBootstrapPackage & {
   updatedAt: number | null;
   nameKey: string;
   authorKey: string;
@@ -39,7 +39,11 @@ export type CatalogEntryState = CatalogBootstrapItem & {
   catalogIndex: number;
 };
 
-function applyDetectedResult(item: CatalogEntryState, result: DetectResult, forceLatest = false): CatalogEntryState {
+function applyDetectedResult(
+  item: CatalogStorePackage,
+  result: DetectResult,
+  forceLatest = false,
+): CatalogStorePackage {
   const detectedVersion = getDetectedVersion(result);
   const latest = typeof item.latestVersion === 'string' ? item.latestVersion : '';
   const installed = isInstalledDetectResult(result);
@@ -59,7 +63,7 @@ const CatalogDispatchContext = createContext<React.Dispatch<CatalogAction> | nul
 
 // 更新日のタイムスタンプを算出
 // 仕様: version[] の末尾 release_date を updatedAt として使用
-function toUpdatedAt(pkg: CatalogBootstrapItem) {
+function toUpdatedAt(pkg: CatalogBootstrapPackage) {
   if (!pkg.version.length) return null;
   const lastVersion = pkg.version[pkg.version.length - 1];
   const ts = new Date(lastVersion.release_date).getTime();
@@ -69,7 +73,7 @@ function toUpdatedAt(pkg: CatalogBootstrapItem) {
 // 検索・ソート用の派生フィールドを付与
 // - updatedAt: 日付の数値化
 // - nameKey/authorKey/summaryKey: 正規化キー（部分一致検索に利用）
-function enrich(item: CatalogBootstrapItem) {
+function enrich(item: CatalogBootstrapPackage) {
   return {
     ...item,
     updatedAt: toUpdatedAt(item),
@@ -94,7 +98,7 @@ export function initCatalog(): CatalogState {
 }
 
 export type CatalogAction =
-  | { type: 'SET_ITEMS'; payload: CatalogBootstrapItem[] }
+  | { type: 'SET_ITEMS'; payload: CatalogBootstrapPackage[] }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_INSTALLED_IDS'; payload: string[] }
@@ -201,6 +205,6 @@ export function useCatalogDispatch(): React.Dispatch<CatalogAction> {
   return ctx;
 }
 
-export type PackageItem = CatalogEntryState;
+export type PackageItem = CatalogStorePackage;
 
 export type CatalogDispatch = (action: CatalogAction) => void;

@@ -212,6 +212,7 @@ export interface RegisterMetaSectionProps {
   packageForm: RegisterPackageForm;
   initialTags: string[];
   tagCandidates: string[];
+  onSwitchSourceLocale: (locale: string) => void;
   onUpdatePackageField: <K extends keyof RegisterPackageForm>(field: K, value: RegisterPackageForm[K]) => void;
   onTagsChange: (list: string[]) => void;
 }

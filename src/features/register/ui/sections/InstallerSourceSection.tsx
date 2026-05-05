@@ -2,12 +2,14 @@
  * インストーラーのソースコンポーネント
  */
 import { useTranslation } from 'react-i18next';
+import { useMemo } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import Button, { buttonVariants } from '@/components/ui/Button';
 import { ExternalLink } from 'lucide-react';
 import { INSTALLER_SOURCES } from '../../model/form';
 import type { PackageInstallerSectionProps } from '../types';
-import { action, grid, layout, surface, text } from '@/components/ui/_styles';
+import SegmentedOptionGroup from '../components/SegmentedOptionGroup';
+import { grid, layout, surface, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
 type InstallerSourceSectionProps = Pick<
@@ -34,6 +36,17 @@ export default function InstallerSourceSection({
   onSelectPackageFile,
 }: InstallerSourceSectionProps) {
   const { t } = useTranslation('register');
+  const installerSourceOptions = useMemo(
+    () =>
+      INSTALLER_SOURCES.map((option) => ({
+        value: option.value,
+        label:
+          option.value === 'GoogleDrive'
+            ? t('installer.sourceTypes.googleDrive')
+            : t(`installer.sourceTypes.${option.value}`),
+      })),
+    [t],
+  );
   const packageFileSummaryText = packageFileSummary
     ? packageFileSummary.groups
         .map((group) => t('installer.packageFileGroupSummary', { root: group.root, count: group.count }))
@@ -44,29 +57,12 @@ export default function InstallerSourceSection({
     <div className="space-y-4">
       <div className="space-y-2">
         <div className={text.labelSm}>{t('installer.downloadSource')}</div>
-        <div className={cn(action.segmentedGroup, 'flex flex-wrap gap-1')}>
-          {INSTALLER_SOURCES.map((option) => {
-            const isActive = installer.sourceType === option.value;
-            return (
-              <Button
-                variant="plain"
-                size="xs"
-                key={option.value}
-                type="button"
-                className={cn(
-                  action.segmentedOptionBase,
-                  'flex-1',
-                  isActive ? action.segmentedOptionActive : action.segmentedOptionInactive,
-                )}
-                onClick={() => updateInstallerField('sourceType', option.value)}
-              >
-                {option.value === 'GoogleDrive'
-                  ? t('installer.sourceTypes.googleDrive')
-                  : t(`installer.sourceTypes.${option.value}`)}
-              </Button>
-            );
-          })}
-        </div>
+        <SegmentedOptionGroup
+          value={installer.sourceType}
+          options={installerSourceOptions}
+          onChange={(value) => updateInstallerField('sourceType', value)}
+          ariaLabel={t('installer.downloadSource')}
+        />
       </div>
       <div className={cn(surface.panel, 'p-4')}>
         {installer.sourceType === 'direct' && (

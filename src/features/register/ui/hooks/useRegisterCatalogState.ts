@@ -6,7 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useCatalog } from '@/utils/catalogStore';
 import { applyCatalogJsonPatch as applyCatalogJsonPatchModel } from '../../model/catalogPatch';
 import { buildPackageEntry, createEmptyPackageForm, sourcePackageToForm } from '../../model/form';
-import { cleanupImagePreviews, commaListToArray, getErrorMessage, normalizeArrayText } from '../../model/helpers';
+import {
+  arrayToCommaList,
+  cleanupImagePreviews,
+  commaListToArray,
+  getErrorMessage,
+  normalizeArrayText,
+} from '../../model/helpers';
 import type { RegisterPackageForm } from '../../model/types';
 import type { RegisterMarkdownTab } from '../types';
 import { catalogEntrySchema, type CatalogEntry } from '@/utils/catalogSchema';
@@ -109,8 +115,12 @@ export default function useRegisterCatalogState({
       onUserEdit?.();
       const normalized = normalizeArrayText(list);
       setCurrentTags(normalized);
+      setPackageForm((prev) => ({
+        ...prev,
+        tagsText: arrayToCommaList(normalized),
+      }));
     },
-    [onUserEdit],
+    [onUserEdit, setPackageForm],
   );
 
   const applyTagList = useCallback((list: string[]) => {

@@ -44,8 +44,8 @@
   },
   "jsonImport": {
     "title": "JSON input",
-    "description": "Paste your JSON file in the same format as template.json. Matching items will be partially overwritten, and unmatched IDs will be added as new entries. You can add multiple packages at once.",
-    "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"Example Plugin\",\n    \"type\": \"Input plugin\",\n    \"summary\": \"A short package summary goes here.\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"Example Script\",\n    \"type\": \"Script\",\n    \"summary\": \"A short script summary goes here.\"\n  }\n]",
+    "description": "Paste JSON in the same format as template.json. Matching items will be partially overwritten, and IDs that do not match will be added as new entries. You can also add multiple packages at once.",
+    "placeholder": "",
     "cancel": "Cancel",
     "apply": "Apply"
   },

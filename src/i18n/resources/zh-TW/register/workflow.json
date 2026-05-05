@@ -44,8 +44,8 @@
   },
   "jsonImport": {
     "title": "JSON 輸入",
-    "description": "請貼上與 template.json 相同格式的 JSON。符合的項目會部分覆寫，不符合的 id 會作為新條目加入。你也可以一次加入多個套件。",
-    "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"範例外掛\",\n    \"type\": \"輸入外掛\",\n    \"summary\": \"在這裡填入簡短的套件摘要。\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"範例腳本\",\n    \"type\": \"腳本\",\n    \"summary\": \"在這裡填入簡短的腳本摘要。\"\n  }\n]",
+    "description": "請貼上與 template.json 相同格式的 JSON。符合的項目會部分覆寫，ID 不符合的項目會作為新條目加入。也可以一次加入多個套件。",
+    "placeholder": "",
     "cancel": "取消",
     "apply": "套用"
   },

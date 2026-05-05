@@ -44,8 +44,8 @@
   },
   "jsonImport": {
     "title": "JSON 입력",
-    "description": "template.json과 같은 형식의 JSON을 붙여 넣으세요. 일치하는 항목은 일부 덮어쓰고, 일치하지 않는 ID는 새 항목으로 추가됩니다. 여러 패키지를 한 번에 추가할 수 있습니다.",
-    "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"예시 플러그인\",\n    \"type\": \"입력 플러그인\",\n    \"summary\": \"짧은 패키지 요약을 여기에 입력합니다.\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"예시 스크립트\",\n    \"type\": \"스크립트\",\n    \"summary\": \"짧은 스크립트 요약을 여기에 입력합니다.\"\n  }\n]",
+    "description": "template.json과 같은 형식의 JSON을 붙여 넣으세요. 일치하는 항목은 일부 덮어쓰고, 일치하지 않는 ID는 새 항목으로 추가됩니다. 여러 패키지를 한 번에 추가할 수도 있습니다.",
+    "placeholder": "",
     "cancel": "취소",
     "apply": "적용"
   },

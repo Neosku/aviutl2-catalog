@@ -4,6 +4,7 @@
 import { isHttpsUrl } from './helpers';
 import { getInstallStepIssue, getInstallerSourceIssue, getUninstallStepIssue } from './installerRules';
 import { getFileExtension } from './parse';
+import { storeCurrentLocalizedContent } from './localizedContent';
 import { ID_PATTERN, INSTALL_ACTIONS, SPECIAL_INSTALL_ACTIONS, UNINSTALL_ACTIONS } from './constants';
 import {
   isOtherRegisterLicenseType,
@@ -11,7 +12,7 @@ import {
   requiresTemplateCopyrightFields,
 } from '@/utils/licenseTemplates';
 import { i18n } from '@/i18n';
-import type { RegisterPackageForm } from './types';
+import type { RegisterLicense, RegisterLocalizedContentForm, RegisterPackageForm } from './types';
 
 function getInstallerSourceMessage(form: RegisterPackageForm, mode: 'test' | 'submit'): string {
   const issue = getInstallerSourceIssue(form.installer);
@@ -107,31 +108,14 @@ export function validateUninstallerForTest(form: RegisterPackageForm): string {
   return getUninstallStepMessage(form, 'test');
 }
 
-export function validatePackageForm(form: RegisterPackageForm): string {
-  if (!form.id.trim()) return i18n.t('register:validation.idRequired');
-  if (!ID_PATTERN.test(form.id.trim())) return i18n.t('register:validation.idInvalid');
-  if (!form.id.trim().includes('.')) return i18n.t('register:validation.idFormat');
-  if (!form.name.trim()) return i18n.t('register:validation.nameRequired');
-  if (!form.author.trim()) return i18n.t('register:validation.authorRequired');
-  if (!form.type.trim()) return i18n.t('register:validation.typeRequired');
-  if (!form.summary.trim()) return i18n.t('register:validation.summaryRequired');
-  if (form.summary.trim().length > 35) return i18n.t('register:validation.summaryTooLong');
-  if (!form.repoURL.trim()) return i18n.t('register:validation.repoRequired');
-  const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
-  if (descriptionMode === 'external') {
-    const externalUrl = String(form.descriptionUrl || '').trim();
-    if (!isHttpsUrl(externalUrl)) return i18n.t('register:validation.descriptionUrlInvalid');
-  } else if (!form.descriptionText.trim()) {
-    return i18n.t('register:validation.descriptionRequired');
-  }
-  const changelogMode = form.changelogMode === 'external' ? 'external' : 'inline';
-  if (changelogMode === 'external') {
-    const externalUrl = String(form.changelogUrl || '').trim();
-    if (!isHttpsUrl(externalUrl)) return i18n.t('register:validation.changelogUrlInvalid');
-  }
-  if (!form.licenses.length) return i18n.t('register:validation.licenseRequired');
+function withLocaleValidationPrefix(locale: string, message: string): string {
+  return `${locale}: ${message}`;
+}
+
+function validateLicenseList(licenses: RegisterLicense[]): string {
+  if (!licenses.length) return i18n.t('register:validation.licenseRequired');
   // ライセンスは UI 表示都合ではなく、最終 payload の成立条件で検証する。
-  for (const license of form.licenses) {
+  for (const license of licenses) {
     const type = String(license.type || '').trim();
     if (!type) return i18n.t('register:validation.licenseTypeRequired');
     if (isOtherRegisterLicenseType(type) && !String(license.licenseName || '').trim())
@@ -150,6 +134,46 @@ export function validatePackageForm(form: RegisterPackageForm): string {
       if (!hasCopyright) return i18n.t('register:validation.licenseCopyrightRequired');
     }
   }
+  return '';
+}
+
+function validateLocalizedContent(content: RegisterLocalizedContentForm): string {
+  if (!content.name.trim()) return i18n.t('register:validation.nameRequired');
+  if (!content.author.trim()) return i18n.t('register:validation.authorRequired');
+  if (!content.summary.trim()) return i18n.t('register:validation.summaryRequired');
+  if (content.summary.trim().length > 35) return i18n.t('register:validation.summaryTooLong');
+  const descriptionMode = content.descriptionMode === 'external' ? 'external' : 'inline';
+  if (descriptionMode === 'external') {
+    const externalUrl = String(content.descriptionUrl || '').trim();
+    if (!isHttpsUrl(externalUrl)) return i18n.t('register:validation.descriptionUrlInvalid');
+  } else if (!content.descriptionText.trim()) {
+    return i18n.t('register:validation.descriptionRequired');
+  }
+  const changelogMode = content.changelogMode === 'external' ? 'external' : 'inline';
+  if (changelogMode === 'external') {
+    const externalUrl = String(content.changelogUrl || '').trim();
+    if (!isHttpsUrl(externalUrl)) return i18n.t('register:validation.changelogUrlInvalid');
+  }
+  return validateLicenseList(content.licenses);
+}
+
+function validateLocalizedContents(form: RegisterPackageForm): string {
+  const localizedContents = storeCurrentLocalizedContent(form).localizedContents;
+  for (const [locale, content] of Object.entries(localizedContents)) {
+    const message = validateLocalizedContent(content);
+    if (message) return withLocaleValidationPrefix(locale, message);
+  }
+  return '';
+}
+
+export function validatePackageForm(form: RegisterPackageForm): string {
+  if (!form.id.trim()) return i18n.t('register:validation.idRequired');
+  if (!ID_PATTERN.test(form.id.trim())) return i18n.t('register:validation.idInvalid');
+  if (!form.id.trim().includes('.')) return i18n.t('register:validation.idFormat');
+  if (!form.type.trim()) return i18n.t('register:validation.typeRequired');
+  if (!form.repoURL.trim()) return i18n.t('register:validation.repoRequired');
+  const localizedMessage = validateLocalizedContents(form);
+  if (localizedMessage) return localizedMessage;
   const sourceMessage = getInstallerSourceMessage(form, 'submit');
   if (sourceMessage) return sourceMessage;
   // install/uninstall の action 制約は送信先スキーマに合わせて厳密に制限する。

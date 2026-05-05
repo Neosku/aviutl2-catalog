@@ -45,7 +45,7 @@
   "jsonImport": {
     "title": "JSON 入力",
     "description": "template.json と同じ形式の JSON を貼り付けてください。一致する項目は部分上書きし、未一致の id は新規追加します。複数パッケージをまとめて追加することもできます。",
-    "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"Example Plugin\",\n    \"type\": \"入力プラグイン\",\n    \"summary\": \"プラグインの概要がここに入ります。\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"Example Script\",\n    \"type\": \"スクリプト\",\n    \"summary\": \"スクリプトの概要がここに入ります。\"\n  }\n]",
+    "placeholder": "",
     "cancel": "キャンセル",
     "apply": "適用"
   },

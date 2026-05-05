@@ -44,8 +44,8 @@
   },
   "jsonImport": {
     "title": "JSON 输入",
-    "description": "请粘贴与 template.json 格式相同的JSON。匹配项将部分覆盖，不匹配的id将添加为新条目。也可批量添加多个包。",
-    "placeholder": "[\n  {\n    \"id\": \"author.pluginName\",\n    \"name\": \"Example Plugin\",\n    \"type\": \"导入插件\",\n    \"summary\": \"插件的概要将写在这里。\"\n  },\n  {\n    \"id\": \"author.scriptName\",\n    \"name\": \"Example Script\",\n    \"type\": \"脚本\",\n    \"summary\": \"脚本的概要将写在这里。\"\n  }\n]",
+    "description": "请粘贴与 template.json 相同格式的 JSON。匹配的项目会被部分覆盖，ID 不匹配的项目会作为新条目添加。也可以一次添加多个包。",
+    "placeholder": "",
     "cancel": "取消",
     "apply": "应用"
   },

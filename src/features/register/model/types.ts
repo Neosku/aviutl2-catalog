@@ -80,6 +80,28 @@ export interface RegisterInstallerState {
   uninstallSteps: RegisterUninstallStep[];
 }
 
+export interface RegisterLocalizedContentForm {
+  name: string;
+  author: string;
+  originalAuthor: string;
+  deprecationEnabled: boolean;
+  deprecationMessage: string;
+  type: string;
+  summary: string;
+  descriptionText: string;
+  descriptionPath: string;
+  descriptionMode: RegisterDescriptionMode;
+  descriptionUrl: string;
+  changelogMode: RegisterDescriptionMode;
+  changelogUrl: string;
+  changelogPath: string;
+  changelogText: string;
+  noticePath: string;
+  noticeText: string;
+  licenses: RegisterLicense[];
+  tagsText: string;
+}
+
 export interface RegisterPackageForm {
   id: string;
   legacyId: string;
@@ -113,6 +135,7 @@ export interface RegisterPackageForm {
   relationSimilarText: string;
   relationReplacesText: string;
   relationForkOfText: string;
+  localizedContents: Record<string, RegisterLocalizedContentForm>;
   installer: RegisterInstallerState;
   versions: RegisterVersion[];
   images: RegisterImageState;

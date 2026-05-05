@@ -26,6 +26,7 @@ import {
   isUnknownRegisterLicenseType,
   normalizeRegisterLicenseType,
 } from '@/utils/licenseTemplates';
+import { captureLocalizedContent } from './localizedContent';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -487,6 +488,9 @@ export function sourcePackageToForm(args: {
     })),
   }));
   form.images = parseSourceImages(content.images, args.packageBasePath ?? '');
+  form.localizedContents = {
+    [form.sourceLocale]: captureLocalizedContent(form),
+  };
   return form;
 }
 

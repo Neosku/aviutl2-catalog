@@ -3,7 +3,7 @@ import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { useTranslation } from 'react-i18next';
 import type { Dispatch, SetStateAction } from 'react';
-import type { CatalogAction, CatalogEntryState } from '@/utils/catalogStore';
+import type { CatalogAction, CatalogStorePackage } from '@/utils/catalogStore';
 import { isInstalledDetectResult } from '@/utils/detectResult';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '@/utils/installed-map';
 import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '@/utils/installer';
@@ -11,7 +11,7 @@ import { logError } from '@/utils/logging';
 import { normalizeInstalledImport, toErrorMessage } from '../../model/helpers';
 
 interface UseSettingsDataManagementParams {
-  catalogItems: CatalogEntryState[];
+  catalogItems: CatalogStorePackage[];
   dispatch: Dispatch<CatalogAction>;
   setError: Dispatch<SetStateAction<string>>;
 }
@@ -31,7 +31,7 @@ async function showDialogMessage(
   } catch {}
 }
 
-function hasUninstaller(item: CatalogEntryState | null | undefined): boolean {
+function hasUninstaller(item: CatalogStorePackage | null | undefined): boolean {
   return Array.isArray(item?.installer?.uninstall) && item.installer.uninstall.length > 0;
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { i18n } from '@/i18n';
 import { loadBootstrapCatalog } from '@/utils/catalogClient';
-import { buildCatalogBootstrapItems, buildCatalogSearchIndexItems } from '@/utils/catalogBootstrapModel';
+import { buildCatalogBootstrapPackages, buildCatalogSearchIndexItems } from '@/utils/catalogBootstrapModel';
 import type { CatalogDispatch } from '@/utils/catalogStore';
 import { formatUnknownError } from '@/utils/errors';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '@/utils/installed-map';
@@ -46,13 +46,13 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
         const installedMap = await loadInstalledMap();
         if (!cancelled) dispatch({ type: 'SET_INSTALLED_MAP', payload: installedMap });
 
-        let catalogItems: ReturnType<typeof buildCatalogBootstrapItems> | null = null;
+        let catalogItems: ReturnType<typeof buildCatalogBootstrapPackages> | null = null;
         try {
           const bootstrapCatalog = await loadBootstrapCatalog({
             requestedLocale: i18n.resolvedLanguage || i18n.language,
             timeoutMs: 10000,
           });
-          catalogItems = buildCatalogBootstrapItems(bootstrapCatalog);
+          catalogItems = buildCatalogBootstrapPackages(bootstrapCatalog);
         } catch (error: unknown) {
           console.warn('Catalog load failed:', error);
           await logBootstrapError('loadBootstrapCatalog failed', error);

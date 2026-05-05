@@ -117,6 +117,7 @@ export function createEmptyPackageForm(): RegisterPackageForm {
     relationSimilarText: '',
     relationReplacesText: '',
     relationForkOfText: '',
+    localizedContents: {},
     installer: createEmptyInstaller(),
     versions: [],
     images: {
