@@ -1,50 +1,18 @@
 import type { CatalogBootstrapLoadResult } from './catalogClient';
-import type { DetectResult } from './detectResult';
-import type { Installer } from './catalogSchema';
 import { isUrlLike, resolveUrl } from './catalog-schema/utils/pathUtils';
 
-type CatalogVersionFileCompat = {
+export type CatalogBootstrapVersionFile = {
   path: string;
-  XXH3_128: string;
+  xxh128: string;
 };
 
-type CatalogVersionCompat = {
+export type CatalogBootstrapVersion = {
   version: string;
-  release_date: string;
-  file: CatalogVersionFileCompat[];
+  releaseDate: string;
+  files: CatalogBootstrapVersionFile[];
 };
 
-type CatalogImageCompat = {
-  thumbnail?: string;
-  infoImg?: string[];
-};
-
-type CatalogLicenseCopyrightCompat = {
-  years: string;
-  holder: string;
-};
-
-type CatalogLicenseCompat = {
-  type: string;
-  isCustom: boolean;
-  copyrights: CatalogLicenseCopyrightCompat[];
-  licenseBody: string | null;
-};
-
-type CatalogLegacyPackageCompat = {
-  type: string;
-  description: string;
-  repoURL: string;
-  originalAuthor?: string;
-  licenses: CatalogLicenseCompat[];
-  dependencies: string[];
-  images: CatalogImageCompat[];
-  installer?: Installer;
-  version: CatalogVersionCompat[];
-  'latest-version': string;
-};
-
-export type CatalogBootstrapPackage = CatalogLegacyPackageCompat & {
+export type CatalogBootstrapPackage = {
   id: string;
   legacyId: string;
   packageType: string;
@@ -57,6 +25,7 @@ export type CatalogBootstrapPackage = CatalogLegacyPackageCompat & {
   summary: string;
   latestVersion: string;
   latestReleaseDate: string;
+  versions: CatalogBootstrapVersion[];
   thumbnailUrl: string;
   changelog?: {
     markdownSource: string;
@@ -68,14 +37,6 @@ export type CatalogBootstrapPackage = CatalogLegacyPackageCompat & {
     message: string;
   };
   updatedAt?: number | null;
-  nameKey?: string;
-  authorKey?: string;
-  summaryKey?: string;
-  installed?: boolean;
-  installedVersion?: string;
-  isLatest?: boolean;
-  detectedResult?: DetectResult;
-  catalogIndex?: number;
 };
 
 export type CatalogSearchIndexItem = {
@@ -93,18 +54,17 @@ export function buildCatalogBootstrapPackages(result: CatalogBootstrapLoadResult
     const versionEntry = result.versions.packages[listPackage.id];
     const metricEntry = result.metrics.packages[listPackage.id];
     const thumbnailUrl = resolveOptionalAssetPath(result.baseUrls.list, listPackage.images?.thumbnail);
-    const versions = Array.isArray(versionEntry?.versions)
-      ? versionEntry.versions.map((version) => ({
-          version: version.version,
-          release_date: version.releaseDate,
-          file: version.files.map((file) => ({
-            path: file.path,
-            XXH3_128: file.xxh128,
-          })),
-        }))
-      : [];
+    const versions =
+      versionEntry?.versions.map((version) => ({
+        version: version.version,
+        releaseDate: version.releaseDate,
+        files: version.files.map((file) => ({
+          path: file.path,
+          xxh128: file.xxh128,
+        })),
+      })) ?? [];
     const latestVersion = versions.at(-1)?.version ?? '';
-    const latestReleaseDate = versions.at(-1)?.release_date ?? '';
+    const latestReleaseDate = versions.at(-1)?.releaseDate ?? '';
     const changelogSource = listPackage.changelog?.markdownSource
       ? resolveOptionalAssetPath(result.baseUrls.list, listPackage.changelog.markdownSource)
       : '';
@@ -118,26 +78,18 @@ export function buildCatalogBootstrapPackages(result: CatalogBootstrapLoadResult
       name: listPackage.name,
       author: listPackage.author,
       typeLabel: listPackage.typeLabel,
-      type: listPackage.packageType,
       tags: listPackage.tags,
       summary: listPackage.summary,
       latestVersion,
       latestReleaseDate,
+      versions,
       thumbnailUrl,
-      description: listPackage.summary,
       changelog: changelogSource
         ? {
             markdownSource: changelogSource,
           }
         : undefined,
-      repoURL: '',
-      licenses: [],
       niconiCommonsId: listPackage.niconiCommonsId,
-      dependencies: [],
-      images: buildCatalogImageGroups(thumbnailUrl),
-      installer: undefined,
-      version: versions,
-      'latest-version': latestVersion,
       popularity: metricEntry?.popularity ?? 0,
       trend: metricEntry?.trend ?? 0,
       deprecation: listPackage.deprecation,
@@ -155,13 +107,6 @@ export function buildCatalogSearchIndexItems(items: CatalogBootstrapPackage[]): 
     tags: item.tags,
     latestReleaseDate: item.latestReleaseDate,
   }));
-}
-
-function buildCatalogImageGroups(thumbnailUrl: string): CatalogImageCompat[] {
-  if (!thumbnailUrl) {
-    return [];
-  }
-  return [{ thumbnail: thumbnailUrl, infoImg: [] }];
 }
 
 function resolveOptionalAssetPath(baseUrl: string, path: string | undefined): string {

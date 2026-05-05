@@ -1,5 +1,3 @@
-import type { CarouselImage } from './types';
-import type { Image } from '@/utils/catalogSchema';
 import type { PackageTypeTranslationKey } from '@/utils/query';
 import { packageTypeKeyFromRaw, packageTypeKeyToTranslationKey } from '@/utils/query';
 
@@ -88,27 +86,6 @@ export function readPackageDetailSource(search: string): PackageDetailSource {
   if (source === 'updates') return 'updates';
   if (source === 'niconi-commons') return 'niconi-commons';
   return 'home';
-}
-
-export function collectPackageImages(imageGroups: Image[] | undefined): {
-  heroImage: string;
-  carouselImages: CarouselImage[];
-} {
-  const carouselImages: CarouselImage[] = [];
-  let heroImage = '';
-
-  for (const group of Array.isArray(imageGroups) ? imageGroups : []) {
-    if (!Array.isArray(group?.infoImg)) continue;
-    for (const src of group.infoImg) {
-      if (typeof src !== 'string') continue;
-      const trimmed = src.trim();
-      if (!trimmed) continue;
-      if (!heroImage) heroImage = trimmed;
-      carouselImages.push({ src: trimmed, alt: '' });
-    }
-  }
-
-  return { heroImage, carouselImages };
 }
 
 export function resolvePackageTypeLabel(

@@ -14,7 +14,7 @@ export function sliceRelevantChangelogMarkdown(item: UpdatesItem, markdown: stri
     return '';
   }
 
-  const versions = Array.isArray(item.version) ? item.version : [];
+  const versions = Array.isArray(item.versions) ? item.versions : [];
   const knownVersions = new Set(versions.map((entry) => String(entry.version || '').trim()).filter(Boolean));
   if (knownVersions.size === 0) {
     return rawMarkdown;

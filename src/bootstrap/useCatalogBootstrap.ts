@@ -58,7 +58,7 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
           await logBootstrapError('loadBootstrapCatalog failed', error);
         }
 
-        if (Array.isArray(catalogItems) && catalogItems.length > 0) {
+        if (catalogItems?.length) {
           const items = catalogItems;
           if (!cancelled) dispatch({ type: 'SET_ITEMS', payload: items });
           await runBootstrapStep('set_catalog_index failed', async () => {

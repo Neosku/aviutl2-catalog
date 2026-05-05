@@ -229,7 +229,7 @@ export default function Register() {
     setJsonDialogError('');
   }, []);
 
-  const applyCatalogJsonPatch = useCallback(async () => {
+  const applySourceBundleJsonImport = useCallback(async () => {
     try {
       const { packages } = importSourceBundleJson({
         jsonText: jsonDialogText,
@@ -647,7 +647,7 @@ export default function Register() {
         error={jsonDialogError}
         onChange={setJsonDialogText}
         onClose={closeJsonDialog}
-        onApply={applyCatalogJsonPatch}
+        onApply={applySourceBundleJsonImport}
       />
       <RegisterFormLayout
         error={error}

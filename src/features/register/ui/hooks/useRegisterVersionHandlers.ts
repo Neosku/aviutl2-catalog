@@ -141,8 +141,8 @@ export default function useRegisterVersionHandlers({
         const selectedPath = Array.isArray(selection) ? selection[0] : selection;
         if (!selectedPath || typeof selectedPath !== 'string') return;
         // 実ファイルからハッシュを再計算し、手入力ミスを防ぐ。
-        const hash = await computeHashFromFile(selectedPath);
-        updateVersionFile(versionKey, fileKey, 'hash', hash);
+        const xxh128 = await computeHashFromFile(selectedPath);
+        updateVersionFile(versionKey, fileKey, 'xxh128', xxh128);
         updateVersionFile(versionKey, fileKey, 'fileName', basename(selectedPath));
       } catch (err) {
         console.error(err);

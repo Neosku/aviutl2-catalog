@@ -4,8 +4,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCatalog } from '@/utils/catalogStore';
-import { applyCatalogJsonPatch as applyCatalogJsonPatchModel } from '../../model/catalogPatch';
-import { buildPackageEntry, createEmptyPackageForm, sourcePackageToForm } from '../../model/form';
+import { computeLatestVersion, createEmptyPackageForm, sourcePackageToForm } from '../../model/form';
 import {
   arrayToCommaList,
   cleanupImagePreviews,
@@ -13,11 +12,11 @@ import {
   getErrorMessage,
   normalizeArrayText,
 } from '../../model/helpers';
-import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterCatalogItem, RegisterPackageForm } from '../../model/types';
 import type { RegisterMarkdownTab } from '../types';
-import { catalogEntrySchema, type CatalogEntry } from '@/utils/catalogSchema';
 import { loadSourcePackage } from '@/utils/catalogClient';
 import type { PackageItem } from '@/utils/catalogStore';
+import { computeRegisterRelevantHash } from '../../model/registerTestRequirement';
 
 interface UseRegisterCatalogStateArgs {
   setPackageForm: React.Dispatch<React.SetStateAction<RegisterPackageForm>>;
@@ -27,39 +26,31 @@ interface UseRegisterCatalogStateArgs {
   onUserEdit?: () => void;
 }
 
-function catalogStoreItemToRegisterEntry(item: PackageItem): CatalogEntry {
-  return catalogEntrySchema.parse({
+function catalogStoreItemToRegisterCatalogItem(item: PackageItem): RegisterCatalogItem {
+  return {
     id: item.id,
+    legacyId: item.legacyId,
+    packageType: item.packageType,
+    packageRole: item.packageRole,
     name: item.name,
-    type: item.typeLabel || item.packageType || item.type || '',
-    summary: item.summary || item.description || '',
-    description: item.description || item.summary || '',
     author: item.author,
-    originalAuthor: item.originalAuthor,
-    repoURL: item.repoURL || '',
-    'latest-version': item.latestVersion || item['latest-version'] || '',
-    popularity: item.popularity ?? 0,
-    trend: item.trend ?? 0,
-    licenses: item.licenses ?? [],
-    niconiCommonsId: item.niconiCommonsId,
-    tags: item.tags ?? [],
-    dependencies: item.dependencies ?? [],
-    images: item.images ?? [],
-    installer: item.installer ?? {
-      source: { direct: '' },
-      install: [],
-      uninstall: [],
-    },
-    version: item.version ?? [],
+    summary: item.summary,
+    typeLabel: item.typeLabel,
+    tags: item.tags,
+    latestVersion: item.latestVersion,
+    latestReleaseDate: item.latestReleaseDate,
+    popularity: item.popularity,
+    trend: item.trend,
+    registerRelevantHash: undefined,
     deprecation: item.deprecation,
-  });
+  };
 }
 
 function mergeRegisterCatalogItems(
-  storeItems: CatalogEntry[],
-  currentItems: CatalogEntry[],
+  storeItems: RegisterCatalogItem[],
+  currentItems: RegisterCatalogItem[],
   selectedPackageId: string,
-): CatalogEntry[] {
+): RegisterCatalogItem[] {
   if (!selectedPackageId) {
     return storeItems;
   }
@@ -87,7 +78,7 @@ export default function useRegisterCatalogState({
 }: UseRegisterCatalogStateArgs) {
   const { t, i18n } = useTranslation('register');
   const catalogStore = useCatalog();
-  const [catalogItems, setCatalogItems] = useState<CatalogEntry[]>([]);
+  const [catalogItems, setCatalogItems] = useState<RegisterCatalogItem[]>([]);
   const [catalogLoadState, setCatalogLoadState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [catalogBaseUrl, setCatalogBaseUrl] = useState('');
   const [packageSearch, setPackageSearch] = useState('');
@@ -105,8 +96,7 @@ export default function useRegisterCatalogState({
   }, [selectedPackageId]);
 
   const tagCandidates = useMemo(() => {
-    const source = Array.isArray(allTags) ? allTags : [];
-    const set = new Set<string>(source.map((tag) => String(tag || '')));
+    const set = new Set<string>(allTags.map((tag) => String(tag || '')));
     return Array.from(set).toSorted((a, b) => a.localeCompare(b, i18n.language));
   }, [allTags, i18n.language]);
 
@@ -144,7 +134,7 @@ export default function useRegisterCatalogState({
   );
 
   const loadSourceForm = useCallback(
-    async (item: CatalogEntry, sequence: number) => {
+    async (item: RegisterCatalogItem, sequence: number) => {
       const requestedLocale = i18n.language;
       const result = await loadSourcePackage({
         packageId: item.id,
@@ -161,12 +151,18 @@ export default function useRegisterCatalogState({
         noticeMarkdown: result.markdown.notice,
         locale: result.locale,
       });
-      const nextEntry = catalogEntrySchema.parse(
-        buildPackageEntry(form, commaListToArray(form.tagsText), {
-          popularity: item.popularity,
-          trend: item.trend,
-        }),
-      );
+      const latestReleaseDate = form.versions.at(-1)?.releaseDate ?? '';
+      const nextEntry: RegisterCatalogItem = {
+        ...item,
+        name: form.name,
+        author: form.author,
+        summary: form.summary,
+        typeLabel: form.type,
+        tags: commaListToArray(form.tagsText),
+        latestVersion: computeLatestVersion(form),
+        latestReleaseDate,
+        registerRelevantHash: computeRegisterRelevantHash(form),
+      };
       setCatalogItems((prev) => prev.map((entry) => (entry.id === nextEntry.id ? nextEntry : entry)));
       sourceLoadedKeyRef.current = `${item.id}:${requestedLocale}`;
       applyForm(form, result.packageBasePath);
@@ -175,7 +171,7 @@ export default function useRegisterCatalogState({
   );
 
   const handleSelectPackage = useCallback(
-    (item: CatalogEntry | null) => {
+    (item: RegisterCatalogItem | null) => {
       if (!item) {
         sourceLoadSeqRef.current += 1;
         selectedPackageIdRef.current = '';
@@ -217,7 +213,7 @@ export default function useRegisterCatalogState({
       return;
     }
 
-    const items = catalogStore.items.map(catalogStoreItemToRegisterEntry);
+    const items = catalogStore.items.map(catalogStoreItemToRegisterCatalogItem);
     const currentSelectedId = selectedPackageIdRef.current;
     setCatalogItems((prev) => mergeRegisterCatalogItems(items, prev, currentSelectedId));
     setCatalogLoadState('loaded');
@@ -274,9 +270,8 @@ export default function useRegisterCatalogState({
 
   const filteredPackages = useMemo(() => {
     const query = deferredPackageSearch.trim().toLowerCase();
-    const items = Array.isArray(catalogItems) ? catalogItems : [];
-    if (!query) return items;
-    return items.filter((item) => {
+    if (!query) return catalogItems;
+    return catalogItems.filter((item) => {
       const name = String(item?.name || '').toLowerCase();
       const author = String(item?.author || '').toLowerCase();
       return name.includes(query) || author.includes(query);
@@ -301,11 +296,6 @@ export default function useRegisterCatalogState({
     setPackageSearch(value);
   }, []);
 
-  const applyCatalogJsonPatch = useCallback(
-    (jsonText: string) => applyCatalogJsonPatchModel({ catalogItems, jsonText }),
-    [catalogItems],
-  );
-
   return {
     catalogItems,
     setCatalogItems,
@@ -323,6 +313,5 @@ export default function useRegisterCatalogState({
     handleSelectPackage,
     handleStartNewPackage,
     handlePackageSearchChange,
-    applyCatalogJsonPatch,
   };
 }

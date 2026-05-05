@@ -16,7 +16,7 @@ import type { RegisterLicense, RegisterLocalizedContentForm, RegisterPackageForm
 
 function getInstallerSourceMessage(form: RegisterPackageForm, mode: 'test' | 'submit'): string {
   const issue = getInstallerSourceIssue(form.installer);
-  if (issue === 'direct') {
+  if (issue === 'directUrl') {
     return mode === 'test'
       ? i18n.t('register:validation.installerSourceDirectTest')
       : i18n.t('register:validation.installerSourceDirectSubmit');
@@ -26,15 +26,15 @@ function getInstallerSourceMessage(form: RegisterPackageForm, mode: 'test' | 'su
       ? i18n.t('register:validation.installerSourceBoothTest')
       : i18n.t('register:validation.installerSourceBoothSubmit');
   }
-  if (issue === 'github') {
+  if (issue === 'githubRelease') {
     return mode === 'test'
       ? i18n.t('register:validation.installerSourceGithubTest')
       : i18n.t('register:validation.installerSourceGithubSubmit');
   }
-  if (issue === 'GoogleDrive') {
+  if (issue === 'googleDrive') {
     return mode === 'test'
-      ? i18n.t('register:validation.installerSourceGoogleDriveTest')
-      : i18n.t('register:validation.installerSourceGoogleDriveSubmit');
+      ? i18n.t('register:validation.installerSourceGDriveTest')
+      : i18n.t('register:validation.installerSourceGDriveSubmit');
   }
   if (issue === 'missing') {
     return i18n.t('register:validation.installerSourceMissing');
@@ -56,7 +56,7 @@ function getInstallStepMessage(form: RegisterPackageForm, mode: 'test' | 'submit
         return mode === 'test'
           ? i18n.t('register:validation.installRunPathTest')
           : i18n.t('register:validation.installRunPathSubmit');
-      if (step.action === 'run_auo_setup') return i18n.t('register:validation.installRunAuoSetupPath');
+      if (step.action === 'runAuoSetup') return i18n.t('register:validation.installRunAuoSetupPath');
       if (step.action === 'delete')
         return mode === 'test'
           ? i18n.t('register:validation.installDeletePathTest')
@@ -129,8 +129,7 @@ function validateLicenseList(licenses: RegisterLicense[]): string {
     const usesTemplate = !isUnknownRegisterLicenseType(type) && !isOtherRegisterLicenseType(type) && !license.isCustom;
     const requiresCopyright = usesTemplate && requiresTemplateCopyrightFields(type);
     if (requiresCopyright) {
-      const entries = Array.isArray(license.copyrights) ? license.copyrights : [];
-      const hasCopyright = entries.some((c) => String(c?.years || '').trim() && String(c?.holder || '').trim());
+      const hasCopyright = license.copyrights.some((c) => c.years.trim() && c.holder.trim());
       if (!hasCopyright) return i18n.t('register:validation.licenseCopyrightRequired');
     }
   }
@@ -171,7 +170,7 @@ export function validatePackageForm(form: RegisterPackageForm): string {
   if (!ID_PATTERN.test(form.id.trim())) return i18n.t('register:validation.idInvalid');
   if (!form.id.trim().includes('.')) return i18n.t('register:validation.idFormat');
   if (!form.type.trim()) return i18n.t('register:validation.typeRequired');
-  if (!form.repoURL.trim()) return i18n.t('register:validation.repoRequired');
+  if (!form.packagePageUrl.trim()) return i18n.t('register:validation.repoRequired');
   const localizedMessage = validateLocalizedContents(form);
   if (localizedMessage) return localizedMessage;
   const sourceMessage = getInstallerSourceMessage(form, 'submit');
@@ -195,12 +194,12 @@ export function validatePackageForm(form: RegisterPackageForm): string {
   // バージョンごとの file は配布実体に直結するため、欠落を許可しない。
   for (const ver of form.versions) {
     if (!ver.version.trim()) return i18n.t('register:validation.versionNameRequired');
-    if (!ver.release_date.trim()) return i18n.t('register:validation.versionDateRequired');
+    if (!ver.releaseDate.trim()) return i18n.t('register:validation.versionDateRequired');
     if (!ver.files.length) return i18n.t('register:validation.versionFilesRequired');
     for (const file of ver.files) {
       if (!file.path.trim()) return i18n.t('register:validation.versionFilePathRequired');
-      if (!file.hash.trim()) return i18n.t('register:validation.versionFileHashRequired');
-      if (file.hash.trim().length !== 32) return i18n.t('register:validation.versionFileHashLength');
+      if (!file.xxh128.trim()) return i18n.t('register:validation.versionFileHashRequired');
+      if (file.xxh128.trim().length !== 32) return i18n.t('register:validation.versionFileHashLength');
     }
   }
   if (form.images.thumbnail?.file && !getFileExtension(form.images.thumbnail.file.name)) {

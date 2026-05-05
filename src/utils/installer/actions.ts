@@ -1,12 +1,17 @@
 import { i18n } from '@/i18n';
-import type { InstallerAction } from '../catalogSchema';
 import { MISSING_DETECT_RESULT, type DetectResult } from '../detectResult';
 import { formatUnknownError } from '../errors';
 import { detectInstalledVersionsMap } from '../installed-map';
 import { logInfo } from '../logging';
 import { deletePath, ensureAbsolutePath, expandMacros, expandRunArgs, runInstallerExecutable } from './runtime';
 import { emitTestOperation } from './shape';
-import type { CatalogDispatchFn, InstallerMacroContext, InstallerRunnableItem, StepOperationTarget } from './types';
+import type {
+  CatalogDispatchFn,
+  InstallerAction,
+  InstallerMacroContext,
+  InstallerRunnableItem,
+  StepOperationTarget,
+} from './types';
 
 export async function syncDetectedVersionWithDispatch(
   item: InstallerRunnableItem,
@@ -68,7 +73,7 @@ export async function executeRunAction(params: {
   const { step, ctx, pathLabel, stepOperation, onOperation } = params;
   const executablePath = ensureAbsolutePath(await expandMacros(step.path, ctx), pathLabel);
   stepOperation.targetPath = executablePath;
-  const expandedArgs = await expandRunArgs(step.args, ctx);
+  const expandedArgs = await expandRunArgs(step.args ?? [], ctx);
   await runInstallerExecutable(executablePath, expandedArgs, !!step.elevate);
   emitTestOperation(onOperation, {
     kind: stepOperation.kind,

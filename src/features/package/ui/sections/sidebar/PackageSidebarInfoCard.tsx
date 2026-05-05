@@ -53,7 +53,7 @@ export default function PackageSidebarInfoCard({
 
   const tagLinks = useMemo(
     () =>
-      (item.tags || []).map((tag) => {
+      item.tags.map((tag) => {
         const search = buildPackageListSearch('', { q: '', tags: [tag] });
         return {
           tag,

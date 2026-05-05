@@ -19,7 +19,7 @@
     "fileLabel": "File {{count}}",
     "deleteFile": "Delete file {{count}}",
     "pathLabel": "Install path",
-    "hashLabel": "Hash (XXH3_128)",
+    "hashLabel": "Hash (xxh128)",
     "hashMissing": "Not calculated",
     "sourceFile": "Original filename",
     "chooseAndHash": "Choose file and hash"

@@ -1,12 +1,17 @@
 import type { PackageItem } from '@/utils/catalogStore';
-import type { License } from '@/utils/catalogSchema';
 
 export interface CarouselImage {
   src: string;
   alt: string;
 }
 
-export type PackageLicenseEntry = License & { key: string; body: string };
+export type PackageLicenseEntry = {
+  key: string;
+  type: string;
+  body: string;
+  copyrights?: { years: string; holder: string }[];
+  licenseBody?: string | null;
+};
 
 export interface PackageMarkdownState {
   html: string;

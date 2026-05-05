@@ -3,8 +3,8 @@
     "title": "インストーラ",
     "downloadSource": "ダウンロード元",
     "sourceTypes": {
-      "direct": "直接URL",
-      "github": "GitHub Release",
+      "directUrl": "直接URL",
+      "githubRelease": "GitHub Release",
       "googleDrive": "Google Drive",
       "booth": "BOOTH"
     },
@@ -54,8 +54,8 @@
       "copy": "コピー",
       "run": "EXE実行",
       "delete": "削除",
-      "extract_sfx": "7zを展開",
-      "run_auo_setup": "auo_setup2.exeを実行"
+      "extractSfx": "7zを展開",
+      "runAuoSetup": "auo_setup2.exeを実行"
     }
   },
   "tests": {
@@ -76,14 +76,14 @@
     "deleteSkipped": "削除スキップ",
     "deleteSkippedDetail": "対象が見つからないためスキップ",
     "operationFailed": "{{action}} 失敗",
-    "extractSfxDone": "extract_sfx を実行しました",
-    "runAuoSetupDone": "run_auo_setup を実行しました",
+    "extractSfxDone": "extractSfx を実行しました",
+    "runAuoSetupDone": "runAuoSetup を実行しました",
     "matchedCount": "一致件数: {{count}}件",
     "fromPath": "元のパス",
     "toPath": "先のパス",
     "kind": {
       "extract": "展開",
-      "extract_sfx": "SFX展開",
+      "extractSfx": "SFX展開",
       "run": "実行",
       "error": "エラー"
     },
@@ -99,14 +99,14 @@
     "installerSourceBoothSubmit": "installer.source の booth URL を入力してください",
     "installerSourceGithubTest": "GitHub ID/レポジトリ名/正規表現パターンすべてを入力してください",
     "installerSourceGithubSubmit": "installer.source github の owner/repo/pattern は全て必須です",
-    "installerSourceGoogleDriveTest": "ファイル ID を入力してください",
-    "installerSourceGoogleDriveSubmit": "GoogleDrive のファイル ID を入力してください",
+    "installerSourceGDriveTest": "ファイル ID を入力してください",
+    "installerSourceGDriveSubmit": "Google Drive のファイル ID を入力してください",
     "installerSourceMissing": "installer.source を選択してください",
     "installUnsupportedTest": "未対応のインストール手順が含まれています",
     "installUnsupportedSubmit": "install の action は {{allowed}} のみ使用できます",
     "installRunPathTest": "EXE実行の実行パスを指定してください",
     "installRunPathSubmit": "run の path は必須です",
-    "installRunAuoSetupPath": "run_auo_setup の path は必須です",
+    "installRunAuoSetupPath": "runAuoSetup の path は必須です",
     "installDeletePathTest": "削除するパスを指定してください",
     "installDeletePathSubmit": "delete の path は必須です",
     "installTargetPath": "対象パスを入力してください",
@@ -141,11 +141,11 @@
     "uninstallRunElevateBoolean": "uninstall run の elevate は true/false で指定してください",
     "versionsRequired": "バージョン情報を最低1件追加してください",
     "versionNameRequired": "version の version を入力してください",
-    "versionDateRequired": "version の release_date を入力してください",
+    "versionDateRequired": "version の releaseDate を入力してください",
     "versionFilesRequired": "version の file を1件以上追加してください",
     "versionFilePathRequired": "version.file の path を入力してください",
-    "versionFileHashRequired": "version.file の XXH3_128 を計算してください",
-    "versionFileHashLength": "XXH3_128 は32桁の16進数で入力してください",
+    "versionFileHashRequired": "version.file の xxh128 を計算してください",
+    "versionFileHashLength": "xxh128 は32桁の16進数で入力してください",
     "thumbnailExtension": "サムネイルのファイル拡張子を確認してください"
   }
 }

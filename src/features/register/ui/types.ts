@@ -2,10 +2,10 @@
  * register UI 層で共有する型定義
  */
 import type { FormEvent, MouseEventHandler, PointerEvent } from 'react';
-import type { CatalogEntry } from '@/utils/catalogSchema';
 import type { Au2pkgImportSummary } from '../model/au2pkg';
 import type { RegisterDraftTestState } from '../model/registerTestRequirement';
 import type {
+  RegisterCatalogItem,
   RegisterImageState,
   RegisterInstallerOption,
   RegisterInstallerState,
@@ -29,7 +29,7 @@ export interface InstallerTestProgress {
   phase: string;
 }
 
-export type RegisterTestOperationKind = 'download' | 'extract' | 'extract_sfx' | 'copy' | 'delete' | 'run' | 'error';
+export type RegisterTestOperationKind = 'download' | 'extract' | 'extractSfx' | 'copy' | 'delete' | 'run' | 'error';
 export type RegisterTestOperationStatus = 'done' | 'skip' | 'error';
 
 export interface RegisterTestOperation {
@@ -187,11 +187,11 @@ export interface RegisterSuccessDialogProps {
 export interface RegisterSidebarProps {
   packageSearch: string;
   catalogLoadState: 'idle' | 'loading' | 'loaded' | 'error';
-  filteredPackages: CatalogEntry[];
+  filteredPackages: RegisterCatalogItem[];
   draftPackages: RegisterDraftListItemView[];
   selectedPackageId: string;
   onPackageSearchChange: (value: string) => void;
-  onSelectPackage: (item: CatalogEntry | null) => void;
+  onSelectPackage: (item: RegisterCatalogItem | null) => void;
   onStartNewPackage: () => void;
   onOpenDraftPackage: (draftId: string) => void;
   onDeleteDraftPackage: (draftId: string) => void;

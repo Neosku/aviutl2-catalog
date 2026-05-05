@@ -113,7 +113,7 @@ function PackageCardMetaSection({ item, lastUpdated, tags }: PackageCardMetaSect
       </div>
 
       <p className="text-[15px] text-slate-500 dark:text-slate-400/90 line-clamp-3 leading-normal mb-auto">
-        {item.summary || item.description || ''}
+        {item.summary || ''}
       </p>
 
       <div className="flex flex-wrap gap-1 mt-1.5 mb-1">

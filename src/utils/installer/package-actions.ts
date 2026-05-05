@@ -4,13 +4,11 @@ import { detectInstalledVersionsMap, loadInstalledMap, removeInstalledId } from 
 import type { CatalogDispatch } from '../catalogStore';
 import { runInstallerForItem } from './install';
 import { hasInstaller } from './shape';
-import type { InstallProgressPayload, InstallerRunnableItem } from './types';
+import type { Installer, InstallProgressPayload, InstallerRunnableItem } from './types';
 import { runUninstallerForItem } from './uninstall';
 
-function hasUninstallScript(item: InstallerRunnableItem): boolean {
-  const installer =
-    typeof item.installer === 'object' && item.installer ? (item.installer as { uninstall?: unknown }) : null;
-  return Array.isArray(installer?.uninstall) && installer.uninstall.length > 0;
+function hasUninstallScript(item: InstallerRunnableItem & { installer: Installer }): boolean {
+  return item.installer.uninstallSteps.length > 0;
 }
 
 async function syncRemovedPackageState(

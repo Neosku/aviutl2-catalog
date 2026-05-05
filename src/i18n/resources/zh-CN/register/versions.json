@@ -19,7 +19,7 @@
     "fileLabel": "文件 {{count}}个",
     "deleteFile": "删除文件 {{count}}个",
     "pathLabel": "保存目标路径（安装时）",
-    "hashLabel": "哈希值（XXH3_128）",
+    "hashLabel": "哈希值（xxh128）",
     "hashMissing": "未计算",
     "sourceFile": "源文件名",
     "chooseAndHash": "选择文件并计算"

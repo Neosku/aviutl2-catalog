@@ -25,9 +25,8 @@ export {
   createEmptyVersionFile,
 } from './factories';
 
-export { entryToForm, getFileExtension, sourcePackageToForm } from './parse';
+export { getFileExtension, sourcePackageToForm } from './parse';
 
-export { applyCatalogJsonPatch } from './catalogPatch';
 export { importSourceBundleJson } from './sourceBundleImport';
 export {
   applyLocalizedContent,
@@ -48,7 +47,7 @@ export {
 export {
   buildInstallerPayload,
   buildInstallerTestItem,
-  buildPackageEntry,
+  buildRegisterCatalogItem,
   buildSourceSubmitPayload,
   computeHashFromFile,
   computeLatestVersion,

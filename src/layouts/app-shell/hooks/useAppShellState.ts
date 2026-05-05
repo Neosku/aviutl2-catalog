@@ -346,7 +346,7 @@ export default function useAppShellState() {
       sortOrder,
       setSortOrder,
       categories,
-      allTags: allTags || [],
+      allTags,
       selectedTags,
       installStatus,
       deprecationStatus,

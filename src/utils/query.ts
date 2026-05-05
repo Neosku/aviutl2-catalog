@@ -6,7 +6,6 @@ type NameSortable = {
 
 type FilterableItem = {
   tags?: string[];
-  type?: string;
   packageType?: string;
 };
 
@@ -82,14 +81,6 @@ function normalizePackageType(type: unknown): string {
   return typeof type === 'string' ? type.trim() : '';
 }
 
-function readPackageTypeValue(type: unknown, packageType?: unknown): string {
-  const normalizedPackageType = normalizePackageType(packageType);
-  if (normalizedPackageType) {
-    return normalizedPackageType;
-  }
-  return normalizePackageType(type);
-}
-
 function normalizePackageTypeKey(value: unknown): PackageTypeFilterKey | null {
   const normalized = normalizePackageType(value);
   return PACKAGE_TYPE_KEYS.has(normalized as PackageTypeFilterKey) ? (normalized as PackageTypeFilterKey) : null;
@@ -144,7 +135,7 @@ export function filterByTagsAndType<T extends FilterableItem>(
   return items.filter((it) => {
     const itemTags = Array.isArray(it.tags) ? it.tags.filter((tag): tag is string => typeof tag === 'string') : [];
     const tagOk = !tags.length || itemTags.some((tag) => tags.includes(tag));
-    const rawType = readPackageTypeValue(it.type, it.packageType);
+    const rawType = normalizePackageType(it.packageType);
     const itemTypeKey = packageTypeKeyFromRaw(rawType);
     const typeOk =
       !types.length ||

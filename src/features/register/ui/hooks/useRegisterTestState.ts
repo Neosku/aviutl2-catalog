@@ -8,14 +8,13 @@ import { detectInstalledVersionsMap } from '@/utils/installed-map';
 import { runInstallerForItem, runUninstallerForItem } from '@/utils/installer';
 import { buildInstallerTestItem, validateInstallerForTest, validateUninstallerForTest } from '../../model/form';
 import { computeRegisterRelevantHash, resolveRegisterCatalogRelevantHash } from '../../model/registerTestRequirement';
-import type { CatalogEntry } from '@/utils/catalogSchema';
-import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterCatalogItem, RegisterPackageForm } from '../../model/types';
 import type { InstallerTestItem, InstallerTestProgress, RegisterTestOperation } from '../types';
 
 interface UseRegisterTestStateArgs {
   packageForm: RegisterPackageForm;
   selectedPackageId: string;
-  catalogItems: CatalogEntry[];
+  catalogItems: RegisterCatalogItem[];
   flushDraftBeforeTest?: () => void;
   onTestPassed?: (kind: 'installer' | 'uninstaller') => void;
 }
@@ -32,7 +31,7 @@ function normalizeOperationKind(value: unknown): RegisterTestOperation['kind'] {
   switch (value) {
     case 'download':
     case 'extract':
-    case 'extract_sfx':
+    case 'extractSfx':
     case 'copy':
     case 'delete':
     case 'run':

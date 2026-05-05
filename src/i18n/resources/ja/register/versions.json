@@ -19,7 +19,7 @@
     "fileLabel": "File {{count}}",
     "deleteFile": "ファイル{{count}}を削除",
     "pathLabel": "保存先パス (インストール時)",
-    "hashLabel": "ハッシュ値 (XXH3_128)",
+    "hashLabel": "ハッシュ値 (xxh128)",
     "hashMissing": "未計算",
     "sourceFile": "元ファイル名",
     "chooseAndHash": "ファイルを選択して計算"

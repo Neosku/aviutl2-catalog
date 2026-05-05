@@ -3,8 +3,8 @@
     "title": "安裝程式",
     "downloadSource": "下載來源",
     "sourceTypes": {
-      "direct": "直接 URL",
-      "github": "GitHub Release",
+      "directUrl": "直接 URL",
+      "githubRelease": "GitHub Release",
       "googleDrive": "Google Drive",
       "booth": "BOOTH"
     },
@@ -54,8 +54,8 @@
       "copy": "複製",
       "run": "執行 EXE",
       "delete": "刪除",
-      "extract_sfx": "解壓 7z",
-      "run_auo_setup": "執行 auo_setup2.exe"
+      "extractSfx": "解壓 7z",
+      "runAuoSetup": "執行 auo_setup2.exe"
     }
   },
   "tests": {
@@ -76,14 +76,14 @@
     "deleteSkipped": "已略過刪除",
     "deleteSkippedDetail": "因找不到目標而略過",
     "operationFailed": "{{action}} 失敗",
-    "extractSfxDone": "已執行 extract_sfx",
-    "runAuoSetupDone": "已執行 run_auo_setup",
+    "extractSfxDone": "已執行 extractSfx",
+    "runAuoSetupDone": "已執行 runAuoSetup",
     "matchedCount": "符合的檔案數：{{count}}",
     "fromPath": "來源路徑",
     "toPath": "目標路徑",
     "kind": {
       "extract": "解壓",
-      "extract_sfx": "解壓 SFX",
+      "extractSfx": "解壓 SFX",
       "run": "執行",
       "error": "錯誤"
     },
@@ -99,14 +99,14 @@
     "installerSourceBoothSubmit": "installer.source booth URL 為必填項目。",
     "installerSourceGithubTest": "請輸入 GitHub 擁有者、儲存庫名稱與正規表示式模式。",
     "installerSourceGithubSubmit": "installer.source github owner/repo/pattern 均為必填項目。",
-    "installerSourceGoogleDriveTest": "請輸入檔案 ID。",
-    "installerSourceGoogleDriveSubmit": "Google Drive 檔案 ID 為必填項目。",
+    "installerSourceGDriveTest": "請輸入檔案 ID。",
+    "installerSourceGDriveSubmit": "Google Drive 檔案 ID 為必填項目。",
     "installerSourceMissing": "請選擇 installer.source。",
     "installUnsupportedTest": "安裝步驟中包含不支援的動作。",
     "installUnsupportedSubmit": "install action 必須為以下之一：{{allowed}}",
     "installRunPathTest": "請輸入可執行檔路徑。",
     "installRunPathSubmit": "run.path 為必填項目。",
-    "installRunAuoSetupPath": "run_auo_setup.path 為必填項目。",
+    "installRunAuoSetupPath": "runAuoSetup.path 為必填項目。",
     "installDeletePathTest": "請輸入要刪除的路徑。",
     "installDeletePathSubmit": "delete.path 為必填項目。",
     "installTargetPath": "請輸入目標路徑。",
@@ -141,11 +141,11 @@
     "uninstallRunElevateBoolean": "uninstall run.elevate 必須為 true 或 false。",
     "versionsRequired": "請至少新增一個版本。",
     "versionNameRequired": "請輸入 version.version。",
-    "versionDateRequired": "請輸入 version.release_date。",
+    "versionDateRequired": "請輸入 version.releaseDate。",
     "versionFilesRequired": "請至少新增一個 version.file。",
     "versionFilePathRequired": "請輸入 version.file.path。",
-    "versionFileHashRequired": "請計算 version.file 的 XXH3_128。",
-    "versionFileHashLength": "XXH3_128 必須為 32 位十六進位字元。",
+    "versionFileHashRequired": "請計算 version.file 的 xxh128。",
+    "versionFileHashLength": "xxh128 必須為 32 位十六進位字元。",
     "thumbnailExtension": "請檢查縮圖檔案副檔名。"
   }
 }

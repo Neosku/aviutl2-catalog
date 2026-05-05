@@ -1,5 +1,4 @@
 import { i18n } from '@/i18n';
-import type { InstallerAction, InstallerSource } from '../catalogSchema';
 import { assertNever } from '../errors';
 import { logInfo } from '../logging';
 import { executeDeleteAction, executeRunAction } from './actions';
@@ -14,7 +13,14 @@ import {
   runAuoSetup,
 } from './runtime';
 import { emitTestOperation } from './shape';
-import type { DownloadProgress, InstallerMacroContext, StepOperationTarget, TestOperationKind } from './types';
+import type {
+  DownloadProgress,
+  InstallerAction,
+  InstallerMacroContext,
+  InstallerSource,
+  StepOperationTarget,
+  TestOperationKind,
+} from './types';
 
 type StepOperation = {
   kind: TestOperationKind;
@@ -43,13 +49,13 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
       const src = installerSource;
       if (!src) throw new Error('Download source is not specified');
       let sourceLabel = '';
-      if ('GoogleDrive' in src && src.GoogleDrive && typeof src.GoogleDrive.id === 'string' && src.GoogleDrive.id) {
-        const fileId = src.GoogleDrive.id;
+      if (src.type === 'googleDrive') {
+        const fileId = src.id;
         sourceLabel = `Google Drive fileId=${fileId}`;
         ctx.downloadPath = await downloadFileFromGoogleDrive(fileId, tmpDir, reportDownloadProgress);
         await logInfo(`[installer ${itemId}] downloading from Google Drive fileId=${fileId} to ${tmpDir}`);
-      } else if ('booth' in src && typeof src.booth === 'string' && src.booth) {
-        const boothUrl = src.booth;
+      } else if (src.type === 'booth') {
+        const boothUrl = src.url;
         sourceLabel = boothUrl;
         await logInfo(`[installer ${itemId}] downloading from BOOTH ${boothUrl} to ${tmpDir}`);
         ctx.downloadPath = await downloadFileFromBoothUrl(boothUrl, tmpDir, {
@@ -57,11 +63,11 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
         });
       } else {
         let url = '';
-        if ('github' in src && src.github && src.github.owner && src.github.repo) {
-          url = await fetchGitHubURL(src.github);
+        if (src.type === 'githubRelease') {
+          url = await fetchGitHubURL(src);
         }
-        if ('direct' in src && typeof src.direct === 'string' && src.direct) {
-          url = src.direct;
+        if (src.type === 'directUrl') {
+          url = src.url;
         }
         if (!url) throw new Error('Download source is not specified');
         sourceLabel = url;
@@ -101,15 +107,15 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
       });
       break;
     }
-    case 'extract_sfx': {
+    case 'extractSfx': {
       const fromRel = await expandMacros(step.from || ctx.downloadPath, ctx);
       const toRel = await expandMacros(step.to || `{tmp}`, ctx);
-      const from = ensureAbsolutePath(fromRel, `install.extract_sfx.from`);
-      const to = ensureAbsolutePath(toRel, `install.extract_sfx.to`);
+      const from = ensureAbsolutePath(fromRel, `install.extractSfx.from`);
+      const to = ensureAbsolutePath(toRel, `install.extractSfx.to`);
       logInfo(`[installer ${itemId}] extracting SFX from ${from} to ${to}`);
       await extractSevenZipSfx(from, to);
       emitTestOperation(onOperation, {
-        kind: 'extract_sfx',
+        kind: 'extractSfx',
         status: 'done',
         summary: i18n.t('register:tests.extractSfxDone'),
         detail: '',
@@ -158,8 +164,8 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
       });
       break;
     }
-    case 'run_auo_setup': {
-      const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.run_auo_setup.path`);
+    case 'runAuoSetup': {
+      const pRaw = ensureAbsolutePath(await expandMacros(step.path, ctx), `install.runAuoSetup.path`);
       await runAuoSetup(pRaw);
       emitTestOperation(onOperation, {
         kind: 'run',

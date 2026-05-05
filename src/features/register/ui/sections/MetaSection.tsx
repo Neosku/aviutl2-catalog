@@ -133,9 +133,9 @@ export default function RegisterMetaSection({
             </label>
             <input
               id="package-repo-url"
-              name="repoURL"
-              value={packageForm.repoURL}
-              onChange={(e) => onUpdatePackageField('repoURL', e.target.value)}
+              name="packagePageUrl"
+              value={packageForm.packagePageUrl}
+              onChange={(e) => onUpdatePackageField('packagePageUrl', e.target.value)}
               placeholder={t('meta.repoUrlPlaceholder')}
               type="url"
               required

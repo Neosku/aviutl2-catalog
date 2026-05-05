@@ -8,7 +8,7 @@ export function generateKey(): string {
 }
 
 export function normalizeArrayText(values: unknown[] = []): string[] {
-  return (Array.isArray(values) ? values : []).map((v) => String(v || '').trim()).filter(Boolean);
+  return values.map((v) => String(v || '').trim()).filter(Boolean);
 }
 
 export function commaListToArray(text: string): string[] {
@@ -19,7 +19,7 @@ export function commaListToArray(text: string): string[] {
 }
 
 export function arrayToCommaList(arr: unknown[]): string {
-  return normalizeArrayText(Array.isArray(arr) ? arr : []).join(', ');
+  return normalizeArrayText(arr).join(', ');
 }
 
 export function isMarkdownPath(value: unknown): boolean {
@@ -41,7 +41,6 @@ export function resolveRelativeUrl(rawPath: string, baseUrl: string): string {
 }
 
 export function getDescriptionSourceUrl(form: RegisterPackageForm, baseUrl: string): string {
-  if (!form || typeof form !== 'object') return '';
   if (form.descriptionMode === 'external') {
     const externalUrl = String(form.descriptionUrl || '').trim();
     return isHttpsUrl(externalUrl) ? externalUrl : '';
@@ -72,11 +71,9 @@ export function revokePreviewUrl(url: string): void {
 export function cleanupImagePreviews(images: RegisterImageState | null | undefined): void {
   if (!images) return;
   if (images.thumbnail?.previewUrl) revokePreviewUrl(images.thumbnail.previewUrl);
-  if (Array.isArray(images.info)) {
-    images.info.forEach((entry) => {
-      if (entry?.previewUrl) revokePreviewUrl(entry.previewUrl);
-    });
-  }
+  images.info.forEach((entry) => {
+    if (entry.previewUrl) revokePreviewUrl(entry.previewUrl);
+  });
 }
 
 export function resolveBaseUrl(rawUrl: string): string | null {
@@ -98,7 +95,6 @@ export function resolveBaseUrl(rawUrl: string): string | null {
 }
 
 export function basename(path: string): string {
-  if (typeof path !== 'string') return '';
   const parts = path.split(/[/\\]/);
   return parts[parts.length - 1] || path;
 }

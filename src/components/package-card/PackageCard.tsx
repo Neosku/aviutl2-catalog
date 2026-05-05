@@ -31,7 +31,6 @@ export default function PackageCard({
   } = usePackageCardActions(item);
 
   const thumbnail = pickThumbnail(item);
-  const category = typeof item.packageType === 'string' ? item.packageType : '';
   const isInstalled = Boolean(item.installed);
   const hasUpdate = isInstalled && !item.isLatest;
   const showPausedUpdateState = isPauseStateLoaded && hasUpdate && isUpdatePaused;
@@ -48,7 +47,7 @@ export default function PackageCard({
       <PackageCardView
         item={item}
         thumbnail={thumbnail}
-        category={category}
+        category={item.packageType}
         lastUpdated={lastUpdated}
         isInstalled={isInstalled}
         hasUpdate={hasUpdate}

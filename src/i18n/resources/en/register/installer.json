@@ -3,8 +3,8 @@
     "title": "Installer",
     "downloadSource": "Download source",
     "sourceTypes": {
-      "direct": "Direct URL",
-      "github": "GitHub Release",
+      "directUrl": "Direct URL",
+      "githubRelease": "GitHub Release",
       "googleDrive": "Google Drive",
       "booth": "BOOTH"
     },
@@ -54,8 +54,8 @@
       "copy": "Copy",
       "run": "Run EXE",
       "delete": "Delete",
-      "extract_sfx": "Extract 7z",
-      "run_auo_setup": "Run auo_setup2.exe"
+      "extractSfx": "Extract 7z",
+      "runAuoSetup": "Run auo_setup2.exe"
     }
   },
   "tests": {
@@ -76,14 +76,14 @@
     "deleteSkipped": "Delete skipped",
     "deleteSkippedDetail": "Skipped because the target was not found",
     "operationFailed": "{{action}} failed",
-    "extractSfxDone": "Ran extract_sfx",
-    "runAuoSetupDone": "Ran run_auo_setup",
+    "extractSfxDone": "Ran extractSfx",
+    "runAuoSetupDone": "Ran runAuoSetup",
     "matchedCount": "Matched files: {{count}}",
     "fromPath": "From path",
     "toPath": "To path",
     "kind": {
       "extract": "Extract",
-      "extract_sfx": "Extract SFX",
+      "extractSfx": "Extract SFX",
       "run": "Run",
       "error": "Error"
     },
@@ -99,14 +99,14 @@
     "installerSourceBoothSubmit": "installer.source booth URL is required.",
     "installerSourceGithubTest": "Enter the GitHub owner, repository, and regex pattern.",
     "installerSourceGithubSubmit": "installer.source github owner/repo/pattern are all required.",
-    "installerSourceGoogleDriveTest": "Enter the file ID.",
-    "installerSourceGoogleDriveSubmit": "Google Drive file ID is required.",
+    "installerSourceGDriveTest": "Enter the file ID.",
+    "installerSourceGDriveSubmit": "Google Drive file ID is required.",
     "installerSourceMissing": "Select installer.source.",
     "installUnsupportedTest": "The install steps contain unsupported actions.",
     "installUnsupportedSubmit": "install action must be one of: {{allowed}}",
     "installRunPathTest": "Enter the executable path.",
     "installRunPathSubmit": "run.path is required.",
-    "installRunAuoSetupPath": "run_auo_setup.path is required.",
+    "installRunAuoSetupPath": "runAuoSetup.path is required.",
     "installDeletePathTest": "Enter the path to delete.",
     "installDeletePathSubmit": "delete.path is required.",
     "installTargetPath": "Enter the target path.",
@@ -141,11 +141,11 @@
     "uninstallRunElevateBoolean": "uninstall run.elevate must be true or false.",
     "versionsRequired": "Add at least one version.",
     "versionNameRequired": "Enter version.version.",
-    "versionDateRequired": "Enter version.release_date.",
+    "versionDateRequired": "Enter version.releaseDate.",
     "versionFilesRequired": "Add at least one version.file.",
     "versionFilePathRequired": "Enter version.file.path.",
-    "versionFileHashRequired": "Calculate version.file XXH3_128.",
-    "versionFileHashLength": "XXH3_128 must be 32 hexadecimal characters.",
+    "versionFileHashRequired": "Calculate version.file xxh128.",
+    "versionFileHashLength": "xxh128 must be 32 hexadecimal characters.",
     "thumbnailExtension": "Check the thumbnail file extension."
   }
 }

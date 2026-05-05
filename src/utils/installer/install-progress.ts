@@ -1,15 +1,14 @@
 import { i18n } from '@/i18n';
-import type { InstallerAction } from '../catalogSchema';
-import type { DownloadProgress, InstallProgressPayload, InstallProgressPhase } from './types';
+import type { DownloadProgress, InstallerAction, InstallProgressPayload, InstallProgressPhase } from './types';
 
 const STEP_PROGRESS_LABELS: Record<string, string> = {
   download: 'common:installerActions.download',
   extract: 'common:installerActions.extract',
-  extract_sfx: 'common:installerActions.extract',
+  extractSfx: 'common:installerActions.extract',
   copy: 'common:installerActions.copy',
   delete: 'common:installerActions.delete',
   run: 'common:installerActions.run',
-  run_auo_setup: 'common:installerActions.run',
+  runAuoSetup: 'common:installerActions.run',
 };
 
 type ProgressCallback = ((progress: InstallProgressPayload) => void) | undefined;

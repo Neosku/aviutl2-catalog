@@ -25,7 +25,7 @@ export default function RegisterPreviewSection({
   );
   const updatedAt = useMemo(() => {
     if (packageForm.versions.length > 0) {
-      return packageForm.versions[packageForm.versions.length - 1].release_date;
+      return packageForm.versions[packageForm.versions.length - 1].releaseDate;
     }
     return fallbackUpdatedAtRef.current;
   }, [packageForm.versions]);
@@ -35,18 +35,13 @@ export default function RegisterPreviewSection({
       name: packageForm.name || t('preview.fallbackName'),
       author: packageForm.author || t('preview.fallbackAuthor'),
       packageType: packageForm.type || t('common:labels.type'),
-      type: packageForm.type || t('common:labels.type'),
+      typeLabel: packageForm.type || t('common:labels.type'),
       tags: currentTags,
       summary: packageForm.summary || t('preview.fallbackSummary'),
       deprecation: packageForm.deprecationEnabled
         ? { message: String(packageForm.deprecationMessage || '').trim() }
         : undefined,
-      images: [
-        {
-          thumbnail: thumbnailPreview,
-          infoImg: infoImages,
-        },
-      ],
+      thumbnailUrl: thumbnailPreview || infoImages[0] || '',
       updatedAt: new Date(updatedAt).getTime() || null,
       installed: false,
       isLatest: true,

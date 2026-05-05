@@ -23,14 +23,14 @@ export const ACTION_LABELS: Record<string, string> = {
   copy: 'コピー',
   run: 'EXE実行',
   delete: '削除',
-  extract_sfx: '7zを展開',
-  run_auo_setup: 'auo_setup2.exeを実行',
+  extractSfx: '7zを展開',
+  runAuoSetup: 'auo_setup2.exeを実行',
 };
 
 export const INSTALLER_SOURCES: RegisterInstallerOption[] = [
-  { value: 'direct', label: '直接URL' },
-  { value: 'github', label: 'GitHub Release' },
-  { value: 'GoogleDrive', label: 'Google Drive' },
+  { value: 'directUrl', label: '直接URL' },
+  { value: 'githubRelease', label: 'GitHub Release' },
+  { value: 'googleDrive', label: 'Google Drive' },
   { value: 'booth', label: 'BOOTH' },
 ];
 

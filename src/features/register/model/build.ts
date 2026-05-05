@@ -6,16 +6,18 @@ import { SUPPORTED_SOURCE_LOCALES } from './constants';
 import { buildInstallerSource, serializeInstallStep, serializeUninstallStep } from './installerRules';
 import { getFileExtension } from './parse';
 import { captureLocalizedContent } from './localizedContent';
+import { computeRegisterRelevantHash } from './registerTestRequirement';
 import type {
+  RegisterCatalogItem,
   RegisterInstallerTestItem,
   RegisterLicense,
   RegisterLocalizedContentForm,
   RegisterPackageForm,
 } from './types';
-import type { CatalogEntry, Image, Installer, License, Version } from '@/utils/catalogSchema';
 import { catalogPackageTypeSchema, type CatalogPackageType } from '@/utils/catalog-schema/shared/commonSchema';
 import type { CatalogLicense } from '@/utils/catalog-schema/shared/licenseSchema';
-import type { Installation } from '@/utils/catalog-schema/shared/installationSchema';
+import type { CatalogVersion } from '@/utils/catalog-schema/shared/versionSchema';
+import type { Installer } from '@/utils/installer/types';
 import {
   sourceContentSchema,
   sourceInstallSchema,
@@ -49,98 +51,34 @@ export function buildInstallerPayload(form: RegisterPackageForm): Installer {
   const source = buildInstallerSource(form.installer);
   return {
     source,
-    install: form.installer.installSteps.map(serializeInstallStep),
-    uninstall: form.installer.uninstallSteps.map(serializeUninstallStep),
+    installSteps: form.installer.installSteps.map(serializeInstallStep),
+    uninstallSteps: form.installer.uninstallSteps.map(serializeUninstallStep),
   };
 }
 
-function buildLicensesPayload(form: RegisterPackageForm): License[] {
-  return (form.licenses || [])
-    .map((license): License | null => {
-      const type = String(license.type || '').trim();
-      const licenseName = String(license.licenseName || '').trim();
-      const resolvedType = isOtherRegisterLicenseType(type)
-        ? licenseName
-        : isUnknownRegisterLicenseType(type)
-          ? '不明'
-          : type;
-      const licenseBody = String(license.licenseBody || '').trim();
-      const isCustom =
-        license.isCustom ||
-        isUnknownRegisterLicenseType(type) ||
-        isOtherRegisterLicenseType(type) ||
-        licenseBody.length > 0;
-      const copyrights = Array.isArray(license.copyrights)
-        ? license.copyrights
-            .map((c) => ({
-              years: String(c?.years || '').trim(),
-              holder: String(c?.holder || '').trim(),
-            }))
-            .filter((c) => c.years && c.holder)
-        : [];
-      if (!resolvedType) return null;
-      return {
-        type: resolvedType,
-        isCustom,
-        copyrights,
-        licenseBody: isCustom ? licenseBody : null,
-      };
-    })
-    .filter((value): value is License => value !== null);
-}
-
-function buildImagesPayload(form: RegisterPackageForm): Image[] {
-  const id = form.id.trim();
-  const group: Image = {};
-  if (form.images.thumbnail) {
-    if (form.images.thumbnail.file) {
-      const ext = getFileExtension(form.images.thumbnail.file.name) || 'png';
-      group.thumbnail = `./image/${id}_thumbnail.${ext}`;
-    } else if (form.images.thumbnail.existingPath) {
-      group.thumbnail = form.images.thumbnail.existingPath;
-    }
-  }
-  const infoImg: string[] = [];
-  form.images.info.forEach((entry, idx) => {
-    if (entry.file) {
-      const ext = getFileExtension(entry.file.name) || 'png';
-      infoImg.push(`./image/${id}_${idx + 1}.${ext}`);
-    } else if (entry.existingPath) {
-      infoImg.push(entry.existingPath);
-    }
-  });
-  if (infoImg.length) {
-    group.infoImg = infoImg;
-  }
-  if (!group.thumbnail && !group.infoImg) return [];
-  return [group];
-}
-
-function buildVersionPayload(form: RegisterPackageForm): Version[] {
+function buildVersionPayload(form: RegisterPackageForm): CatalogVersion[] {
   return form.versions.map((ver) => ({
     version: ver.version.trim(),
-    release_date: ver.release_date.trim(),
-    file: ver.files.map((f) => ({
+    releaseDate: ver.releaseDate.trim(),
+    files: ver.files.map((f) => ({
       path: f.path.trim(),
-      XXH3_128: f.hash.trim(),
+      xxh128: f.xxh128.trim(),
     })),
   }));
 }
 
 function buildSourceLicensesPayload(licenses: RegisterLicense[]): CatalogLicense[] {
-  return (licenses || [])
+  return licenses
     .map((license): CatalogLicense | null => {
       const rawType = String(license.type || '').trim();
       const licenseName = String(license.licenseName || '').trim();
       const licenseBody = String(license.licenseBody || '').trim();
-      const copyrights = Array.isArray(license.copyrights)
-        ? license.copyrights
-            .map((c) => ({
-              years: String(c?.years || '').trim(),
-              holder: String(c?.holder || '').trim(),
-            }))
-            .filter((c) => c.years && c.holder)
-        : [];
+      const copyrights = license.copyrights
+        .map((c) => ({
+          years: c.years.trim(),
+          holder: c.holder.trim(),
+        }))
+        .filter((c) => c.years && c.holder);
 
       if (!rawType) return null;
       if (isUnknownRegisterLicenseType(rawType)) {
@@ -172,80 +110,6 @@ function buildSourceLicensesPayload(licenses: RegisterLicense[]): CatalogLicense
     .filter((value): value is CatalogLicense => value !== null);
 }
 
-function toSourceInstallerSource(source: Installer['source']): Installation['source'] {
-  if ('direct' in source) {
-    return { type: 'directUrl', url: source.direct };
-  }
-  if ('booth' in source) {
-    return { type: 'booth', url: source.booth };
-  }
-  if ('github' in source) {
-    return {
-      type: 'githubRelease',
-      owner: source.github.owner,
-      repo: source.github.repo,
-      pattern: source.github.pattern,
-    };
-  }
-  return { type: 'googleDrive', id: source.GoogleDrive.id };
-}
-
-function toSourceInstallStep(step: Installer['install'][number]): Installation['installSteps'][number] {
-  switch (step.action) {
-    case 'download':
-      return { action: 'download' };
-    case 'extract':
-      return {
-        action: 'extract',
-        ...(step.from ? { from: step.from } : {}),
-        ...(step.to ? { to: step.to } : {}),
-      };
-    case 'extract_sfx':
-      return {
-        action: 'extractSfx',
-        ...(step.from ? { from: step.from } : {}),
-        ...(step.to ? { to: step.to } : {}),
-      };
-    case 'copy':
-      return { action: 'copy', from: step.from, to: step.to };
-    case 'delete':
-      return { action: 'delete', path: step.path };
-    case 'run':
-      return {
-        action: 'run',
-        path: step.path,
-        ...(step.args?.length ? { args: step.args } : {}),
-        ...(step.elevate ? { elevate: true } : {}),
-      };
-    case 'run_auo_setup':
-      return { action: 'runAuoSetup', path: step.path };
-  }
-}
-
-function toSourceUninstallStep(step: Installer['uninstall'][number]): Installation['uninstallSteps'][number] {
-  if (step.action === 'delete') {
-    return { action: 'delete', path: step.path };
-  }
-  if (step.action !== 'run') {
-    throw new Error(`unsupported uninstall action for source payload: ${step.action}`);
-  }
-  return {
-    action: 'run',
-    path: step.path,
-    ...(step.args?.length ? { args: step.args } : {}),
-    ...(step.elevate ? { elevate: true } : {}),
-  };
-}
-
-function buildSourceInstallationPayload(form: RegisterPackageForm): Installation {
-  const installer = buildInstallerPayload(form);
-  return {
-    source: toSourceInstallerSource(installer.source),
-    installSteps: installer.install.map(toSourceInstallStep),
-    uninstallSteps: installer.uninstall.map(toSourceUninstallStep),
-  };
-}
-
 function normalizeSourcePackageType(value: unknown): CatalogPackageType {
   const raw = String(value || '').trim();
   const direct = catalogPackageTypeSchema.safeParse(raw);
@@ -269,9 +133,9 @@ function normalizeSourcePackageType(value: unknown): CatalogPackageType {
 }
 
 function resolveSourceLocale(form: RegisterPackageForm, fallbackLocale: string): string {
-  const sourceLocale = String(form.sourceLocale || '').trim();
+  const sourceLocale = form.sourceLocale.trim();
   if (SUPPORTED_SOURCE_LOCALES.includes(sourceLocale as (typeof SUPPORTED_SOURCE_LOCALES)[number])) return sourceLocale;
-  const locale = String(fallbackLocale || '').trim();
+  const locale = fallbackLocale.trim();
   if (SUPPORTED_SOURCE_LOCALES.includes(locale as (typeof SUPPORTED_SOURCE_LOCALES)[number])) return locale;
   return 'ja';
 }
@@ -355,13 +219,13 @@ function buildSourceImagePayload(
 export function computeLatestVersion(form: RegisterPackageForm): string {
   if (!form.versions.length) return '';
   const last = form.versions[form.versions.length - 1];
-  return last?.version?.trim() || '';
+  return last.version.trim();
 }
 
 function getCurrentLocalizedContent(form: RegisterPackageForm, tags: string[]): RegisterLocalizedContentForm {
   return {
     ...captureLocalizedContent(form),
-    tagsText: arrayToCommaList(Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText)),
+    tagsText: arrayToCommaList(normalizeArrayText(tags)),
   };
 }
 
@@ -374,15 +238,15 @@ function buildLocalizedSourceContent(args: {
   const packageType = normalizeSourcePackageType(localized.type);
   const typeLabel = packageType === 'custom' ? localized.type.trim() : '';
   const descriptionMode = localized.descriptionMode === 'external' ? 'external' : 'inline';
-  const externalDescriptionUrl = String(localized.descriptionUrl || '').trim();
+  const externalDescriptionUrl = localized.descriptionUrl.trim();
   const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
   const descriptionMarkdownSource = useExternalDescription ? externalDescriptionUrl : `./docs/${locale}.md`;
-  const originalAuthor = String(localized.originalAuthor || '').trim();
-  const deprecationMessage = localized.deprecationEnabled ? String(localized.deprecationMessage || '').trim() : '';
+  const originalAuthor = localized.originalAuthor.trim();
+  const deprecationMessage = localized.deprecationEnabled ? localized.deprecationMessage.trim() : '';
   const changelogMode = localized.changelogMode === 'external' ? 'external' : 'inline';
-  const externalChangelogUrl = String(localized.changelogUrl || '').trim();
+  const externalChangelogUrl = localized.changelogUrl.trim();
   const useExternalChangelog = changelogMode === 'external' && isHttpsUrl(externalChangelogUrl);
-  const inlineChangelogPath = String(localized.changelogPath || '').trim();
+  const inlineChangelogPath = localized.changelogPath.trim();
   const existingInlineChangelogPath = inlineChangelogPath && !isUrlLike(inlineChangelogPath) ? inlineChangelogPath : '';
   const changelogMarkdownSource = useExternalChangelog
     ? externalChangelogUrl
@@ -390,7 +254,7 @@ function buildLocalizedSourceContent(args: {
       ? ''
       : existingInlineChangelogPath || (localized.changelogText.trim() ? `./changelog/${locale}.md` : '');
   const noticeMarkdownSource =
-    String(localized.noticePath || '').trim() || (localized.noticeText.trim() ? `./notice/${locale}.md` : '');
+    localized.noticePath.trim() || (localized.noticeText.trim() ? `./notice/${locale}.md` : '');
 
   return sourceContentSchema.parse({
     name: localized.name.trim(),
@@ -446,41 +310,31 @@ export async function computeHashFromFile(filePath: string): Promise<string> {
   return hex.toLowerCase();
 }
 
-export function buildPackageEntry(
+export function buildRegisterCatalogItem(
   form: RegisterPackageForm,
   tags: string[],
-  inherited: Partial<Pick<CatalogEntry, 'popularity' | 'trend'>> = {},
-): CatalogEntry {
+  inherited: Partial<Pick<RegisterCatalogItem, 'popularity' | 'trend'>> = {},
+): RegisterCatalogItem {
   const id = form.id.trim();
-  const descriptionMode = form.descriptionMode === 'external' ? 'external' : 'inline';
-  const externalDescriptionUrl = String(form.descriptionUrl || '').trim();
-  const useExternalDescription = descriptionMode === 'external' && isHttpsUrl(externalDescriptionUrl);
-  const niconiCommonsId = String(form.niconiCommonsId || '').trim();
-  const originalAuthor = String(form.originalAuthor || '').trim();
   const deprecationEnabled = form.deprecationEnabled;
-  const deprecationMessage = deprecationEnabled ? String(form.deprecationMessage || '').trim() : '';
-  const entry: CatalogEntry = {
+  const deprecationMessage = deprecationEnabled ? form.deprecationMessage.trim() : '';
+  return {
     id,
+    legacyId: form.legacyId.trim() || id,
+    packageType: normalizeSourcePackageType(form.type),
+    packageRole: form.packageRole || 'primaryPackage',
     name: form.name.trim(),
-    type: form.type.trim(),
-    summary: form.summary.trim(),
-    description: useExternalDescription ? externalDescriptionUrl : `./md/${id}.md`,
     author: form.author.trim(),
-    ...(originalAuthor ? { originalAuthor } : {}),
-    ...(deprecationEnabled ? { deprecation: { message: deprecationMessage } } : {}),
-    repoURL: form.repoURL.trim(),
-    'latest-version': computeLatestVersion(form),
+    summary: form.summary.trim(),
+    typeLabel: form.type.trim(),
+    tags: normalizeArrayText(tags),
+    latestVersion: computeLatestVersion(form),
+    latestReleaseDate: form.versions.at(-1)?.releaseDate?.trim() ?? '',
     popularity: toFiniteNumber(inherited.popularity, 0),
     trend: toFiniteNumber(inherited.trend, 0),
-    licenses: buildLicensesPayload(form),
-    ...(niconiCommonsId ? { niconiCommonsId } : {}),
-    tags: Array.isArray(tags) ? normalizeArrayText(tags) : commaListToArray(form.tagsText),
-    dependencies: commaListToArray(form.relationRequiresText),
-    images: buildImagesPayload(form),
-    installer: buildInstallerPayload(form),
-    version: buildVersionPayload(form),
+    registerRelevantHash: computeRegisterRelevantHash(form),
+    ...(deprecationEnabled ? { deprecation: { message: deprecationMessage } } : {}),
   };
-  return entry;
 }
 
 export function buildSourceSubmitPayload(
@@ -495,7 +349,7 @@ export function buildSourceSubmitPayload(
   const basePath = buildPackageSourceBasePath(id);
   const sourceFiles: RegisterSourceSubmitFile[] = [];
   const packageType = normalizeSourcePackageType(form.type);
-  const niconiCommonsId = String(form.niconiCommonsId || '').trim();
+  const niconiCommonsId = form.niconiCommonsId.trim();
   const relationRequires = commaListToArray(form.relationRequiresText);
   const relationRecommends = commaListToArray(form.relationRecommendsText);
   const relationConflicts = commaListToArray(form.relationConflictsText);
@@ -517,20 +371,20 @@ export function buildSourceSubmitPayload(
     packageType,
     packageRole: form.packageRole || 'primaryPackage',
     addedAt: form.addedAt.trim(),
-    packagePageUrl: form.repoURL.trim(),
+    packagePageUrl: form.packagePageUrl.trim(),
     ...(niconiCommonsId ? { niconiCommonsId } : {}),
   });
   const install = sourceInstallSchema.parse({
     ...(Object.keys(relations).length ? { relations } : {}),
-    installation: buildSourceInstallationPayload(form),
+    installation: buildInstallerPayload(form),
   });
   const versions = sourceVersionsSchema.parse({
     versions: form.versions.map((version) => ({
       version: version.version.trim(),
-      releaseDate: version.release_date.trim(),
+      releaseDate: version.releaseDate.trim(),
       files: version.files.map((file) => ({
         path: file.path.trim(),
-        xxh128: file.hash.trim(),
+        xxh128: file.xxh128.trim(),
       })),
     })),
   });
@@ -570,7 +424,7 @@ export function buildInstallerTestItem(form: RegisterPackageForm): RegisterInsta
   return {
     id,
     installer: buildInstallerPayload(form),
-    'latest-version': computeLatestVersion(form),
+    latestVersion: computeLatestVersion(form),
     versions: buildVersionPayload(form),
   };
 }

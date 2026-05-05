@@ -3,8 +3,8 @@
     "title": "安装程序",
     "downloadSource": "下载来源",
     "sourceTypes": {
-      "direct": "直接URL",
-      "github": "GitHub Release",
+      "directUrl": "直接URL",
+      "githubRelease": "GitHub Release",
       "googleDrive": "Google Drive",
       "booth": "BOOTH"
     },
@@ -54,8 +54,8 @@
       "copy": "复制",
       "run": "运行EXE",
       "delete": "删除",
-      "extract_sfx": "解压7z自解压包",
-      "run_auo_setup": "运行auo_setup2.exe"
+      "extractSfx": "解压7z自解压包",
+      "runAuoSetup": "运行auo_setup2.exe"
     }
   },
   "tests": {
@@ -76,14 +76,14 @@
     "deleteSkipped": "跳过删除",
     "deleteSkippedDetail": "未找到对象，已跳过",
     "operationFailed": "{{action}} 失败",
-    "extractSfxDone": "已执行 extract_sfx",
-    "runAuoSetupDone": "已执行 run_auo_setup",
+    "extractSfxDone": "已执行 extractSfx",
+    "runAuoSetupDone": "已执行 runAuoSetup",
     "matchedCount": "匹配数：{{count}}个",
     "fromPath": "源路径",
     "toPath": "目标路径",
     "kind": {
       "extract": "解压",
-      "extract_sfx": "解压SFX",
+      "extractSfx": "解压SFX",
       "run": "运行",
       "error": "错误"
     },
@@ -99,14 +99,14 @@
     "installerSourceBoothSubmit": "请输入 installer.source 的 booth URL",
     "installerSourceGithubTest": "请输入 GitHub ID/仓库名称/正则表达式模式（所有项）",
     "installerSourceGithubSubmit": "installer.source github owner/repo/pattern 均为必填项",
-    "installerSourceGoogleDriveTest": "请输入文件ID",
-    "installerSourceGoogleDriveSubmit": "请输入 Google Drive 的文件ID",
+    "installerSourceGDriveTest": "请输入文件ID",
+    "installerSourceGDriveSubmit": "请输入 Google Drive 的文件ID",
     "installerSourceMissing": "请选择 installer.source",
     "installUnsupportedTest": "卸载步骤中包含不支持的操作",
     "installUnsupportedSubmit": "install 的 action 仅允许使用 {{allowed}}",
     "installRunPathTest": "请指定 EXE 运行的运行路径",
     "installRunPathSubmit": "run的path为必填项",
-    "installRunAuoSetupPath": "run_auo_setup的path为必填项",
+    "installRunAuoSetupPath": "runAuoSetup 的 path 为必填项",
     "installDeletePathTest": "请输入要删除的路径",
     "installDeletePathSubmit": "delete的path为必填项",
     "installTargetPath": "请输入目标路径",
@@ -141,11 +141,11 @@
     "uninstallRunElevateBoolean": "uninstall run 的 elevate 请指定 true/false",
     "versionsRequired": "请至少添加一个版本信息",
     "versionNameRequired": "请填写 version 的 version",
-    "versionDateRequired": "请填写 version 的 release_date",
+    "versionDateRequired": "请填写 version 的 releaseDate",
     "versionFilesRequired": "请至少添加一个 version 的 file",
     "versionFilePathRequired": "请输入 version.file 的 path",
-    "versionFileHashRequired": "请计算 version.file 的 XXH3_128",
-    "versionFileHashLength": "XXH3_128 请输入32位十六进制数",
+    "versionFileHashRequired": "请计算 version.file 的 xxh128",
+    "versionFileHashLength": "xxh128 请输入32位十六进制数",
     "thumbnailExtension": "请确认缩略图的文件扩展名"
   }
 }

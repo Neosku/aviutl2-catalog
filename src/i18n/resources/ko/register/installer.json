@@ -3,8 +3,8 @@
     "title": "설치 프로그램",
     "downloadSource": "다운로드 원본",
     "sourceTypes": {
-      "direct": "직접 URL",
-      "github": "GitHub Release",
+      "directUrl": "직접 URL",
+      "githubRelease": "GitHub Release",
       "googleDrive": "Google Drive",
       "booth": "BOOTH"
     },
@@ -54,8 +54,8 @@
       "copy": "복사",
       "run": "EXE 실행",
       "delete": "삭제",
-      "extract_sfx": "7z 추출",
-      "run_auo_setup": "auo_setup2.exe 실행"
+      "extractSfx": "7z 추출",
+      "runAuoSetup": "auo_setup2.exe 실행"
     }
   },
   "tests": {
@@ -76,14 +76,14 @@
     "deleteSkipped": "삭제 건너뜀",
     "deleteSkippedDetail": "대상을 찾지 못해 건너뛰었습니다",
     "operationFailed": "{{action}} 실패",
-    "extractSfxDone": "extract_sfx 실행됨",
-    "runAuoSetupDone": "run_auo_setup 실행됨",
+    "extractSfxDone": "extractSfx 실행됨",
+    "runAuoSetupDone": "runAuoSetup 실행됨",
     "matchedCount": "일치한 파일 수: {{count}}",
     "fromPath": "원본 경로",
     "toPath": "대상 경로",
     "kind": {
       "extract": "추출",
-      "extract_sfx": "SFX 추출",
+      "extractSfx": "SFX 추출",
       "run": "실행",
       "error": "오류"
     },
@@ -99,14 +99,14 @@
     "installerSourceBoothSubmit": "installer.source booth URL 이 필요합니다.",
     "installerSourceGithubTest": "GitHub 소유자, 저장소, 정규식 패턴을 입력해 주세요.",
     "installerSourceGithubSubmit": "installer.source github owner/repo/pattern 이 모두 필요합니다.",
-    "installerSourceGoogleDriveTest": "파일 ID를 입력해 주세요.",
-    "installerSourceGoogleDriveSubmit": "Google Drive 파일 ID가 필요합니다.",
+    "installerSourceGDriveTest": "파일 ID를 입력해 주세요.",
+    "installerSourceGDriveSubmit": "Google Drive 파일 ID가 필요합니다.",
     "installerSourceMissing": "installer.source 를 선택해 주세요.",
     "installUnsupportedTest": "설치 단계에 지원되지 않는 동작이 포함되어 있습니다.",
     "installUnsupportedSubmit": "install action 은 다음 중 하나여야 합니다: {{allowed}}",
     "installRunPathTest": "실행 파일 경로를 입력해 주세요.",
     "installRunPathSubmit": "run.path 가 필요합니다.",
-    "installRunAuoSetupPath": "run_auo_setup.path 가 필요합니다.",
+    "installRunAuoSetupPath": "runAuoSetup.path 가 필요합니다.",
     "installDeletePathTest": "삭제할 경로를 입력해 주세요.",
     "installDeletePathSubmit": "delete.path 가 필요합니다.",
     "installTargetPath": "대상 경로를 입력해 주세요.",
@@ -141,11 +141,11 @@
     "uninstallRunElevateBoolean": "uninstall run.elevate 는 true 또는 false 여야 합니다.",
     "versionsRequired": "최소 하나의 버전을 추가해 주세요.",
     "versionNameRequired": "version.version 을 입력해 주세요.",
-    "versionDateRequired": "version.release_date 를 입력해 주세요.",
+    "versionDateRequired": "version.releaseDate 를 입력해 주세요.",
     "versionFilesRequired": "최소 하나의 version.file 을 추가해 주세요.",
     "versionFilePathRequired": "version.file.path 를 입력해 주세요.",
-    "versionFileHashRequired": "version.file XXH3_128 을 계산해 주세요.",
-    "versionFileHashLength": "XXH3_128 은 32자리 16진수여야 합니다.",
+    "versionFileHashRequired": "version.file xxh128 을 계산해 주세요.",
+    "versionFileHashLength": "xxh128 은 32자리 16진수여야 합니다.",
     "thumbnailExtension": "썸네일 파일 확장자를 확인해 주세요."
   }
 }

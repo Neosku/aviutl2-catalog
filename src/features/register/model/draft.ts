@@ -2,11 +2,10 @@
  * Draft persistence utilities for register form
  */
 import { i18n } from '@/i18n';
-import type { CatalogEntry } from '@/utils/catalogSchema';
 import { normalizeRegisterLicenseType } from '@/utils/licenseTemplates';
-import { basename, commaListToArray, computeStableTextHash, generateKey, normalizeArrayText } from './helpers';
+import { basename, computeStableTextHash, generateKey, normalizeArrayText } from './helpers';
 import { normalizeInstallStepState, normalizeUninstallStepState } from './installerRules';
-import { entryToForm, getFileExtension } from './parse';
+import { getFileExtension } from './parse';
 import { createEmptyPackageForm } from './factories';
 import type { RegisterImageEntry, RegisterPackageForm } from './types';
 import * as tauriFs from '@tauri-apps/plugin-fs';
@@ -171,10 +170,10 @@ function normalizeDraftFormSnapshot(form: RegisterDraftFormSnapshot) {
     },
     versions: form.versions.map((version) => ({
       version: version.version,
-      release_date: version.release_date,
+      releaseDate: version.releaseDate,
       files: version.files.map((file) => ({
         path: file.path,
-        hash: file.hash,
+        xxh128: file.xxh128,
         fileName: file.fileName,
       })),
     })),
@@ -336,22 +335,6 @@ export function saveRegisterDraft(args: {
     storage.removeItem(createDraftStorageKey(current.draftId));
   }
   return record;
-}
-
-export function saveRegisterDraftFromCatalogEntry(args: {
-  item: CatalogEntry;
-  catalogBaseUrl?: string;
-  packageSender?: string;
-}): RegisterDraftRecord {
-  const form = entryToForm(args.item, args.catalogBaseUrl);
-  const existingDraft = getRegisterDraft(args.item.id);
-  return saveRegisterDraft({
-    packageForm: form,
-    tags: commaListToArray(form.tagsText),
-    packageSender: existingDraft?.packageSender || String(args.packageSender || ''),
-    draftId: existingDraft?.draftId,
-    packageId: args.item.id,
-  });
 }
 
 export function getRegisterDraftById(draftId: string): RegisterDraftRecord | null {

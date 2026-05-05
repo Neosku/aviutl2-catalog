@@ -1,4 +1,5 @@
 import type { PackageItem } from '@/utils/catalogStore';
+import type { InstallerRunnableItem } from '@/utils/installer/types';
 import type { PackageInstallBusyAction } from '@/utils/usePackageInstallerActions';
 
 export type PackageCardItem = Pick<
@@ -10,17 +11,13 @@ export type PackageCardItem = Pick<
   | 'typeLabel'
   | 'tags'
   | 'summary'
-  | 'images'
+  | 'thumbnailUrl'
   | 'updatedAt'
   | 'installed'
   | 'deprecation'
 > &
-  Partial<
-    Pick<
-      PackageItem,
-      'description' | 'isLatest' | 'installedVersion' | 'detectedResult' | 'installer' | 'latestVersion'
-    >
-  >;
+  Partial<Pick<PackageItem, 'isLatest' | 'installedVersion' | 'detectedResult' | 'latestVersion'>> &
+  InstallerRunnableItem;
 
 export interface PackageCardProps {
   item: PackageCardItem;

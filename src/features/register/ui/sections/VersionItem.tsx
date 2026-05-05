@@ -86,8 +86,8 @@ const VersionItem = memo(
                 {version.version || t('versions.versionUnset')}
               </span>
               <span className={text.mutedXs}>
-                {version.release_date
-                  ? `${t('versions.releaseDate')}: ${version.release_date}`
+                {version.releaseDate
+                  ? `${t('versions.releaseDate')}: ${version.releaseDate}`
                   : t('versions.releaseDateUnset')}
               </span>
             </div>
@@ -124,8 +124,8 @@ const VersionItem = memo(
                   max="9999-12-31"
                   className="flex-1"
                   id={`version-${version.key}-release`}
-                  value={version.release_date}
-                  onChange={(e) => updateVersionField(version.key, 'release_date', e.target.value)}
+                  value={version.releaseDate}
+                  onChange={(e) => updateVersionField(version.key, 'releaseDate', e.target.value)}
                   ref={handleDateRef}
                 />
                 <Button

@@ -51,8 +51,8 @@ function operationKindLabel(t: RegisterTestTranslator, kind: RegisterTestOperati
       return t('installer.actions.delete');
     case 'extract':
       return t('tests.kind.extract');
-    case 'extract_sfx':
-      return t('tests.kind.extract_sfx');
+    case 'extractSfx':
+      return t('tests.kind.extractSfx');
     case 'run':
       return t('tests.kind.run');
     case 'error':

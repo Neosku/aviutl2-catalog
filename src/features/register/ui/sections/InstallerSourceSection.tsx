@@ -41,7 +41,7 @@ export default function InstallerSourceSection({
       INSTALLER_SOURCES.map((option) => ({
         value: option.value,
         label:
-          option.value === 'GoogleDrive'
+          option.value === 'googleDrive'
             ? t('installer.sourceTypes.googleDrive')
             : t(`installer.sourceTypes.${option.value}`),
       })),
@@ -65,7 +65,7 @@ export default function InstallerSourceSection({
         />
       </div>
       <div className={cn(surface.panel, 'p-4')}>
-        {installer.sourceType === 'direct' && (
+        {installer.sourceType === 'directUrl' && (
           <div className="space-y-2">
             <label className={text.labelSm} htmlFor="installer-direct-url">
               {t('installer.directUrl')}
@@ -91,7 +91,7 @@ export default function InstallerSourceSection({
             />
           </div>
         )}
-        {installer.sourceType === 'github' && (
+        {installer.sourceType === 'githubRelease' && (
           <div className="space-y-4">
             <div className={grid.twoCol}>
               <div className="space-y-2">
@@ -144,7 +144,7 @@ export default function InstallerSourceSection({
             </div>
           </div>
         )}
-        {installer.sourceType === 'GoogleDrive' && (
+        {installer.sourceType === 'googleDrive' && (
           <div className="space-y-2">
             <label className={text.labelSm} htmlFor="installer-google-drive-id">
               {t('installer.googleDriveId')}

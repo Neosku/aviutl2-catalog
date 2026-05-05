@@ -1,8 +1,10 @@
 import { i18n } from '@/i18n';
 import * as tauriHttp from '@tauri-apps/plugin-http';
-import type { GithubSource } from '../catalogSchema';
+import type { InstallerSource } from './types';
 import { formatUnknownError } from '../errors';
 import { logError } from '../logging';
+
+type GithubSource = Extract<InstallerSource, { type: 'githubRelease' }>;
 
 type GitHubAsset = {
   name?: string;

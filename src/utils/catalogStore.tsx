@@ -45,9 +45,9 @@ function applyDetectedResult(
   forceLatest = false,
 ): CatalogStorePackage {
   const detectedVersion = getDetectedVersion(result);
-  const latest = typeof item.latestVersion === 'string' ? item.latestVersion : '';
+  const latest = item.latestVersion;
   const installed = isInstalledDetectResult(result);
-  const isLatest = Boolean(forceLatest) || (isDetectedResult(result) && !!latest && detectedVersion === latest);
+  const isLatest = forceLatest || (isDetectedResult(result) && !!latest && detectedVersion === latest);
   return {
     ...item,
     installed,
@@ -62,11 +62,11 @@ const CatalogStateContext = createContext<CatalogState | null>(null);
 const CatalogDispatchContext = createContext<React.Dispatch<CatalogAction> | null>(null);
 
 // 更新日のタイムスタンプを算出
-// 仕様: version[] の末尾 release_date を updatedAt として使用
+// 仕様: v2 versions の末尾 releaseDate を updatedAt として使用
 function toUpdatedAt(pkg: CatalogBootstrapPackage) {
-  if (!pkg.version.length) return null;
-  const lastVersion = pkg.version[pkg.version.length - 1];
-  const ts = new Date(lastVersion.release_date).getTime();
+  if (!pkg.versions.length) return null;
+  const lastVersion = pkg.versions[pkg.versions.length - 1];
+  const ts = new Date(lastVersion.releaseDate).getTime();
   return Number.isFinite(ts) ? ts : null;
 }
 
@@ -112,7 +112,7 @@ function catalogReducerInternal(state: CatalogState, action: CatalogAction): Cat
       // カタログ本体の差し替え
       // - installer があるものは downloadURL を installer:// に置き換え（UI でインストーラ起動）
       // - detectedMap（検出済みバージョン）から installed/isLatest を付加
-      const items = (action.payload || []).map((item, index) =>
+      const items = action.payload.map((item, index) =>
         applyDetectedResult(
           {
             ...enrich({ ...item }),
@@ -138,28 +138,26 @@ function catalogReducerInternal(state: CatalogState, action: CatalogAction): Cat
       return { ...state, error: action.payload };
     case 'SET_INSTALLED_IDS': {
       // 手動管理の installedIds（将来拡張用の保持。現在の表示計算には未使用）
-      const installedIds = Array.from(new Set(action.payload || []));
-      const items = state.items.map((it) => it);
-      return { ...state, installedIds, items };
+      const installedIds = Array.from(new Set(action.payload));
+      return { ...state, installedIds };
     }
     case 'SET_INSTALLED_MAP': {
-      const installedMap = action.payload || {};
       // 検出済み状態（detectedMap）には影響させず、記録目的で保持
-      return { ...state, installedMap };
+      return { ...state, installedMap: action.payload };
     }
     case 'SET_DETECTED_MAP': {
       // まとめて検出されたインストールバージョンを反映
-      const detectedMap = action.payload || {};
+      const detectedMap = action.payload;
       const items = state.items.map((it) => applyDetectedResult(it, detectedMap[it.id] ?? MISSING_DETECT_RESULT));
       return { ...state, detectedMap, items };
     }
     case 'SET_DETECTED_ONE': {
       // 単一パッケージの検出結果を反映（インストール/アンインストール直後など）
-      const { id, result, forceLatest } = action.payload || {};
+      const { id, result, forceLatest } = action.payload;
       if (!id) return state;
 
       const detectedMap = { ...state.detectedMap };
-      detectedMap[id] = result ?? MISSING_DETECT_RESULT;
+      detectedMap[id] = result;
 
       const index = state.items.findIndex((it) => it.id === id);
       if (index < 0) return { ...state, detectedMap };

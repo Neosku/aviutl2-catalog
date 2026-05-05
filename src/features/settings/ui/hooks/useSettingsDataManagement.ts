@@ -4,6 +4,7 @@ import * as tauriFs from '@tauri-apps/plugin-fs';
 import { useTranslation } from 'react-i18next';
 import type { Dispatch, SetStateAction } from 'react';
 import type { CatalogAction, CatalogStorePackage } from '@/utils/catalogStore';
+import { resolveInstallableCatalogItem } from '@/utils/catalogInstallItem';
 import { isInstalledDetectResult } from '@/utils/detectResult';
 import { detectInstalledVersionsMap, loadInstalledMap, saveInstalledSnapshot } from '@/utils/installed-map';
 import { hasInstaller, runInstallerForItem, runUninstallerForItem } from '@/utils/installer';
@@ -31,8 +32,8 @@ async function showDialogMessage(
   } catch {}
 }
 
-function hasUninstaller(item: CatalogStorePackage | null | undefined): boolean {
-  return Array.isArray(item?.installer?.uninstall) && item.installer.uninstall.length > 0;
+function hasUninstaller(item: Awaited<ReturnType<typeof resolveInstallableCatalogItem>> | null | undefined): boolean {
+  return Array.isArray(item?.installer?.uninstallSteps) && item.installer.uninstallSteps.length > 0;
 }
 
 export default function useSettingsDataManagement({
@@ -141,14 +142,19 @@ export default function useSettingsDataManagement({
       for (let i = 0; i < toInstall.length; i += 1) {
         const id = toInstall[i];
         const item = idToItem.get(id);
-        if (!item || !hasInstaller(item)) {
+        if (!item) {
+          skippedInstall.push(id);
+          continue;
+        }
+        const resolvedItem = await resolveInstallableCatalogItem(item);
+        if (!resolvedItem || !hasInstaller(resolvedItem)) {
           skippedInstall.push(id);
           continue;
         }
         const label = item.name ? `${item.name} (${id})` : id;
         setSyncStatus(t('dataManagement.status.installing', { current: i + 1, total: toInstall.length, label }));
         try {
-          await runInstallerForItem(item, dispatch);
+          await runInstallerForItem(resolvedItem, dispatch);
           installedCount += 1;
         } catch (installError) {
           failedInstall.push(`${id}: ${toErrorMessage(installError, t('common:errors.unknown'))}`);
@@ -158,14 +164,19 @@ export default function useSettingsDataManagement({
       for (let i = 0; i < toRemove.length; i += 1) {
         const id = toRemove[i];
         const item = idToItem.get(id);
-        if (!item || !hasUninstaller(item)) {
+        if (!item) {
+          skippedRemove.push(id);
+          continue;
+        }
+        const resolvedItem = await resolveInstallableCatalogItem(item);
+        if (!resolvedItem || !hasUninstaller(resolvedItem)) {
           skippedRemove.push(id);
           continue;
         }
         const label = item.name ? `${item.name} (${id})` : id;
         setSyncStatus(t('dataManagement.status.removing', { current: i + 1, total: toRemove.length, label }));
         try {
-          await runUninstallerForItem(item, dispatch);
+          await runUninstallerForItem(resolvedItem, dispatch);
           removedCount += 1;
         } catch (removeError) {
           failedRemove.push(`${id}: ${toErrorMessage(removeError, t('common:errors.unknown'))}`);

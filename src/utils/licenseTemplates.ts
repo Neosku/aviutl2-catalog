@@ -1,4 +1,3 @@
-import type { Copyright, License } from './catalogSchema';
 import apache20TextRaw from '@/assets/licenses/Apache-2.0.txt?raw';
 import bsd2ClauseTextRaw from '@/assets/licenses/BSD-2-Clause.txt?raw';
 import bsd3ClauseTextRaw from '@/assets/licenses/BSD-3-Clause.txt?raw';
@@ -22,6 +21,18 @@ export const LICENSE_TEMPLATES = {
 export type LicenseTemplateType = keyof typeof LICENSE_TEMPLATES;
 export type RegisterLicenseType = LicenseTemplateType | 'other' | 'unknown';
 type LicenseTypeOptionValue = RegisterLicenseType;
+
+type CopyrightEntry = {
+  years: string;
+  holder: string;
+};
+
+type LicenseBodyInput = {
+  type: unknown;
+  isCustom?: boolean;
+  copyrights?: CopyrightEntry[];
+  licenseBody?: string | null;
+};
 
 interface LicenseTypeOption {
   value: LicenseTypeOptionValue;
@@ -68,11 +79,11 @@ export function resolveCatalogLicenseTypeLabel(value: unknown): string {
   return toTrimmedString(value);
 }
 
-function normalizeCopyrightEntries(copyrights: Copyright[]): Copyright[] {
-  return copyrights;
+function normalizeCopyrightEntries(copyrights: CopyrightEntry[] | undefined): CopyrightEntry[] {
+  return Array.isArray(copyrights) ? copyrights : [];
 }
 
-function resolvePrimaryCopyright(entries: Copyright[]): { years: string; holder: string } {
+function resolvePrimaryCopyright(entries: CopyrightEntry[]): { years: string; holder: string } {
   const primary =
     entries.find((entry) => toTrimmedString(entry.years) || toTrimmedString(entry.holder)) || entries[0] || {};
   return {
@@ -98,7 +109,7 @@ export function requiresTemplateCopyrightFields(type: unknown): boolean {
   return COPYRIGHT_PLACEHOLDER_RE.test(LICENSE_TEMPLATES[type]);
 }
 
-export function buildLicenseBody(license: License | null | undefined): string {
+export function buildLicenseBody(license: LicenseBodyInput | null | undefined): string {
   if (!license || typeof license !== 'object') return '';
 
   const customBody = toTrimmedString(license.licenseBody);

@@ -7,11 +7,10 @@ import {
   type RegisterDraftRecord,
 } from '../../model/draft';
 import { resolveRegisterDraftTestState } from '../../model/registerTestRequirement';
-import type { CatalogEntry } from '@/utils/catalogSchema';
-import type { RegisterPackageForm } from '../../model/types';
+import type { RegisterCatalogItem, RegisterPackageForm } from '../../model/types';
 import type { RegisterDraftListItemView } from '../types';
 
-function toDraftListItem(record: RegisterDraftRecord, catalogItems: CatalogEntry[]): RegisterDraftListItemView {
+function toDraftListItem(record: RegisterDraftRecord, catalogItems: RegisterCatalogItem[]): RegisterDraftListItemView {
   const testStatus = resolveRegisterDraftTestState({
     catalogItems,
     packageId: record.packageId,
@@ -41,7 +40,7 @@ interface UseRegisterDraftPersistenceArgs {
   currentTags: string[];
   userEditToken: number;
   draftPackageId: string;
-  catalogItems: CatalogEntry[];
+  catalogItems: RegisterCatalogItem[];
   setError: React.Dispatch<React.SetStateAction<string>>;
 }
 

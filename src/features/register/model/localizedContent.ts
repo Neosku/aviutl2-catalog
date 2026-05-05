@@ -6,7 +6,7 @@ import { SUPPORTED_SOURCE_LOCALES } from './constants';
 import type { RegisterCopyright, RegisterLicense, RegisterLocalizedContentForm, RegisterPackageForm } from './types';
 
 function normalizeLocale(locale: string): string {
-  return String(locale || '').trim();
+  return locale.trim();
 }
 
 function isSupportedSourceLocale(locale: string): boolean {
@@ -16,8 +16,8 @@ function isSupportedSourceLocale(locale: string): boolean {
 function cloneCopyright(copyright: RegisterCopyright): RegisterCopyright {
   return {
     key: String(copyright.key || generateKey()),
-    years: String(copyright.years || ''),
-    holder: String(copyright.holder || ''),
+    years: copyright.years,
+    holder: copyright.holder,
   };
 }
 
@@ -25,15 +25,15 @@ function cloneLicense(license: RegisterLicense): RegisterLicense {
   return {
     key: String(license.key || generateKey()),
     type: license.type || '',
-    licenseName: String(license.licenseName || ''),
-    isCustom: Boolean(license.isCustom),
-    licenseBody: String(license.licenseBody || ''),
-    copyrights: Array.isArray(license.copyrights) ? license.copyrights.map(cloneCopyright) : [],
+    licenseName: license.licenseName,
+    isCustom: license.isCustom,
+    licenseBody: license.licenseBody,
+    copyrights: license.copyrights.map(cloneCopyright),
   };
 }
 
 export function cloneRegisterLicenses(licenses: RegisterLicense[]): RegisterLicense[] {
-  return Array.isArray(licenses) ? licenses.map(cloneLicense) : [];
+  return licenses.map(cloneLicense);
 }
 
 export function captureLocalizedContent(form: RegisterPackageForm): RegisterLocalizedContentForm {

@@ -6,8 +6,6 @@ import PackageCardThumbnailSection from './sections/PackageCardThumbnailSection'
 import type { PackageCardViewProps } from './types';
 import { cn } from '@/lib/cn';
 
-const EMPTY_TAGS: string[] = [];
-
 export default function PackageCardView({
   item,
   thumbnail,
@@ -27,7 +25,6 @@ export default function PackageCardView({
   onRemove,
 }: PackageCardViewProps) {
   const { t } = useTranslation('package');
-  const tags = Array.isArray(item.tags) ? item.tags : EMPTY_TAGS;
   const installedVersionLabel = getInstalledVersionLabel(
     item.installedVersion,
     item.detectedResult,
@@ -48,7 +45,7 @@ export default function PackageCardView({
         onClick={onOpenDetail}
       />
       <div className="pointer-events-none flex-1 p-4 flex flex-col min-w-0 relative z-10">
-        <PackageCardMetaSection item={item} lastUpdated={lastUpdated} tags={tags} />
+        <PackageCardMetaSection item={item} lastUpdated={lastUpdated} tags={item.tags} />
         <PackageCardActionSection
           isInstalled={isInstalled}
           hasUpdate={hasUpdate}

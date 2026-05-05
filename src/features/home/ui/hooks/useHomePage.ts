@@ -8,8 +8,8 @@ import type { HomeDeprecationStatus, HomeInstallStatus, HomeSortOrder } from '..
 
 const HOME_CATEGORY_ALL: PackageTypeFilterKey = 'all';
 
-function sortTags(tags: string[] | null | undefined, locale: string): string[] {
-  return (tags || []).toSorted((a, b) => a.localeCompare(b, locale, { sensitivity: 'base' }));
+function sortTags(tags: string[], locale: string): string[] {
+  return tags.toSorted((a, b) => a.localeCompare(b, locale, { sensitivity: 'base' }));
 }
 
 export default function useHomePage() {

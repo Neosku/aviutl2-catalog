@@ -7,17 +7,5 @@ export const placeholderPatternStyle: CSSProperties = {
 };
 
 export function pickThumbnail(item: PackageCardItem | null | undefined): string {
-  const groups = Array.isArray(item?.images) ? item.images : [];
-
-  for (const group of groups) {
-    const candidate = typeof group?.thumbnail === 'string' ? group.thumbnail.trim() : '';
-    if (candidate) return candidate;
-
-    if (Array.isArray(group?.infoImg)) {
-      const fallback = group.infoImg.find((src) => typeof src === 'string' && src.trim());
-      if (fallback) return fallback.trim();
-    }
-  }
-
-  return '';
+  return typeof item?.thumbnailUrl === 'string' ? item.thumbnailUrl.trim() : '';
 }

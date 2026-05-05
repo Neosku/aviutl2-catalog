@@ -19,7 +19,7 @@
     "fileLabel": "檔案 {{count}}",
     "deleteFile": "刪除檔案 {{count}}",
     "pathLabel": "安裝路徑",
-    "hashLabel": "雜湊值（XXH3_128）",
+    "hashLabel": "雜湊值（xxh128）",
     "hashMissing": "未計算",
     "sourceFile": "原始檔名",
     "chooseAndHash": "選擇檔案並計算雜湊"

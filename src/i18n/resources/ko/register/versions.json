@@ -19,7 +19,7 @@
     "fileLabel": "파일 {{count}}",
     "deleteFile": "파일 {{count}} 삭제",
     "pathLabel": "설치 경로",
-    "hashLabel": "해시 (XXH3_128)",
+    "hashLabel": "해시 (xxh128)",
     "hashMissing": "미계산",
     "sourceFile": "원본 파일명",
     "chooseAndHash": "파일 선택 및 해시 계산"

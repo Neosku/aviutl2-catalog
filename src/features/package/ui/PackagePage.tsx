@@ -105,8 +105,7 @@ export default function PackagePage() {
 
   const licenseEntries = useMemo<PackageLicenseEntry[]>(() => {
     if (!detailPackage) return [];
-    const rawLicenses = Array.isArray(detailPackage.licenses) ? detailPackage.licenses : [];
-    const entries = rawLicenses.map((license, idx) => {
+    return detailPackage.licenses.map((license, idx) => {
       const normalizedLicense = {
         type: license.type,
         isCustom: license.type === 'custom',
@@ -121,17 +120,15 @@ export default function PackagePage() {
         body: String(buildLicenseBody(normalizedLicense) || ''),
       };
     });
-    return entries;
   }, [detailPackage]);
 
   const renderableLicenses = useMemo(() => licenseEntries.filter((entry) => entry.body), [licenseEntries]);
 
   const licenseTypesLabel = useMemo(() => {
-    const types = Array.isArray(detailPackage?.licenses)
-      ? detailPackage.licenses
-          .map((license) => license.name?.trim() || resolveCatalogLicenseTypeLabel(license?.type))
-          .filter(Boolean)
-      : [];
+    const types =
+      detailPackage?.licenses
+        .map((license) => license.name?.trim() || resolveCatalogLicenseTypeLabel(license.type))
+        .filter(Boolean) ?? [];
     return types.length ? types.join(', ') : '?';
   }, [detailPackage]);
   const relationSections = useMemo<PackageRelationSection[]>(() => {

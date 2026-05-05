@@ -34,7 +34,7 @@ function getTodayInTokyoISO(): string {
 
 export function createEmptyInstaller(): RegisterInstallerState {
   return {
-    sourceType: 'direct',
+    sourceType: 'directUrl',
     directUrl: '',
     boothUrl: '',
     githubOwner: '',
@@ -50,7 +50,7 @@ export function createEmptyVersionFile(): RegisterVersionFile {
   return {
     key: generateKey(),
     path: '',
-    hash: '',
+    xxh128: '',
     fileName: '',
   };
 }
@@ -59,7 +59,7 @@ export function createEmptyVersion(): RegisterVersion {
   return {
     key: generateKey(),
     version: '',
-    release_date: getTodayInTokyoISO(),
+    releaseDate: getTodayInTokyoISO(),
     files: [createEmptyVersionFile()],
   };
 }
@@ -108,7 +108,7 @@ export function createEmptyPackageForm(): RegisterPackageForm {
     changelogText: '',
     noticePath: '',
     noticeText: '',
-    repoURL: '',
+    packagePageUrl: '',
     licenses: [createEmptyLicense()],
     tagsText: '',
     relationRequiresText: '',

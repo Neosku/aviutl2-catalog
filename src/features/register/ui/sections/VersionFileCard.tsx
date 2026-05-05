@@ -66,10 +66,10 @@ const VersionFileCard = memo(
                 <dd
                   className={cn(
                     'font-mono',
-                    file.hash ? 'text-slate-700 dark:text-slate-300' : 'text-amber-600 dark:text-amber-500',
+                    file.xxh128 ? 'text-slate-700 dark:text-slate-300' : 'text-amber-600 dark:text-amber-500',
                   )}
                 >
-                  {file.hash ? file.hash : t('versions.hashMissing')}
+                  {file.xxh128 ? file.xxh128 : t('versions.hashMissing')}
                 </dd>
               </div>
               {file.fileName && (

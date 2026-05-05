@@ -4,15 +4,19 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as z from 'zod';
-import { catalogEntrySchema, type CatalogEntry } from '@/utils/catalogSchema';
-import { SUBMIT_ACTIONS, buildPackageEntry, buildSourceSubmitPayload, validatePackageForm } from '../../model/form';
-import type { RegisterPackageForm } from '../../model/types';
+import {
+  SUBMIT_ACTIONS,
+  buildRegisterCatalogItem,
+  buildSourceSubmitPayload,
+  validatePackageForm,
+} from '../../model/form';
+import type { RegisterCatalogItem, RegisterPackageForm } from '../../model/types';
 import type { RegisterSuccessDialogState, SubmitPackagePayload } from '../types';
 import { SubmitEndpointResponse } from '@/lib/submitEndpoint';
 
 interface UseRegisterSubmitHandlerArgs {
   submitEndpoint: string;
-  setCatalogItems: React.Dispatch<React.SetStateAction<CatalogEntry[]>>;
+  setCatalogItems: React.Dispatch<React.SetStateAction<RegisterCatalogItem[]>>;
   setSelectedPackageId: React.Dispatch<React.SetStateAction<string>>;
   setSuccessDialog: React.Dispatch<React.SetStateAction<RegisterSuccessDialogState>>;
 }
@@ -28,7 +32,7 @@ const submitEndpointResponseSchema = z.object({
 
 export interface SubmitSinglePackageInput {
   packageForm: RegisterPackageForm;
-  catalogItems: CatalogEntry[];
+  catalogItems: RegisterCatalogItem[];
   tags: string[];
   packageSender: string;
   syncCatalogState?: boolean;
@@ -36,7 +40,7 @@ export interface SubmitSinglePackageInput {
 }
 
 export interface SubmitSinglePackageResult {
-  nextCatalog: CatalogEntry[];
+  nextCatalog: RegisterCatalogItem[];
   packageName: string;
   url: string;
 }
@@ -69,7 +73,7 @@ export default function useRegisterSubmitHandler({
       }
       const entryId = targetForm.id.trim();
       const existingIndex = targetCatalogItems.findIndex((item) => item.id === entryId);
-      const inherited: Partial<Pick<CatalogEntry, 'popularity' | 'trend'>> = {};
+      const inherited: Partial<Pick<RegisterCatalogItem, 'popularity' | 'trend'>> = {};
       if (existingIndex >= 0) {
         // popularity/trend はクライアントで再計算しないため、既存値を保持する。
         const existingItem = targetCatalogItems[existingIndex];
@@ -78,12 +82,12 @@ export default function useRegisterSubmitHandler({
           inherited.trend = existingItem.trend;
         }
       }
-      const entry: CatalogEntry = catalogEntrySchema.parse(buildPackageEntry(targetForm, tags, inherited));
+      const entry = buildRegisterCatalogItem(targetForm, tags, inherited);
       const mergedCatalog =
         existingIndex >= 0
           ? targetCatalogItems.map((item, idx) => (idx === existingIndex ? entry : item))
           : [...targetCatalogItems, entry];
-      const nextCatalog: CatalogEntry[] = mergedCatalog;
+      const nextCatalog: RegisterCatalogItem[] = mergedCatalog;
       const sourceSubmitPayload = buildSourceSubmitPayload(targetForm, tags, { locale: i18n.language });
 
       const formData = new FormData();
