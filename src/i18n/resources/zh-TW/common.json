@@ -58,7 +58,11 @@
     "unknown": "未知錯誤",
     "submitFailed": "提交失敗。請檢查網路連線與設定。",
     "submitEndpointRequired": "尚未設定 VITE_SUBMIT_ENDPOINT。",
-    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT 必須以 https:// 開頭。"
+    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT 必須以 https:// 開頭。",
+    "downloadSourceMissing": "未指定下載來源。",
+    "installerSourceInvalid": "installer.source 格式無效。",
+    "installerInstallStepInvalid": "installer.installSteps[{{index}}] 格式無效。",
+    "installerUninstallStepInvalid": "installer.uninstallSteps[{{index}}] 格式無效。"
   },
   "submit": {
     "successDefault": "提交完成。",

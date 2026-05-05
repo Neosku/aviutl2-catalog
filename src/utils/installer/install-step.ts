@@ -47,7 +47,7 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
   switch (stepAction) {
     case 'download': {
       const src = installerSource;
-      if (!src) throw new Error('Download source is not specified');
+      if (!src) throw new Error(i18n.t('common:errors.downloadSourceMissing'));
       let sourceLabel = '';
       if (src.type === 'googleDrive') {
         const fileId = src.id;
@@ -69,7 +69,7 @@ export async function executeInstallStep(params: ExecuteInstallStepParams): Prom
         if (src.type === 'directUrl') {
           url = src.url;
         }
-        if (!url) throw new Error('Download source is not specified');
+        if (!url) throw new Error(i18n.t('common:errors.downloadSourceMissing'));
         sourceLabel = url;
         await logInfo(`[installer ${itemId}] downloading from ${url} to ${tmpDir}`);
         ctx.downloadPath = await downloadFileFromUrl(url, tmpDir, {

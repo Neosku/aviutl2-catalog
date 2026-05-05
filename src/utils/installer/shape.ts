@@ -57,7 +57,7 @@ function normalizeInstallerSource(raw: unknown): InstallerSource | undefined {
   if (raw == null) return undefined;
   const parsed = installationSourceSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new Error('installer.source is invalid');
+    throw new Error(i18n.t('common:errors.installerSourceInvalid'));
   }
   return parsed.data;
 }
@@ -67,7 +67,7 @@ function normalizeInstallSteps(raw: unknown): InstallerConfigLike['installSteps'
   return raw.map((step, index) => {
     const parsed = installStepSchema.safeParse(step);
     if (!parsed.success) {
-      throw new Error(`installer.installSteps[${index}] is invalid`);
+      throw new Error(i18n.t('common:errors.installerInstallStepInvalid', { index }));
     }
     return parsed.data;
   });
@@ -78,7 +78,7 @@ function normalizeUninstallSteps(raw: unknown): InstallerConfigLike['uninstallSt
   return raw.map((step, index) => {
     const parsed = uninstallStepSchema.safeParse(step);
     if (!parsed.success) {
-      throw new Error(`installer.uninstallSteps[${index}] is invalid`);
+      throw new Error(i18n.t('common:errors.installerUninstallStepInvalid', { index }));
     }
     return parsed.data;
   });

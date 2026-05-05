@@ -58,7 +58,11 @@
     "unknown": "不明なエラー",
     "submitFailed": "送信に失敗しました。ネットワークや設定をご確認ください。",
     "submitEndpointRequired": "VITE_SUBMIT_ENDPOINT が設定されていません。",
-    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT には https:// で始まるURLを設定してください。"
+    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT には https:// で始まるURLを設定してください。",
+    "downloadSourceMissing": "ダウンロード元が指定されていません。",
+    "installerSourceInvalid": "installer.source の形式が不正です。",
+    "installerInstallStepInvalid": "installer.installSteps[{{index}}] の形式が不正です。",
+    "installerUninstallStepInvalid": "installer.uninstallSteps[{{index}}] の形式が不正です。"
   },
   "submit": {
     "successDefault": "送信が完了しました。",

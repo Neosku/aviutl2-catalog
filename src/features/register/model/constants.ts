@@ -17,21 +17,11 @@ export const SPECIAL_INSTALL_ACTIONS = INSTALL_ACTION_RULE_ENTRIES.filter(([, ru
 export const UNINSTALL_ACTIONS = Object.keys(uninstallActionRules);
 export const ID_PATTERN = catalogPackageIdPattern;
 
-export const ACTION_LABELS: Record<string, string> = {
-  download: 'ダウンロード',
-  extract: 'ZIP展開',
-  copy: 'コピー',
-  run: 'EXE実行',
-  delete: '削除',
-  extractSfx: '7zを展開',
-  runAuoSetup: 'auo_setup2.exeを実行',
-};
-
 export const INSTALLER_SOURCES: RegisterInstallerOption[] = [
-  { value: 'directUrl', label: '直接URL' },
-  { value: 'githubRelease', label: 'GitHub Release' },
-  { value: 'googleDrive', label: 'Google Drive' },
-  { value: 'booth', label: 'BOOTH' },
+  { value: 'directUrl', label: 'directUrl' },
+  { value: 'githubRelease', label: 'githubRelease' },
+  { value: 'googleDrive', label: 'googleDrive' },
+  { value: 'booth', label: 'booth' },
 ];
 
 export const SUPPORTED_SOURCE_LOCALES = ['ja', 'en', 'ko', 'zh-CN', 'zh-TW'] as const;
@@ -44,9 +34,9 @@ export const PACKAGE_GUIDE_FALLBACK_URL =
 export const LICENSE_TEMPLATE_TYPES = new Set<string>(LICENSE_TEMPLATE_TYPE_VALUES);
 export const INSTALL_ACTION_OPTIONS: RegisterInstallerOption[] = INSTALL_ACTIONS.map((action) => ({
   value: action,
-  label: ACTION_LABELS[action] || action,
+  label: action,
 }));
 export const UNINSTALL_ACTION_OPTIONS: RegisterInstallerOption[] = UNINSTALL_ACTIONS.map((action) => ({
   value: action,
-  label: ACTION_LABELS[action] || action,
+  label: action,
 }));

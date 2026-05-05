@@ -58,7 +58,11 @@
     "unknown": "Unknown error",
     "submitFailed": "Submission failed. Please check your Internet connection.",
     "submitEndpointRequired": "VITE_SUBMIT_ENDPOINT is not configured.",
-    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT must start with https://."
+    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT must start with https://.",
+    "downloadSourceMissing": "Download source is not specified.",
+    "installerSourceInvalid": "installer.source is invalid.",
+    "installerInstallStepInvalid": "installer.installSteps[{{index}}] is invalid.",
+    "installerUninstallStepInvalid": "installer.uninstallSteps[{{index}}] is invalid."
   },
   "submit": {
     "successDefault": "Submission completed!",

@@ -2,7 +2,6 @@
  * register モジュールのエントリーポイント
  */
 export {
-  ACTION_LABELS,
   ID_PATTERN,
   INSTALL_ACTION_OPTIONS,
   INSTALL_ACTIONS,

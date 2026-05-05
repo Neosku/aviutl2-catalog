@@ -58,7 +58,11 @@
     "unknown": "알 수 없는 오류",
     "submitFailed": "전송에 실패했습니다. 네트워크와 설정을 확인해 주세요.",
     "submitEndpointRequired": "VITE_SUBMIT_ENDPOINT가 설정되어 있지 않습니다.",
-    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT는 https://로 시작해야 합니다."
+    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT는 https://로 시작해야 합니다.",
+    "downloadSourceMissing": "다운로드 소스가 지정되지 않았습니다.",
+    "installerSourceInvalid": "installer.source 형식이 올바르지 않습니다.",
+    "installerInstallStepInvalid": "installer.installSteps[{{index}}] 형식이 올바르지 않습니다.",
+    "installerUninstallStepInvalid": "installer.uninstallSteps[{{index}}] 형식이 올바르지 않습니다."
   },
   "submit": {
     "successDefault": "전송이 완료되었습니다.",

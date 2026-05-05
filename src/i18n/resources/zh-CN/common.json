@@ -58,7 +58,11 @@
     "unknown": "未知错误",
     "submitFailed": "提交失败。请检查网络连接和设置。",
     "submitEndpointRequired": "未设置 VITE_SUBMIT_ENDPOINT。",
-    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT 必须设置为以 https:// 开头的 URL。"
+    "submitEndpointHttps": "VITE_SUBMIT_ENDPOINT 必须设置为以 https:// 开头的 URL。",
+    "downloadSourceMissing": "未指定下载来源。",
+    "installerSourceInvalid": "installer.source 格式无效。",
+    "installerInstallStepInvalid": "installer.installSteps[{{index}}] 格式无效。",
+    "installerUninstallStepInvalid": "installer.uninstallSteps[{{index}}] 格式无效。"
   },
   "submit": {
     "successDefault": "提交完成。",

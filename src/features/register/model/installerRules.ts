@@ -1,4 +1,5 @@
 import type { InstallerInstallAction, InstallerSource, InstallerUninstallAction } from '@/utils/installer/types';
+import { i18n } from '@/i18n';
 import type { RegisterInstallStep, RegisterInstallerState, RegisterUninstallStep } from './types';
 
 type InstallActionRule = {
@@ -113,11 +114,11 @@ export function getInstallerSourceIssue(installer: RegisterInstallerState): Inst
 
 export function buildInstallerSource(installer: RegisterInstallerState): InstallerSource {
   const issue = getInstallerSourceIssue(installer);
-  if (issue === 'directUrl') throw new Error('installer.source.url is required');
-  if (issue === 'booth') throw new Error('installer.source.booth is required');
-  if (issue === 'githubRelease') throw new Error('installer.source.githubRelease owner/repo/pattern are required');
-  if (issue === 'googleDrive') throw new Error('installer.source.googleDrive.id is required');
-  if (issue === 'missing') throw new Error('installer.source must be selected');
+  if (issue === 'directUrl') throw new Error(i18n.t('register:errors.installerSourceDirectRequired'));
+  if (issue === 'booth') throw new Error(i18n.t('register:errors.installerSourceBoothRequired'));
+  if (issue === 'githubRelease') throw new Error(i18n.t('register:errors.installerSourceGithubRequired'));
+  if (issue === 'googleDrive') throw new Error(i18n.t('register:errors.installerSourceGoogleDriveRequired'));
+  if (issue === 'missing') throw new Error(i18n.t('register:errors.installerSourceRequired'));
 
   if (installer.sourceType === 'directUrl') {
     return { type: 'directUrl', url: installer.directUrl.trim() };
@@ -176,11 +177,16 @@ export function getUninstallStepIssue(step: RegisterUninstallStep): InstallerSte
 export function serializeInstallStep(step: RegisterInstallStep): InstallerInstallAction {
   const normalized = normalizeInstallStepState(step);
   const action = normalized.action.trim();
+  const actionLabel = action || i18n.t('register:errors.emptyAction');
   const issue = getInstallStepIssueFromNormalized(normalized);
-  if (issue === 'unsupported') throw new Error(`unsupported install action: ${action || '(empty)'}`);
-  if (issue === 'path') throw new Error(`${action || 'install'} action requires path`);
-  if (issue === 'from_to') throw new Error('copy action requires from/to');
-  if (issue === 'elevate') throw new Error('elevate is only supported for run action');
+  if (issue === 'unsupported') {
+    throw new Error(i18n.t('register:errors.installActionUnsupported', { action: actionLabel }));
+  }
+  if (issue === 'path') {
+    throw new Error(i18n.t('register:errors.actionRequiresPath', { action: action || 'install' }));
+  }
+  if (issue === 'from_to') throw new Error(i18n.t('register:errors.copyActionRequiresFromTo'));
+  if (issue === 'elevate') throw new Error(i18n.t('register:errors.elevateRunOnly'));
 
   const path = normalized.path.trim();
   const from = normalized.from.trim();
@@ -213,10 +219,15 @@ export function serializeInstallStep(step: RegisterInstallStep): InstallerInstal
 export function serializeUninstallStep(step: RegisterUninstallStep): InstallerUninstallAction {
   const normalized = normalizeUninstallStepState(step);
   const action = normalized.action.trim();
+  const actionLabel = action || i18n.t('register:errors.emptyAction');
   const issue = getUninstallStepIssueFromNormalized(normalized);
-  if (issue === 'unsupported') throw new Error(`unsupported uninstall action: ${action || '(empty)'}`);
-  if (issue === 'path') throw new Error(`${action || 'uninstall'} action requires path`);
-  if (issue === 'elevate') throw new Error('elevate is only supported for run action');
+  if (issue === 'unsupported') {
+    throw new Error(i18n.t('register:errors.uninstallActionUnsupported', { action: actionLabel }));
+  }
+  if (issue === 'path') {
+    throw new Error(i18n.t('register:errors.actionRequiresPath', { action: action || 'uninstall' }));
+  }
+  if (issue === 'elevate') throw new Error(i18n.t('register:errors.elevateRunOnly'));
 
   const path = normalized.path.trim();
   if (action === 'delete') {

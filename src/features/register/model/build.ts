@@ -143,7 +143,7 @@ function resolveSourceLocale(form: RegisterPackageForm, fallbackLocale: string):
 function buildPackageSourceBasePath(packageId: string): string {
   const parts = splitPackageId(packageId);
   if (!parts) {
-    throw new Error(`invalid package id: ${packageId}`);
+    throw new Error(i18n.t('register:errors.packageIdInvalidDetail', { packageId }));
   }
   return `packages/${parts.namespace}/${parts.packageSlug}`;
 }

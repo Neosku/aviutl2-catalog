@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button';
 import { GripVertical, Plus } from 'lucide-react';
-import { ACTION_LABELS, INSTALL_ACTION_OPTIONS, SPECIAL_INSTALL_ACTIONS } from '../../model/form';
+import { INSTALL_ACTION_OPTIONS, SPECIAL_INSTALL_ACTIONS } from '../../model/form';
 import type { PackageInstallerSectionProps } from '../types';
 import ActionDropdown from '../components/ActionDropdown';
 import DeleteButton from '../components/DeleteButton';
@@ -74,7 +74,7 @@ export default function InstallStepsSection({
                       )}
                     >
                       {t(`installer.actions.${step.action}`, {
-                        defaultValue: ACTION_LABELS[step.action] || step.action,
+                        defaultValue: step.action,
                       })}
                       <span className={cn('ml-auto', text.optionalMuted)}>{t('installer.fixedStep')}</span>
                     </div>
