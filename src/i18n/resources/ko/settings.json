@@ -5,6 +5,7 @@
   },
   "sections": {
     "app": "앱 설정",
+    "developer": "메인테이너",
     "dataManagement": "데이터 관리",
     "appInfo": "앱 정보"
   },
@@ -31,8 +32,16 @@
       "title": "익명 사용 통계 보내기",
       "description": "앱 추천 개선을 위해 현재 설치된 패키지 ID와 함께 설치 및 제거된 패키지 ID를 익명으로 전송합니다."
     },
-    "save": "설정 저장",
-    "saved": "저장됨"
+    "developerMode": {
+      "title": "로컬 모드",
+      "description": ""
+    },
+    "developerManifest": {
+      "label": "로컬 파일",
+      "description": "로컬 manifest.json을 지정해 주세요.",
+      "placeholder": "manifest.json 경로",
+      "dialogTitle": "로컬 파일 선택"
+    }
   },
   "dataManagement": {
     "packages": "패키지 목록 내보내기 / 가져오기",
@@ -82,11 +91,15 @@
     "licenseBody": "이 소프트웨어는 MIT 라이선스로 제공됩니다. 전체 내용은 LICENSE.txt를 확인해 주세요."
   },
   "messages": {
-    "saveSuccess": "설정을 저장했습니다."
+    "autoSaving": "설정을 저장하는 중...",
+    "autoSaveSuccess": "설정을 저장했습니다."
   },
   "errors": {
     "directoryPickFailed": "디렉터리를 선택하지 못했습니다.",
+    "filePickFailed": "파일을 선택하지 못했습니다.",
     "aviutl2Required": "AviUtl2 폴더를 선택해 주세요.",
+    "localManifestRequired": "로컬 manifest.json 파일을 선택해 주세요.",
+    "catalogReloadFailed": "카탈로그를 다시 불러오지 못했습니다.",
     "languageApplyFailed": "설정은 저장되었지만 표시 언어를 즉시 적용하지 못했습니다.",
     "saveFailed": "설정을 저장하지 못했습니다. 권한과 경로를 확인해 주세요."
   }

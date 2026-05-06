@@ -15,17 +15,25 @@ import {
   type SourcePackage,
 } from '@/utils/catalog-schema/source/sourceSchema';
 import { resolveRequestedLocale } from '@/utils/catalog-schema/utils/localeResolver';
-import { isUrlLike, joinPath, resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
+import {
+  dirnamePath,
+  isUrlLike,
+  joinPath,
+  normalizeLocalPathSegments,
+  resolvePathOrUrl,
+  resolveUrl,
+} from '@/utils/catalog-schema/utils/pathUtils';
 import { resolveSourcePackagePaths, type SourcePackagePathSet } from '@/utils/catalog-schema/utils/sourcePathResolver';
 import { formatUnknownError } from '@/utils/errors';
 import { ipc } from '@/utils/invokeIpc';
 import { logError } from '@/utils/logging';
+import { getSettings } from '@/utils/settings';
 
 const CATALOG_CACHE_ROOT = 'catalog';
 const MANIFEST_CACHE_FILE = `${CATALOG_CACHE_ROOT}/manifest.json`;
 const DEFAULT_TIMEOUT_MS = 10000;
 
-type CacheSource = 'remote' | 'cache';
+type CacheSource = 'remote' | 'cache' | 'local';
 
 type ManifestArtifact = CatalogManifest['paths']['versions'];
 
@@ -35,7 +43,28 @@ type ManifestContext = {
   manifestSource: CacheSource;
   manifestUrl: string;
   manifestBaseUrl: string;
+  manifestBaseLocation: CatalogBaseLocation;
 };
+
+type CatalogManifestLocation =
+  | {
+      kind: 'remote';
+      manifestUrl: string;
+    }
+  | {
+      kind: 'local';
+      manifestPath: string;
+    };
+
+type CatalogBaseLocation =
+  | {
+      kind: 'remote';
+      baseUrl: string;
+    }
+  | {
+      kind: 'local';
+      basePath: string;
+    };
 
 type DistributionArtifactLoadResult<T> = {
   data: T;
@@ -292,14 +321,14 @@ export async function loadMarkdown(
     timeoutMs?: number;
   } = {},
 ): Promise<string> {
-  const resolvedUrl = isUrlLike(markdownSource) ? markdownSource : resolveUrl(baseUrl, markdownSource);
+  const resolvedUrl = resolvePathOrUrl(baseUrl, markdownSource);
   const cachedPromise = markdownPromises.get(resolvedUrl);
   if (cachedPromise) {
     return await cachedPromise;
   }
 
   const timeoutMs = normalizeTimeout(options.timeoutMs);
-  const promise = fetchText(resolvedUrl, timeoutMs).catch((error: unknown) => {
+  const promise = readTextLocation(resolvedUrl, timeoutMs).catch((error: unknown) => {
     markdownPromises.delete(resolvedUrl);
     throw error;
   });
@@ -399,18 +428,41 @@ async function loadManifestContext(timeoutMs: number): Promise<ManifestContext> 
 }
 
 async function createManifestContext(timeoutMs: number): Promise<ManifestContext> {
-  const manifestUrl = getRemoteManifestUrl();
+  const manifestLocation = await getConfiguredManifestLocation();
+  const manifestUrl = getManifestLocationLabel(manifestLocation);
+
+  if (manifestLocation.kind === 'local') {
+    const localManifest = await readJsonWithSchema(manifestLocation.manifestPath, manifestSchema, timeoutMs);
+    const manifestBaseLocation: CatalogBaseLocation = {
+      kind: 'local',
+      basePath: dirnamePath(manifestLocation.manifestPath),
+    };
+    return {
+      manifest: localManifest.data,
+      previousManifest: null,
+      manifestSource: 'local',
+      manifestUrl,
+      manifestBaseUrl: manifestBaseLocation.basePath,
+      manifestBaseLocation,
+    };
+  }
+
   const cachedManifest = await tryReadCachedJson(MANIFEST_CACHE_FILE, manifestSchema, 'manifest cache read failed');
 
   try {
-    const remoteManifest = await fetchJsonWithSchema(manifestUrl, manifestSchema, timeoutMs);
+    const remoteManifest = await readJsonWithSchema(manifestUrl, manifestSchema, timeoutMs);
     await writeCachedJson(MANIFEST_CACHE_FILE, remoteManifest.data);
+    const manifestBaseUrl = resolveUrl(remoteManifest.resolvedLocation, '.');
     return {
       manifest: remoteManifest.data,
       previousManifest: cachedManifest,
       manifestSource: 'remote',
-      manifestUrl: remoteManifest.resolvedUrl,
-      manifestBaseUrl: resolveUrl(remoteManifest.resolvedUrl, '.'),
+      manifestUrl: remoteManifest.resolvedLocation,
+      manifestBaseUrl,
+      manifestBaseLocation: {
+        kind: 'remote',
+        baseUrl: manifestBaseUrl,
+      },
     };
   } catch (error: unknown) {
     await logError(`[catalogClient] manifest fetch failed: ${formatUnknownError(error)}`);
@@ -423,6 +475,10 @@ async function createManifestContext(timeoutMs: number): Promise<ManifestContext
       manifestSource: 'cache',
       manifestUrl,
       manifestBaseUrl: resolveUrl(manifestUrl, '.'),
+      manifestBaseLocation: {
+        kind: 'remote',
+        baseUrl: resolveUrl(manifestUrl, '.'),
+      },
     };
   }
 }
@@ -436,7 +492,24 @@ async function loadDistributionArtifact<T>(options: {
   cacheLabel: string;
 }): Promise<DistributionArtifactLoadResult<T>> {
   const cachePath = resolveCachePath(options.currentArtifact);
-  const artifactBaseUrl = resolveDistributionBaseUrl(options.context.manifestBaseUrl, options.currentArtifact);
+  const artifactLocation = resolveDistributionArtifactLocation(
+    options.context.manifestBaseLocation,
+    options.currentArtifact,
+  );
+  const artifactBaseUrl = resolveDistributionBaseLocation(
+    options.context.manifestBaseLocation,
+    options.currentArtifact,
+  );
+
+  if (options.context.manifestSource === 'local') {
+    const localData = await readZstdJsonWithSchema(artifactLocation, options.schema, options.timeoutMs);
+    return {
+      data: localData,
+      source: 'local',
+      artifactBaseUrl,
+    };
+  }
+
   const shouldPreferCache =
     options.context.manifestSource === 'cache' ||
     options.previousArtifact?.zstd.sha256 === options.currentArtifact.zstd.sha256;
@@ -461,8 +534,7 @@ async function loadDistributionArtifact<T>(options: {
     throw new Error(`${options.cacheLabel} is unavailable because no remote manifest is loaded`);
   }
 
-  const artifactUrl = resolveUrl(options.context.manifestBaseUrl, options.currentArtifact.zstd.path);
-  const remoteData = await fetchZstdJsonWithSchema(artifactUrl, options.schema, options.timeoutMs);
+  const remoteData = await readZstdJsonWithSchema(artifactLocation, options.schema, options.timeoutMs);
   await writeCachedJson(cachePath, remoteData);
   return {
     data: remoteData,
@@ -471,58 +543,57 @@ async function loadDistributionArtifact<T>(options: {
   };
 }
 
-async function fetchJsonWithSchema<T>(
-  url: string,
+async function readJsonWithSchema<T>(
+  location: string,
   schema: ZodType<T>,
   timeoutMs: number,
 ): Promise<{
   data: T;
-  resolvedUrl: string;
+  resolvedLocation: string;
 }> {
-  const response = await fetchResponse(url, timeoutMs);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
-  }
+  const remotePayload = isUrlLike(location) ? await fetchJsonText(location, timeoutMs) : null;
+  const sourceLabel = remotePayload ? remotePayload.resolvedUrl : normalizeLocalPathSegments(location);
+  const raw = remotePayload ? remotePayload.text : await tauriFs.readTextFile(normalizeLocalPathSegments(location));
 
   let payload: unknown;
   try {
-    payload = await response.json();
+    payload = JSON.parse(raw);
   } catch (error: unknown) {
-    throw new Error(`failed to parse JSON from ${url}: ${formatUnknownError(error)}`, { cause: error });
+    throw new Error(`failed to parse JSON from ${sourceLabel}: ${formatUnknownError(error)}`, { cause: error });
   }
 
   return {
     data: schema.parse(payload),
-    resolvedUrl: response.url || url,
+    resolvedLocation: sourceLabel,
   };
 }
 
-async function fetchZstdJsonWithSchema<T>(url: string, schema: ZodType<T>, timeoutMs: number): Promise<T> {
-  const response = await fetchResponse(url, timeoutMs);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
-  }
-
+async function readZstdJsonWithSchema<T>(location: string, schema: ZodType<T>, timeoutMs: number): Promise<T> {
   let compressedBytes: number[];
   try {
-    const buffer = await response.arrayBuffer();
-    compressedBytes = Array.from(new Uint8Array(buffer));
+    compressedBytes = isUrlLike(location)
+      ? await fetchBinaryBytes(location, timeoutMs)
+      : Array.from(await tauriFs.readFile(normalizeLocalPathSegments(location)));
   } catch (error: unknown) {
-    throw new Error(`failed to read zstd payload from ${url}: ${formatUnknownError(error)}`, { cause: error });
+    throw new Error(`failed to read zstd payload from ${location}: ${formatUnknownError(error)}`, { cause: error });
   }
 
   let jsonText = '';
   try {
     jsonText = await ipc.decompressZstdToUtf8({ bytes: compressedBytes });
   } catch (error: unknown) {
-    throw new Error(`failed to decompress zstd payload from ${url}: ${formatUnknownError(error)}`, { cause: error });
+    throw new Error(`failed to decompress zstd payload from ${location}: ${formatUnknownError(error)}`, {
+      cause: error,
+    });
   }
 
   let payload: unknown;
   try {
     payload = JSON.parse(jsonText);
   } catch (error: unknown) {
-    throw new Error(`failed to parse decompressed JSON from ${url}: ${formatUnknownError(error)}`, { cause: error });
+    throw new Error(`failed to parse decompressed JSON from ${location}: ${formatUnknownError(error)}`, {
+      cause: error,
+    });
   }
 
   return schema.parse(payload);
@@ -534,6 +605,26 @@ async function fetchText(url: string, timeoutMs: number): Promise<string> {
     throw new Error(`HTTP ${response.status} for ${url}`);
   }
   return await response.text();
+}
+
+async function fetchJsonText(url: string, timeoutMs: number): Promise<{ text: string; resolvedUrl: string }> {
+  const response = await fetchResponse(url, timeoutMs);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${url}`);
+  }
+  return {
+    text: await response.text(),
+    resolvedUrl: response.url || url,
+  };
+}
+
+async function fetchBinaryBytes(url: string, timeoutMs: number): Promise<number[]> {
+  const response = await fetchResponse(url, timeoutMs);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${url}`);
+  }
+  const buffer = await response.arrayBuffer();
+  return Array.from(new Uint8Array(buffer));
 }
 
 async function readSourceJson<T>(location: string, schema: ZodType<T>, timeoutMs: number): Promise<T> {
@@ -577,7 +668,7 @@ async function readTextLocation(location: string, timeoutMs: number): Promise<st
   if (isUrlLike(location)) {
     return await fetchText(location, timeoutMs);
   }
-  return await tauriFs.readTextFile(location);
+  return await tauriFs.readTextFile(normalizeLocalPathSegments(location));
 }
 
 function resolveSourceAssetPath(packageBasePath: string, relativePathOrUrl: string): string {
@@ -644,8 +735,26 @@ function resolveCachePath(artifact: ManifestArtifact): string {
   return `${CATALOG_CACHE_ROOT}/${normalizeRelativePath(artifactJsonPath)}`;
 }
 
-function resolveDistributionBaseUrl(manifestBaseUrl: string, artifact: ManifestArtifact): string {
-  return resolveUrl(resolveUrl(manifestBaseUrl, artifact.zstd.path), '.');
+function resolveDistributionArtifactLocation(baseLocation: CatalogBaseLocation, artifact: ManifestArtifact): string {
+  return resolveBaseLocationPath(baseLocation, artifact.zstd.path);
+}
+
+function resolveDistributionBaseLocation(baseLocation: CatalogBaseLocation, artifact: ManifestArtifact): string {
+  const artifactLocation = resolveDistributionArtifactLocation(baseLocation, artifact);
+  if (isUrlLike(artifactLocation)) {
+    return resolveUrl(artifactLocation, '.');
+  }
+  return dirnamePath(artifactLocation);
+}
+
+function resolveBaseLocationPath(baseLocation: CatalogBaseLocation, relativePath: string): string {
+  if (isUrlLike(relativePath)) {
+    return relativePath;
+  }
+  if (baseLocation.kind === 'remote') {
+    return resolveUrl(baseLocation.baseUrl, relativePath);
+  }
+  return joinPath(baseLocation.basePath, relativePath);
 }
 
 function stripZstdSuffix(path: string): string {
@@ -665,20 +774,43 @@ function dirname(path: string): string {
   return lastSlashIndex >= 0 ? normalized.slice(0, lastSlashIndex) : '';
 }
 
-function getRemoteManifestUrl(): string {
+async function getConfiguredManifestLocation(): Promise<CatalogManifestLocation> {
+  const settings = await getSettings();
+  const localModeEnabled = settings.local_mode_enabled === true;
+  const localManifestPath = String(settings.local_manifest_path || '').trim();
+  if (localModeEnabled) {
+    if (!localManifestPath) {
+      throw new Error('local manifest path is not configured');
+    }
+    return {
+      kind: 'local',
+      manifestPath: localManifestPath,
+    };
+  }
+
   const raw = typeof import.meta.env.VITE_REMOTE === 'string' ? import.meta.env.VITE_REMOTE.trim() : '';
   if (!raw) {
     throw new Error('VITE_REMOTE is not configured');
   }
   if (isUrlLike(raw)) {
-    return raw;
+    return {
+      kind: 'remote',
+      manifestUrl: raw,
+    };
   }
 
   const origin =
     typeof window !== 'undefined' && window.location && window.location.href
       ? window.location.href
       : 'app://localhost/';
-  return new URL(raw, origin).toString();
+  return {
+    kind: 'remote',
+    manifestUrl: new URL(raw, origin).toString(),
+  };
+}
+
+function getManifestLocationLabel(location: CatalogManifestLocation): string {
+  return location.kind === 'remote' ? location.manifestUrl : normalizeLocalPathSegments(location.manifestPath);
 }
 
 function getSourcePackagesRoot(): string {

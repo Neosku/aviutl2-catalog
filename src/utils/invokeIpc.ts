@@ -49,6 +49,8 @@ type InvokeIpcMap = {
       theme: string;
       locale: string;
       packageStateOptOut: boolean;
+      localModeEnabled: boolean;
+      localManifestPath: string;
     },
     void
   >;

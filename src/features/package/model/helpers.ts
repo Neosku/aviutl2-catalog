@@ -8,6 +8,8 @@ type PackageTypeTranslator = (key: PackageTypeLabelKey, options?: { defaultValue
 
 export type PackageDetailSource = 'home' | 'updates' | 'niconi-commons';
 
+import { resolvePathOrUrl } from '@/utils/catalog-schema/utils/pathUtils';
+
 export function isMarkdownFilePath(path: string): boolean {
   const trimmedPath = path.trim();
   if (!trimmedPath || trimmedPath.includes('\n')) return false;
@@ -20,10 +22,7 @@ export function isMarkdownFilePath(path: string): boolean {
 export function resolveMarkdownUrl(path: string, baseUrl: string): string {
   const trimmed = String(path || '').trim();
   if (!trimmed) throw new Error('Empty markdown path');
-  try {
-    return new URL(trimmed, baseUrl).toString();
-  } catch {}
-  throw new Error('Unable to resolve markdown path');
+  return resolvePathOrUrl(baseUrl, trimmed);
 }
 
 export function shouldOpenExternalLink(href: string): boolean {

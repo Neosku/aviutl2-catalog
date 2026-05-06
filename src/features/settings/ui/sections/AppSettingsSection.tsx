@@ -4,10 +4,10 @@ import { UI_LOCALE_OPTIONS } from '@/i18n';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { inputVariants } from '@/components/ui/Input';
-import { Check, FolderOpen, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
+import { FolderOpen, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { AppSettingsSectionProps } from '../types';
 import SettingToggleRow from './SettingToggleRow';
-import { layout, surface, text } from '@/components/ui/_styles';
+import { surface, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
 const iconBlockStyle: CSSProperties = { display: 'block' };
@@ -15,15 +15,12 @@ const iconBlockStyle: CSSProperties = { display: 'block' };
 export default function AppSettingsSection({
   form,
   packageStateEnabled,
-  saving,
-  success,
   onAviutl2RootChange,
   onLocaleChange,
   onPortableToggle,
   onPackageStateEnabledToggle,
   onPickAviutl2Root,
   onToggleTheme,
-  onSave,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation(['settings', 'common']);
 
@@ -113,20 +110,6 @@ export default function AppSettingsSection({
           checked={packageStateEnabled}
           onToggle={() => onPackageStateEnabledToggle(!packageStateEnabled)}
         />
-
-        <div className={cn(layout.inlineGap2, 'flex-wrap justify-end border-slate-100 dark:border-slate-800')}>
-          <Button
-            variant={success ? 'success' : 'primary'}
-            size="actionSm"
-            onClick={onSave}
-            disabled={saving || Boolean(success)}
-            type="button"
-            className="cursor-pointer"
-          >
-            {success && <Check size={16} />}
-            {success ? t('app.saved') : t('app.save')}
-          </Button>
-        </div>
       </div>
     </section>
   );

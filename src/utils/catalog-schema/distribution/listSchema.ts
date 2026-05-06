@@ -27,9 +27,11 @@ export const catalogListPackageSchema = z
     changelog: markdownRefSchema.optional(),
     niconiCommonsId: nonEmptyStringSchema.optional(),
     deprecation: deprecationSchema.optional(),
-    images: z.object({
-      thumbnail: nonEmptyStringSchema,
-    }),
+    images: z
+      .object({
+        thumbnail: nonEmptyStringSchema,
+      })
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (value.packageType === 'custom' && !value.typeLabel) {

@@ -5,6 +5,7 @@
   },
   "sections": {
     "app": "アプリ設定",
+    "developer": "メンテナー向け",
     "dataManagement": "データ管理",
     "appInfo": "アプリ情報"
   },
@@ -31,8 +32,16 @@
       "title": "匿名統計の送信",
       "description": "利用状況を参考にした表示を提供するため、インストール・アンインストールされたパッケージID、およびインストール済みパッケージIDを匿名で送信します。ご協力をお願いします。"
     },
-    "save": "設定を保存",
-    "saved": "保存しました"
+    "developerMode": {
+      "title": "ローカルモード",
+      "description": ""
+    },
+    "developerManifest": {
+      "label": "ローカルファイル",
+      "description": "ローカルの manifest.json を指定してください。",
+      "placeholder": "manifest.json のパス",
+      "dialogTitle": "ローカルファイルを選択"
+    }
   },
   "dataManagement": {
     "packages": "パッケージ一覧のエクスポート / インポート",
@@ -82,11 +91,15 @@
     "licenseBody": "本ソフトウェアは MIT License に基づき提供されます。ライセンス全文は LICENSE.txt をご参照ください。"
   },
   "messages": {
-    "saveSuccess": "設定を保存しました。"
+    "autoSaving": "設定を保存しています…",
+    "autoSaveSuccess": "設定を保存しました。"
   },
   "errors": {
     "directoryPickFailed": "ディレクトリ選択に失敗しました",
+    "filePickFailed": "ファイル選択に失敗しました",
     "aviutl2Required": "AviUtl2 のフォルダを指定してください。",
+    "localManifestRequired": "ローカルの manifest.json を指定してください。",
+    "catalogReloadFailed": "カタログの再読み込みに失敗しました。",
     "languageApplyFailed": "設定は保存しましたが、表示言語をすぐには反映できませんでした。",
     "saveFailed": "保存に失敗しました。権限やパスをご確認ください。"
   }

@@ -5,6 +5,7 @@
   },
   "sections": {
     "app": "App Settings",
+    "developer": "Maintainer",
     "dataManagement": "Data Management",
     "appInfo": "App Info"
   },
@@ -31,8 +32,16 @@
       "title": "Send anonymous usage statistics",
       "description": "To improve app recommendations, anonymously send installed and uninstalled package IDs along with the currently installed package IDs."
     },
-    "save": "Save Settings",
-    "saved": "Saved"
+    "developerMode": {
+      "title": "Local Mode",
+      "description": ""
+    },
+    "developerManifest": {
+      "label": "Local File",
+      "description": "Specify the local manifest.json.",
+      "placeholder": "Path to manifest.json",
+      "dialogTitle": "Select Local File"
+    }
   },
   "dataManagement": {
     "packages": "Export / Import Package List",
@@ -82,11 +91,15 @@
     "licenseBody": "This software is provided under the MIT License. See LICENSE.txt for the full text."
   },
   "messages": {
-    "saveSuccess": "Settings saved."
+    "autoSaving": "Saving settings...",
+    "autoSaveSuccess": "Settings saved."
   },
   "errors": {
     "directoryPickFailed": "Failed to select a directory.",
+    "filePickFailed": "Failed to select a file.",
     "aviutl2Required": "Please select the AviUtl2 folder.",
+    "localManifestRequired": "Please select a local manifest.json file.",
+    "catalogReloadFailed": "Failed to reload the catalog.",
     "languageApplyFailed": "The settings were saved, but the display language could not be applied immediately.",
     "saveFailed": "Failed to save settings. Check the app permissions and path."
   }

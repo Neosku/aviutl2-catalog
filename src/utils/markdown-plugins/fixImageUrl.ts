@@ -1,14 +1,14 @@
 import { MarkdownExit } from 'markdown-exit';
+import { isUrlLike, resolveMarkdownAssetPath } from '@/utils/catalog-schema/utils/pathUtils';
+import { toDisplayAssetUrl } from '@/utils/displayAssetUrl';
 
 function resolveImageSrc(src: string, baseUrl?: string): string {
-  if (!baseUrl) return src;
-  try {
-    const url = new URL(src, baseUrl);
-    return url.href;
-  } catch {
+  if (!baseUrl || isUrlLike(src)) {
     return src;
   }
+  return toDisplayAssetUrl(resolveMarkdownAssetPath(baseUrl, src));
 }
+
 /** 画像リンクを渡されたbaseUrlを基準に変換する。 */
 export function fixImageUrl(md: MarkdownExit): void {
   const defaultImageRenderer =

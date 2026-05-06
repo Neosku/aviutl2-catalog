@@ -5,6 +5,7 @@
   },
   "sections": {
     "app": "应用设置",
+    "developer": "维护者",
     "dataManagement": "数据管理",
     "appInfo": "应用信息"
   },
@@ -31,8 +32,16 @@
       "title": "发送匿名统计",
       "description": "为了提供基于使用情况的排序，程序将匿名发送已安装/已卸载的包ID以及已安装的包ID。感谢您的配合。"
     },
-    "save": "保存设置",
-    "saved": "已保存"
+    "developerMode": {
+      "title": "本地模式",
+      "description": ""
+    },
+    "developerManifest": {
+      "label": "本地文件",
+      "description": "请指定本地 manifest.json。",
+      "placeholder": "manifest.json 的路径",
+      "dialogTitle": "选择本地文件"
+    }
   },
   "dataManagement": {
     "packages": "导出/导入包列表",
@@ -82,11 +91,15 @@
     "licenseBody": "本软件基于 MIT License 提供。许可证全文请参阅 LICENSE.txt。"
   },
   "messages": {
-    "saveSuccess": "设置已保存。"
+    "autoSaving": "正在保存设置...",
+    "autoSaveSuccess": "设置已保存。"
   },
   "errors": {
     "directoryPickFailed": "目录选择失败。",
+    "filePickFailed": "文件选择失败。",
     "aviutl2Required": "请指定 AviUtl2 文件夹。",
+    "localManifestRequired": "请选择本地 manifest.json 文件。",
+    "catalogReloadFailed": "目录重新加载失败。",
     "languageApplyFailed": "设置已保存，但无法立即应用显示语言。",
     "saveFailed": "保存失败。请检查权限或路径。"
   }

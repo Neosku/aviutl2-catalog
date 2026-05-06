@@ -1,6 +1,6 @@
 import { i18n } from '@/i18n';
 import { loadDetailCatalog, loadMarkdown } from './catalogClient';
-import { resolveUrl } from './catalog-schema/utils/pathUtils';
+import { resolvePathOrUrl } from './catalog-schema/utils/pathUtils';
 
 export interface PackageNoticeContent {
   title: string;
@@ -27,7 +27,7 @@ export async function loadPackageNoticeContent(packageId: string): Promise<Packa
   return {
     title: detailPackage?.packagePageUrl || normalizedId,
     html: renderMarkdown(markdownText, {
-      baseUrl: resolveUrl(detailResult.baseUrls.detail, noticeSource),
+      baseUrl: resolvePathOrUrl(detailResult.baseUrls.detail, noticeSource),
     }),
   };
 }

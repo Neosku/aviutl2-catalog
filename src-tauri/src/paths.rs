@@ -120,6 +120,8 @@ pub struct Settings {
     pub locale: String,                          // UI ロケール
     pub package_state_opt_out: bool,             // 匿名統計の送信を無効化
     pub package_updates_paused_ids: Vec<String>, // 一時停止中のパッケージID一覧(UpdateCheckerの更新で使用予定)
+    pub local_mode_enabled: bool,                // ローカル配信カタログを読み込むメンテナー向けモード
+    pub local_manifest_path: PathBuf,            // メンテナー向けモードで読み込むローカルの manifest.json
     pub app_version: String,                     // 本アプリのバージョン(UpdateCheckerの更新で使用)
     pub catalog_exe_path: PathBuf,               // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
 }
@@ -354,7 +356,16 @@ pub async fn complete_initial_setup(app: AppHandle) -> Result<(), String> {
 
 // aviutl2_rootを保存し、APP_DIRを更新
 #[tauri::command]
-pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_mode: bool, theme: String, locale: String, package_state_opt_out: bool) -> Result<(), String> {
+pub async fn update_settings(
+    app: AppHandle,
+    aviutl2_root: String,
+    is_portable_mode: bool,
+    theme: String,
+    locale: String,
+    package_state_opt_out: bool,
+    local_mode_enabled: bool,
+    local_manifest_path: String,
+) -> Result<(), String> {
     let locale = UiLocale::parse(&locale);
     let missing_root_message = common_message(locale, "backend.errors.aviutlFolderRequired");
     let trimmed = aviutl2_root.trim();
@@ -375,6 +386,8 @@ pub async fn update_settings(app: AppHandle, aviutl2_root: String, is_portable_m
     settings.theme = theme.to_string();
     settings.locale = locale.as_str().to_string();
     settings.package_state_opt_out = package_state_opt_out;
+    settings.local_mode_enabled = local_mode_enabled;
+    settings.local_manifest_path = PathBuf::from(local_manifest_path.trim());
     finalize_settings(&app, &mut settings, &settings_path, &catalog_config_dir).map_err(|e| e.to_string())
 }
 
@@ -428,5 +441,9 @@ fn resolve_aviutl_root(raw: &str) -> PathBuf {
 #[tauri::command]
 pub fn resolve_aviutl2_root(raw: String) -> Result<String, String> {
     let resolved = resolve_aviutl_root(&raw);
-    if resolved.as_os_str().is_empty() { Err(common_message_current("backend.errors.aviutlFolderRequired")) } else { Ok(pathbuf_to_string(&resolved)) }
+    if resolved.as_os_str().is_empty() {
+        Err(common_message_current("backend.errors.aviutlFolderRequired"))
+    } else {
+        Ok(pathbuf_to_string(&resolved))
+    }
 }

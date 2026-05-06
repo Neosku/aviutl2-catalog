@@ -10,6 +10,8 @@ export interface AppSettingsDraft {
   theme?: string | null;
   locale?: string | null;
   packageStateOptOut?: boolean | null;
+  localModeEnabled?: boolean | null;
+  localManifestPath?: string | null;
 }
 
 interface UpdateAppSettingsPayload {
@@ -18,6 +20,8 @@ interface UpdateAppSettingsPayload {
   theme: string;
   locale: SupportedUiLocale;
   packageStateOptOut: boolean;
+  localModeEnabled: boolean;
+  localManifestPath: string;
 }
 
 export function normalizeTheme(value: unknown): string {
@@ -37,6 +41,8 @@ export function resolveAppSettingsUpdate(
     theme: normalizeTheme(draft.theme ?? persisted.theme),
     locale: normalizeUiLocale(draft.locale ?? persisted.locale),
     packageStateOptOut: Boolean(draft.packageStateOptOut ?? persisted.package_state_opt_out),
+    localModeEnabled: Boolean(draft.localModeEnabled ?? persisted.local_mode_enabled),
+    localManifestPath: String(draft.localManifestPath ?? persisted.local_manifest_path ?? '').trim(),
   };
 }
 

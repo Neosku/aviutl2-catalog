@@ -5,10 +5,11 @@
   },
   "sections": {
     "app": "應用設定",
+    "developer": "維護者",
     "dataManagement": "資料管理",
     "appInfo": "應用資訊"
-  },
-  "app": {
+    },
+    "app": {
     "aviutl2Root": {
       "label": "AviUtl2 資料夾",
       "description": "請選擇包含 aviutl2.exe 的資料夾。",
@@ -31,8 +32,16 @@
       "title": "傳送匿名使用統計",
       "description": "為了改善應用推薦，會匿名傳送已安裝與已解除安裝的套件 ID，以及目前已安裝的套件 ID。"
     },
-    "save": "儲存設定",
-    "saved": "已儲存"
+    "developerMode": {
+      "title": "本機模式",
+      "description": ""
+    },
+    "developerManifest": {
+      "label": "本機檔案",
+      "description": "請指定本機 manifest.json。",
+      "placeholder": "manifest.json 路徑",
+      "dialogTitle": "選擇本機檔案"
+    }
   },
   "dataManagement": {
     "packages": "匯出 / 匯入套件清單",
@@ -82,11 +91,15 @@
     "licenseBody": "本軟體依 MIT 授權提供。完整內容請參閱 LICENSE.txt。"
   },
   "messages": {
-    "saveSuccess": "設定已儲存。"
+    "autoSaving": "正在儲存設定...",
+    "autoSaveSuccess": "設定已儲存。"
   },
   "errors": {
     "directoryPickFailed": "選擇資料夾失敗。",
+    "filePickFailed": "選擇檔案失敗。",
     "aviutl2Required": "請選擇 AviUtl2 資料夾。",
+    "localManifestRequired": "請選擇本機 manifest.json 檔案。",
+    "catalogReloadFailed": "重新載入目錄失敗。",
     "languageApplyFailed": "設定已儲存，但顯示語言無法立即套用。",
     "saveFailed": "儲存設定失敗。請檢查權限與路徑。"
   }

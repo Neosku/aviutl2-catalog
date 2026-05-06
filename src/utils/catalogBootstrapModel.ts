@@ -1,5 +1,6 @@
 import type { CatalogBootstrapLoadResult } from './catalogClient';
-import { isUrlLike, resolveUrl } from './catalog-schema/utils/pathUtils';
+import { resolvePathOrUrl } from './catalog-schema/utils/pathUtils';
+import { resolveDisplayAssetUrl } from './displayAssetUrl';
 
 export type CatalogBootstrapVersionFile = {
   path: string;
@@ -53,7 +54,9 @@ export function buildCatalogBootstrapPackages(result: CatalogBootstrapLoadResult
   return result.list.packages.map((listPackage) => {
     const versionEntry = result.versions.packages[listPackage.id];
     const metricEntry = result.metrics.packages[listPackage.id];
-    const thumbnailUrl = resolveOptionalAssetPath(result.baseUrls.list, listPackage.images?.thumbnail);
+    const thumbnailUrl = listPackage.images?.thumbnail
+      ? resolveDisplayAssetUrl(result.baseUrls.list, listPackage.images.thumbnail)
+      : '';
     const versions =
       versionEntry?.versions.map((version) => ({
         version: version.version,
@@ -66,7 +69,7 @@ export function buildCatalogBootstrapPackages(result: CatalogBootstrapLoadResult
     const latestVersion = versions.at(-1)?.version ?? '';
     const latestReleaseDate = versions.at(-1)?.releaseDate ?? '';
     const changelogSource = listPackage.changelog?.markdownSource
-      ? resolveOptionalAssetPath(result.baseUrls.list, listPackage.changelog.markdownSource)
+      ? resolvePathOrUrl(result.baseUrls.list, listPackage.changelog.markdownSource.trim())
       : '';
 
     return {
@@ -107,12 +110,4 @@ export function buildCatalogSearchIndexItems(items: CatalogBootstrapPackage[]): 
     tags: item.tags,
     latestReleaseDate: item.latestReleaseDate,
   }));
-}
-
-function resolveOptionalAssetPath(baseUrl: string, path: string | undefined): string {
-  const trimmed = typeof path === 'string' ? path.trim() : '';
-  if (!trimmed) {
-    return '';
-  }
-  return isUrlLike(trimmed) ? trimmed : resolveUrl(baseUrl, trimmed);
 }

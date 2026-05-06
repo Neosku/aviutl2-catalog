@@ -6,7 +6,7 @@ import { APP_ROUTE_PATHS } from '@/routePaths';
 import ErrorDialog from '@/components/ErrorDialog';
 import PackageNoticeModal from '@/components/PackageNoticeModal';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
-import { resolveUrl } from '@/utils/catalog-schema/utils/pathUtils';
+import { resolveDisplayAssetUrl } from '@/utils/displayAssetUrl';
 import { buildLicenseBody, resolveCatalogLicenseTypeLabel } from '@/utils/licenseTemplates';
 import { HOME_LIST_RESTORE_STATE } from '@/layouts/app-shell/types';
 import { readPackageDetailSource, readPackageListSearchFromDetail, shouldOpenExternalLink } from '../model/helpers';
@@ -64,7 +64,7 @@ export default function PackagePage() {
     if (!detailPackage?.images?.detailImages?.length) {
       return [];
     }
-    return detailPackage.images.detailImages.map((src) => resolveUrl(detailData.detailBaseUrl, src));
+    return detailPackage.images.detailImages.map((src) => resolveDisplayAssetUrl(detailData.detailBaseUrl, src));
   }, [detailData.detailBaseUrl, detailPackage?.images?.detailImages]);
   const heroImage = detailImageUrls[0] || item?.thumbnailUrl || '';
   const carouselImages = useMemo(
