@@ -6,8 +6,8 @@ import RouterFallback from '@/components/RouterFallback';
 import DeepLinkHandler from '@/features/deep-link/ui/DeepLinkHandler';
 import AppShell from '@/layouts/app-shell/AppShell';
 import { APP_ROUTE_PATHS } from '@/routePaths';
+import Home from '@/features/home/ui/HomePage';
 
-const Home = lazy(() => import('@/features/home/ui/HomePage'));
 const Links = lazy(() => import('@/features/links/ui/LinksPage'));
 const Package = lazy(() => import('@/features/package/ui/PackagePage'));
 const Updates = lazy(() => import('@/features/updates/ui/UpdatesPage'));

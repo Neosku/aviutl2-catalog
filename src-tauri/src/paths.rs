@@ -254,12 +254,13 @@ fn finalize_settings(app: &AppHandle, settings: &mut Settings, settings_path: &P
 // "init-setup" ウィンドウを開く
 fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
     if app.get_webview_window("init-setup").is_none() {
-        let mut builder = WebviewWindowBuilder::new(app, "init-setup", WebviewUrl::App("/".into()))
+        let mut builder = WebviewWindowBuilder::new(app, "init-setup", WebviewUrl::App("/?window=init-setup".into()))
             .title(common_message_current("backend.windowTitles.setup"))
             .inner_size(850.0, 640.0)
             .center()
             .resizable(true)
             .decorations(false)
+            .transparent(true)
             .visible(false);
 
         #[cfg(target_os = "windows")]
@@ -277,7 +278,8 @@ fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
             );
         }
 
-        builder.build().map_err(|e| Error::other(e.to_string()))?;
+        let window = builder.build().map_err(|e| Error::other(e.to_string()))?;
+        let _ = window.hide();
     } else if let Some(window) = app.get_webview_window("init-setup") {
         let _ = window.show();
         let _ = window.set_focus();
@@ -290,7 +292,6 @@ fn open_init_setup_window(app: &AppHandle) -> std::io::Result<()> {
 fn open_main_window(app: &AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         window.show().map_err(|e| e.to_string())?;
-        let _ = window.maximize();
         let _ = window.set_focus();
         return Ok(());
     }
@@ -318,8 +319,7 @@ fn open_main_window(app: &AppHandle) -> Result<(), String> {
     }
 
     let window = builder.build().map_err(|e| e.to_string())?;
-    let _ = window.maximize();
-    let _ = window.set_focus();
+    let _ = window.hide();
     Ok(())
 }
 

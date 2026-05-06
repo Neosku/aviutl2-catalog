@@ -1,5 +1,4 @@
 import { AlertCircle } from 'lucide-react';
-import { ensureInitWindowVisible } from '../model/helpers';
 import UpdateDialog from '@/features/app-update/UpdateDialog';
 import TitleBar from '@/layouts/app-shell/title-bar/TitleBar';
 import LocaleToggleFab from './components/LocaleToggleFab';
@@ -17,8 +16,6 @@ import {
 
 const setupErrorBannerClass =
   'mb-4 shrink-0 p-4 rounded-xl border border-red-200/60 bg-red-50/80 backdrop-blur-md text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm';
-
-ensureInitWindowVisible();
 
 export default function InitSetupPage() {
   const state = useInitSetupState();

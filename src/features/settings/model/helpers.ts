@@ -19,6 +19,7 @@ export function applyTheme(theme: string): void {
   const value = String(theme || '').trim();
   const isDark = value !== 'lightmode';
   root.classList.toggle('dark', isDark);
+  localStorage.setItem('theme', value);
 }
 
 export function toSettingsForm(raw: unknown, fallbackLocale: SupportedUiLocale = 'ja'): SettingsFormState {

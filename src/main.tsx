@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import AppRouter from '@/Router';
 import { useCatalogBootstrap } from '@/bootstrap/useCatalogBootstrap';
 import { useGlobalGuards } from '@/bootstrap/useGlobalGuards';
-import { applyBootThemeInitClass, detectWindowLabel, scheduleMainWindowReveal, type AppMode } from '@/bootstrap/window';
+import { applyBootThemeInitClass, getWindowMode, showCurrentWindow } from '@/bootstrap/window';
 import UpdateDialog from '@/features/app-update/UpdateDialog';
 import { useUpdatePrompt } from '@/features/app-update/useUpdatePrompt';
 import InitSetupPage from '@/features/init-setup/ui/InitSetupPage';
@@ -21,14 +21,17 @@ import 'markdown-it-github-alerts/styles/github-colors-dark-media.css';
 import 'markdown-it-github-alerts/styles/github-base.css';
 
 applyBootThemeInitClass();
-scheduleMainWindowReveal();
+
+function CatalogBootstrapLoader() {
+  const dispatch = useCatalogDispatch();
+  useCatalogBootstrap(dispatch);
+  return null;
+}
 
 function Bootstrapper() {
-  const dispatch = useCatalogDispatch();
   const { updateInfo, updateBusy, updateError, confirmUpdate, dismissUpdate } = useUpdatePrompt();
 
   useGlobalGuards();
-  useCatalogBootstrap(dispatch);
 
   return (
     <>
@@ -52,31 +55,22 @@ function App() {
     <>
       <TitleBar />
       <div className="app-scroll">
-        <CatalogProvider init={initCatalog()}>
-          <Bootstrapper />
-        </CatalogProvider>
+        <Bootstrapper />
       </div>
     </>
   );
 }
 
 function RootApp() {
-  const [mode, setMode] = useState<AppMode>('loading');
+  const mode = getWindowMode();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const label = await detectWindowLabel();
-      if (!cancelled) setMode(label === 'init-setup' ? 'init' : 'main');
-    })();
-    return () => {
-      cancelled = true;
-    };
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void showCurrentWindow();
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
-  if (mode === 'loading') {
-    return null;
-  }
   if (mode === 'init') {
     return <InitSetupPage />;
   }
@@ -92,7 +86,10 @@ const root = createRoot(rootElement);
 void initializeI18n().finally(() => {
   root.render(
     <I18nextProvider i18n={i18n}>
-      <RootApp />
+      <CatalogProvider init={initCatalog()}>
+        <CatalogBootstrapLoader />
+        <RootApp />
+      </CatalogProvider>
     </I18nextProvider>,
   );
 });
