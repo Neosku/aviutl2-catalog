@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { loadMarkdown } from '@/utils/catalogClient';
-import { renderMarkdown } from '@/utils/markdown';
 import { isMarkdownFilePath, resolveMarkdownUrl } from '../../model/helpers';
 
 interface UsePackageMarkdownParams {
@@ -25,18 +24,21 @@ export default function usePackageMarkdown({ markdownSource, baseUrl, loadFailed
       return;
     }
 
-    if (!isMarkdownFilePath(source)) {
-      setHtml(renderMarkdown(source));
-      setError('');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    setLoading(isMarkdownFilePath(source));
     setError('');
 
     void (async () => {
+      const { renderMarkdown } = await import('@/utils/markdown');
+
       try {
+        if (!isMarkdownFilePath(source)) {
+          if (!cancelled) {
+            setHtml(renderMarkdown(source));
+            setLoading(false);
+          }
+          return;
+        }
+
         const markdownText = await loadMarkdown(source, baseUrl || '');
         const resolvedBaseUrl = resolveMarkdownUrl(source, baseUrl || '');
         if (!cancelled) {

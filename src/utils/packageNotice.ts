@@ -1,7 +1,6 @@
 import { i18n } from '@/i18n';
 import { loadDetailCatalog, loadMarkdown } from './catalogClient';
 import { resolveUrl } from './catalog-schema/utils/pathUtils';
-import { renderMarkdown } from './markdown';
 
 export interface PackageNoticeContent {
   title: string;
@@ -24,6 +23,7 @@ export async function loadPackageNoticeContent(packageId: string): Promise<Packa
   }
 
   const markdownText = await loadMarkdown(noticeSource, detailResult.baseUrls.detail);
+  const { renderMarkdown } = await import('./markdown');
   return {
     title: detailPackage?.packagePageUrl || normalizedId,
     html: renderMarkdown(markdownText, {

@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { renderMarkdown } from '@/utils/markdown';
 import { Alert } from '@/components/ui/Alert';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -30,7 +29,7 @@ export default function UpdateDialog({
   publishedOn,
 }: UpdateDialogProps) {
   const { t, i18n } = useTranslation('common');
-  const markdownHtml = useMemo(() => (notes ? renderMarkdown(notes) : ''), [notes]);
+  const [markdownHtml, setMarkdownHtml] = useState('');
   const markdownMarkup = useMemo(() => ({ __html: markdownHtml }), [markdownHtml]);
   const publishedOnLabel = useMemo(() => {
     if (!publishedOn) return '';
@@ -43,6 +42,26 @@ export default function UpdateDialog({
       return publishedOn;
     }
   }, [i18n.language, publishedOn]);
+
+  useEffect(() => {
+    if (!notes) {
+      setMarkdownHtml('');
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const { renderMarkdown } = await import('@/utils/markdown');
+      if (!cancelled) {
+        setMarkdownHtml(renderMarkdown(notes));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notes]);
+
   if (!open) return null;
 
   const handleBackdrop = () => {

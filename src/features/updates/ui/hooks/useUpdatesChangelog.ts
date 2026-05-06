@@ -50,7 +50,7 @@ export default function useUpdatesChangelog(items: UpdatesItem[]) {
       void (async () => {
         try {
           const markdown = await loadMarkdown(source, '');
-          const html = buildRelevantChangelogHtml(item, markdown, source);
+          const html = await buildRelevantChangelogHtml(item, markdown, source);
           if (cancelled) return;
           setEntries((prev) => ({
             ...prev,

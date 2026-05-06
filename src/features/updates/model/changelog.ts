@@ -1,10 +1,14 @@
-import { renderMarkdown } from '@/utils/markdown';
 import type { UpdatesItem } from './types';
 
 const VERSION_HEADING_RE = /^##\s+([^\s#]+).*$/gm;
 
-export function buildRelevantChangelogHtml(item: UpdatesItem, markdown: string, sourceUrl: string): string {
+export async function buildRelevantChangelogHtml(
+  item: UpdatesItem,
+  markdown: string,
+  sourceUrl: string,
+): Promise<string> {
   const slicedMarkdown = sliceRelevantChangelogMarkdown(item, markdown);
+  const { renderMarkdown } = await import('@/utils/markdown');
   return renderMarkdown(slicedMarkdown, { baseUrl: sourceUrl });
 }
 

@@ -2,7 +2,6 @@
  * Markdown プレビュー
  */
 import { useDeferredValue, useEffect, useState } from 'react';
-import { renderMarkdown } from '@/utils/markdown';
 import type { RegisterMarkdownTab } from '../types';
 
 export default function useMarkdownPreview(markdownText: string, tab: RegisterMarkdownTab) {
@@ -20,7 +19,12 @@ export default function useMarkdownPreview(markdownText: string, tab: RegisterMa
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const run = () => {
       if (cancelled) return;
-      setPreviewHtml(renderMarkdown(text));
+      void (async () => {
+        const { renderMarkdown } = await import('@/utils/markdown');
+        if (!cancelled) {
+          setPreviewHtml(renderMarkdown(text));
+        }
+      })();
     };
     // Defer rendering so typing stays responsive for long Markdown bodies.
     if (typeof requestIdleCallback === 'function') {
