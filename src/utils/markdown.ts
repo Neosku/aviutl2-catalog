@@ -6,6 +6,12 @@ import { resolveGithubLink } from './markdown-plugins/githubLink';
 import { alertBlock } from './markdown-plugins/alertBlock';
 import { detailsBlock } from './markdown-plugins/detailsBlock';
 import { fixImageUrl } from './markdown-plugins/fixImageUrl';
+// eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-colors-light.css';
+// eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-colors-dark-media.css';
+// eslint-disable-next-line import/no-unassigned-import
+import 'markdown-it-github-alerts/styles/github-base.css';
 
 const md = createMarkdownExit({
   html: true,

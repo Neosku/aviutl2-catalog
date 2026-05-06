@@ -13,12 +13,6 @@ import TitleBar from '@/layouts/app-shell/title-bar/TitleBar';
 import { CatalogProvider, useCatalogDispatch, initCatalog } from '@/utils/catalogStore';
 // eslint-disable-next-line import/no-unassigned-import
 import '@/styles/index.css';
-// eslint-disable-next-line import/no-unassigned-import
-import 'markdown-it-github-alerts/styles/github-colors-light.css';
-// eslint-disable-next-line import/no-unassigned-import
-import 'markdown-it-github-alerts/styles/github-colors-dark-media.css';
-// eslint-disable-next-line import/no-unassigned-import
-import 'markdown-it-github-alerts/styles/github-base.css';
 
 applyBootThemeInitClass();
 

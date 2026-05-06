@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getSettings } from '@/utils/settings';
-import { defaultNS, namespaces, resources } from './resources';
+import { defaultNS, loadLocaleResources, namespaces } from './resources';
 import { normalizeUiLocale, SUPPORTED_UI_LOCALES, type SupportedUiLocale } from './uiLocale';
 type I18nLanguageSource = Pick<typeof i18n, 'resolvedLanguage' | 'language'>;
 
@@ -14,8 +14,18 @@ export function getCurrentUiLocale(source: I18nLanguageSource = i18n): Supported
   return normalizeUiLocale(source.resolvedLanguage ?? source.language);
 }
 
+async function ensureLocaleResources(locale: SupportedUiLocale): Promise<void> {
+  if (namespaces.every((namespace) => i18n.hasResourceBundle(locale, namespace))) return;
+
+  const localeResources = await loadLocaleResources(locale);
+  namespaces.forEach((namespace) => {
+    i18n.addResourceBundle(locale, namespace, localeResources[namespace], true, true);
+  });
+}
+
 export async function changeUiLocale(locale: SupportedUiLocale): Promise<void> {
   if (getCurrentUiLocale(i18n) === locale) return;
+  await ensureLocaleResources(locale);
   // eslint-disable-next-line import/no-named-as-default-member
   await i18n.changeLanguage(locale);
   applyDocumentLanguage(locale);
@@ -40,10 +50,15 @@ export async function initializeI18n(): Promise<typeof i18n> {
     settingsLocale = (await getSettings()).locale ?? '';
   } catch {}
 
+  const initialLanguage = resolveInitialLanguage(settingsLocale);
+  const initialResources = await loadLocaleResources(initialLanguage);
+
   // eslint-disable-next-line import/no-named-as-default-member
   await i18n.use(initReactI18next).init({
-    resources,
-    lng: resolveInitialLanguage(settingsLocale),
+    resources: {
+      [initialLanguage]: initialResources,
+    },
+    lng: initialLanguage,
     fallbackLng: 'ja',
     supportedLngs: [...SUPPORTED_UI_LOCALES],
     load: 'currentOnly',
