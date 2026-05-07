@@ -34,7 +34,7 @@ enum HashCacheRoot {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct HashCacheEntry {
-    xxh3_128: String,
+    xxh128: String,
     mtime_ms: u128,
     size: u64,
 }
@@ -44,15 +44,15 @@ pub struct VersionFileInput {
     #[serde(default)]
     path: String,
     #[serde(default, alias = "XXH3_128")]
-    xxh3_128: String,
+    xxh128: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct VersionEntryInput {
     #[serde(default)]
     version: String,
-    #[serde(default)]
-    file: Vec<VersionFileInput>,
+    #[serde(default, alias = "file")]
+    files: Vec<VersionFileInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -145,7 +145,7 @@ fn collect_unique_paths(_app: &tauri::AppHandle, list: &[VersionItemInput]) -> R
     let mut unique_paths = HashSet::new();
     for it in list {
         for ver in &it.versions {
-            for f in &ver.file {
+            for f in &ver.files {
                 let raw = f.path.as_str();
                 let expanded = expand_macros(raw).replace('/', "\\");
                 if !is_abs(&expanded) {
@@ -169,9 +169,9 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &HashSet<std::pat
             if let Some(entry) = disk_cache.get(path)
                 && entry.mtime_ms == mtime_ms
                 && entry.size == size
-                && entry.xxh3_128.len() == 32
+                && entry.xxh128.len() == 32
             {
-                file_hash_cache.insert(path.clone(), entry.xxh3_128.clone());
+                file_hash_cache.insert(path.clone(), entry.xxh128.clone());
                 continue;
             }
             to_hash.push(path.clone());
@@ -191,7 +191,7 @@ fn build_file_hash_cache(app: &tauri::AppHandle, unique_paths: &HashSet<std::pat
     file_hash_cache.extend(hashed_paths);
     for (k, hex) in &file_hash_cache {
         if let Some((mtime_ms, size)) = stat_file(k) {
-            disk_cache.insert(k.clone(), HashCacheEntry { xxh3_128: hex.clone(), mtime_ms, size });
+            disk_cache.insert(k.clone(), HashCacheEntry { xxh128: hex.clone(), mtime_ms, size });
         }
     }
     write_hash_cache(app, &disk_cache);
@@ -211,16 +211,16 @@ fn determine_versions(_app: &tauri::AppHandle, list: &[VersionItemInput], file_h
         let mut any_present = false;
         let mut any_mismatch = false;
         for ver in it.versions.iter().rev() {
-            if ver.file.is_empty() {
+            if ver.files.is_empty() {
                 continue;
             }
             let mut ok = true;
-            for f in &ver.file {
+            for f in &ver.files {
                 let raw = f.path.as_str();
                 let expanded = expand_macros(raw).replace('/', "\\");
                 let key = std::path::PathBuf::from(expanded);
                 let found_hex = file_hash_cache.get(&key).cloned().unwrap_or_default();
-                let want_hex = f.xxh3_128.as_str();
+                let want_hex = f.xxh128.as_str();
                 if !found_hex.is_empty() {
                     any_present = true;
                 }

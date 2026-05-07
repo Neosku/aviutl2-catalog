@@ -8,8 +8,8 @@
     "developer": "維護者",
     "dataManagement": "資料管理",
     "appInfo": "應用資訊"
-    },
-    "app": {
+  },
+  "app": {
     "aviutl2Root": {
       "label": "AviUtl2 資料夾",
       "description": "請選擇包含 aviutl2.exe 的資料夾。",

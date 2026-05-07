@@ -441,9 +441,5 @@ fn resolve_aviutl_root(raw: &str) -> PathBuf {
 #[tauri::command]
 pub fn resolve_aviutl2_root(raw: String) -> Result<String, String> {
     let resolved = resolve_aviutl_root(&raw);
-    if resolved.as_os_str().is_empty() {
-        Err(common_message_current("backend.errors.aviutlFolderRequired"))
-    } else {
-        Ok(pathbuf_to_string(&resolved))
-    }
+    if resolved.as_os_str().is_empty() { Err(common_message_current("backend.errors.aviutlFolderRequired")) } else { Ok(pathbuf_to_string(&resolved)) }
 }

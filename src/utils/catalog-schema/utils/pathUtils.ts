@@ -69,7 +69,9 @@ export function resolvePathOrUrl(basePathOrUrl: string, relativePathOrUrl: strin
   if (!basePathOrUrl || isWindowsAbsolutePath(relativePathOrUrl)) {
     return relativePathOrUrl;
   }
-  return isUrlLike(basePathOrUrl) ? resolveUrl(basePathOrUrl, relativePathOrUrl) : joinPath(basePathOrUrl, relativePathOrUrl);
+  return isUrlLike(basePathOrUrl)
+    ? resolveUrl(basePathOrUrl, relativePathOrUrl)
+    : joinPath(basePathOrUrl, relativePathOrUrl);
 }
 
 export function resolveLocalAssetBasePath(path: string): string {
