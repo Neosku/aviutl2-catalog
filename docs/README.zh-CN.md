@@ -144,7 +144,8 @@ winget install --id Neosku.AviUtl2-Catalog -e
 
 ## 翻译协力
 
-- 中文翻译：@nsYW
+- 英语翻译：[@TheFearlessDeath500](https://github.com/TheFearlessDeath500)
+- 中文（简体）翻译：[@nsYW](https://github.com/nsYW)
 
 ---
 

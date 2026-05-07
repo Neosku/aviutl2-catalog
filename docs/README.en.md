@@ -144,7 +144,8 @@ When you launch the app, a message appears if an update is available. You can up
 
 ## Translation Credits
 
-- Chinese translation: @nsYW
+- English translation: [@TheFearlessDeath500](https://github.com/TheFearlessDeath500)
+- Chinese (Simplified) translation: [@nsYW](https://github.com/nsYW)
 
 ---
 
