@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import aviutl2Icon from '../../../src-tauri/icons/aviutl2.png';
 import type { SidebarButtonVariant, SidebarIconProps, SidebarIconType } from './components/SidebarButton';
-import type { ActivePage } from './types';
+import { type ActivePage, HOME_LIST_RESTORE_STATE } from './types';
 
 type SidebarRoutePage = Exclude<ActivePage, '' | 'package'>;
 type SidebarRouteMatchMode = 'exact' | 'prefix';
@@ -264,10 +264,10 @@ export function resolveAppShellActivePage(pathname: string): ActivePage {
 }
 
 export function createSidebarRouteActionHandlers(
-  navigate: (path: string) => void,
+  navigate: (path: string, options?: { state?: unknown }) => void,
 ): Pick<SidebarActionHandlers, SidebarRouteActionId> {
   return {
-    home: () => navigate(homeSidebarItem.path),
+    home: () => navigate(homeSidebarItem.path, { state: HOME_LIST_RESTORE_STATE }),
     links: () => navigate(linksSidebarItem.path),
     updates: () => navigate(updatesSidebarItem.path),
     'niconi-commons': () => navigate(niconiCommonsSidebarItem.path),
