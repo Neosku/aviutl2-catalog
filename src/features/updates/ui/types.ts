@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { BulkUpdateProgress, ItemUpdateProgressMap, UpdatesItem } from '../model/types';
+import type { UpdatesChangelogEntry } from './hooks/useUpdatesChangelog';
 
 export interface UpdatesHeaderSectionProps {
   bulkUpdating: boolean;
@@ -21,6 +22,7 @@ export interface UpdatesTableSectionProps {
   bulkUpdating: boolean;
   pausedPackageIds: ReadonlySet<string>;
   pauseBusyIds: ReadonlySet<string>;
+  changelogEntries: Record<string, UpdatesChangelogEntry>;
   onUpdate: (item: UpdatesItem) => void;
   onTogglePause: (item: UpdatesItem, paused: boolean) => void;
 }

@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { loadMarkdown } from '@/utils/catalogClient';
 import type { UpdatesItem } from '../../model/types';
-import { buildRelevantChangelogHtml } from '../../model/changelog';
+import { buildRelevantChangelogSections, type RenderedChangelogSection } from '../../model/changelog';
 
 export interface UpdatesChangelogEntry {
-  html: string;
-  loading: boolean;
-  error: string;
-  empty: boolean;
+  sections: RenderedChangelogSection[];
 }
 
 export default function useUpdatesChangelog(items: UpdatesItem[]) {
-  const { t } = useTranslation('updates');
   const [entries, setEntries] = useState<Record<string, UpdatesChangelogEntry>>({});
 
   const normalizedItems = useMemo(
@@ -37,7 +32,7 @@ export default function useUpdatesChangelog(items: UpdatesItem[]) {
       });
       normalizedItems.forEach((item) => {
         if (!next[item.id]) {
-          next[item.id] = { html: '', loading: true, error: '', empty: false };
+          next[item.id] = { sections: [] };
         }
       });
       return next;
@@ -50,15 +45,12 @@ export default function useUpdatesChangelog(items: UpdatesItem[]) {
       void (async () => {
         try {
           const markdown = await loadMarkdown(source, '');
-          const html = await buildRelevantChangelogHtml(item, markdown, source);
+          const sections = await buildRelevantChangelogSections(item, markdown, source);
           if (cancelled) return;
           setEntries((prev) => ({
             ...prev,
             [item.id]: {
-              html,
-              loading: false,
-              error: '',
-              empty: !html,
+              sections,
             },
           }));
         } catch {
@@ -66,10 +58,7 @@ export default function useUpdatesChangelog(items: UpdatesItem[]) {
           setEntries((prev) => ({
             ...prev,
             [item.id]: {
-              html: '',
-              loading: false,
-              error: t('changelog.loadFailed'),
-              empty: false,
+              sections: [],
             },
           }));
         }
@@ -79,7 +68,7 @@ export default function useUpdatesChangelog(items: UpdatesItem[]) {
     return () => {
       cancelled = true;
     };
-  }, [normalizedItems, t]);
+  }, [normalizedItems]);
 
   return entries;
 }

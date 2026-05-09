@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import ErrorDialog from '@/components/ErrorDialog';
 import useUpdatesPage from './hooks/useUpdatesPage';
 import useUpdatesChangelog from './hooks/useUpdatesChangelog';
-import { BulkProgressSection, UpdatesChangelogSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
+import { BulkProgressSection, UpdatesHeaderSection, UpdatesTableSection } from './sections';
 import { page, text } from '@/components/ui/_styles';
 import { cn } from '@/lib/cn';
 
@@ -40,7 +40,7 @@ export default function UpdatesPage() {
 
   return (
     <>
-      <div className={cn(page.container3xl, page.selectNone)}>
+      <div className={cn(page.container4xl, page.selectNone)}>
         <UpdatesHeaderSection
           bulkUpdating={bulkUpdating}
           hasAnyItemUpdating={hasAnyItemUpdating}
@@ -61,6 +61,7 @@ export default function UpdatesPage() {
             bulkUpdating={bulkUpdating || !pausedPackageUpdatesLoaded}
             pausedPackageIds={pausedPackageIdSet}
             pauseBusyIds={pauseBusyIdSet}
+            changelogEntries={changelogEntries}
             onUpdate={handleUpdate}
             onTogglePause={handleTogglePause}
           />
@@ -76,21 +77,12 @@ export default function UpdatesPage() {
               bulkUpdating={bulkUpdating}
               pausedPackageIds={pausedPackageIdSet}
               pauseBusyIds={pauseBusyIdSet}
+              changelogEntries={changelogEntries}
               onUpdate={handleUpdate}
               onTogglePause={handleTogglePause}
             />
           </div>
         ) : null}
-
-        <div className="mt-6">
-          <UpdatesChangelogSection
-            items={changelogItems}
-            changelogEntries={changelogEntries}
-            title={t('sections.changelog')}
-            emptyMessage={t('changelog.empty')}
-            loadingMessage={t('changelog.loading')}
-          />
-        </div>
       </div>
       <ErrorDialog open={Boolean(error)} message={error} onClose={() => setError('')} />
     </>
