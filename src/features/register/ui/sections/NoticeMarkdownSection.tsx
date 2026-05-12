@@ -3,18 +3,25 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import PackageNoticeModal from '@/components/PackageNoticeModal';
+import Button from '@/components/ui/Button';
+import { layout, surface, text } from '@/components/ui/_styles';
+import { renderMarkdown } from '@/utils/markdown';
 import type { RegisterNoticeMarkdownSectionProps } from '../types';
-import MarkdownEditPreviewPanel from '../components/MarkdownEditPreviewPanel';
-import useMarkdownPreview from '../hooks/useMarkdownPreview';
-import { surface, text } from '@/components/ui/_styles';
 
 export default function RegisterNoticeMarkdownSection({
   packageForm,
   onUpdatePackageField,
 }: RegisterNoticeMarkdownSectionProps) {
-  const { t } = useTranslation('register');
-  const [noticeTab, setNoticeTab] = useState<'edit' | 'preview'>('edit');
-  const noticePreviewHtml = useMarkdownPreview(packageForm.noticeText, noticeTab);
+  const { t } = useTranslation(['register', 'common']);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const hasNoticeText = Boolean(packageForm.noticeText.trim());
+
+  const openPreview = () => {
+    setPreviewHtml(renderMarkdown(packageForm.noticeText));
+    setPreviewOpen(true);
+  };
 
   return (
     <section className={surface.cardSection}>
@@ -22,25 +29,32 @@ export default function RegisterNoticeMarkdownSection({
         <h2 className={text.titleLg}>{t('noticeMarkdown.title')}</h2>
         <p className={text.bodySmMuted}>{t('noticeMarkdown.body')}</p>
       </div>
-      <MarkdownEditPreviewPanel
-        tab={noticeTab}
-        onTabChange={setNoticeTab}
-        previewHtml={noticePreviewHtml}
-        previewMaxHeightClassName="max-h-[320px]"
-        editContent={
-          <div>
-            <label className="sr-only" htmlFor="package-notice-text">
-              {t('noticeMarkdown.title')}
-            </label>
-            <textarea
-              id="package-notice-text"
-              className="min-h-[260px] w-full resize-y rounded-b-xl rounded-t-none border-0 bg-white p-4 font-mono text-sm leading-relaxed text-slate-900 shadow-none focus-visible:outline-none focus-visible:ring-0 dark:bg-slate-800 dark:text-slate-100"
-              value={packageForm.noticeText}
-              onChange={(e) => onUpdatePackageField('noticeText', e.target.value)}
-              placeholder={t('noticeMarkdown.placeholder')}
-            />
-          </div>
-        }
+
+      <div className={layout.rowBetweenWrapGap2}>
+        <label className={text.labelSm} htmlFor="package-notice-text">
+          {t('noticeMarkdown.title')}
+        </label>
+        <Button variant="muted" size="compact" type="button" onClick={openPreview} disabled={!hasNoticeText}>
+          {t('common:actions.preview')}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <textarea
+          id="package-notice-text"
+          className="min-h-[260px] font-mono text-sm leading-relaxed"
+          value={packageForm.noticeText}
+          onChange={(e) => onUpdatePackageField('noticeText', e.target.value)}
+          placeholder={t('noticeMarkdown.placeholder')}
+        />
+      </div>
+
+      <PackageNoticeModal
+        open={previewOpen}
+        title={packageForm.name || packageForm.id || t('noticeMarkdown.title')}
+        html={previewHtml}
+        onClose={() => setPreviewOpen(false)}
+        showConfirm={false}
       />
     </section>
   );

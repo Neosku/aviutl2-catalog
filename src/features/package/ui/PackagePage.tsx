@@ -43,6 +43,7 @@ export default function PackagePage() {
   const { items, loading } = useCatalog();
   const dispatch = useCatalogDispatch();
   const [openLicense, setOpenLicense] = useState<PackageLicenseEntry | null>(null);
+  const [detailNoticeOpen, setDetailNoticeOpen] = useState(false);
   const packageItems = items;
 
   const { detailSource, listLink } = useMemo(() => resolvePackageListState(location.search), [location.search]);
@@ -60,6 +61,7 @@ export default function PackagePage() {
     requestedLocale: i18n.resolvedLanguage || i18n.language,
   });
   const detailPackage = detailData.detailPackage;
+  const hasNoticeSource = Boolean(detailPackage?.notice?.markdownSource?.trim());
   const detailImageUrls = useMemo(() => {
     if (!detailPackage?.images?.detailImages?.length) {
       return [];
@@ -225,7 +227,6 @@ export default function PackagePage() {
           carouselImages={carouselImages}
           detailError={detailData.error}
           description={contentDescription}
-          notice={contentNotice}
           changelog={contentChangelog}
           relationSections={relationSections}
           relationsLoading={relationsLoading}
@@ -245,8 +246,11 @@ export default function PackagePage() {
           busyAction={actions.busyAction}
           isBusy={actions.isBusy}
           progress={actions.progressView}
+          hasNotice={hasNoticeSource}
+          noticeLoading={hasNoticeSource && (notice.loading || !contentNotice.html)}
           renderableLicenses={renderableLicenses}
           licenseTypesLabel={licenseTypesLabel}
+          onOpenNotice={() => setDetailNoticeOpen(true)}
           onOpenLicense={setOpenLicense}
           onDownload={actions.onDownload}
           onUpdate={actions.onUpdate}
@@ -255,6 +259,13 @@ export default function PackagePage() {
       </div>
 
       {openLicense ? <LicenseModal license={openLicense} onClose={() => setOpenLicense(null)} /> : null}
+      <PackageNoticeModal
+        open={detailNoticeOpen}
+        title={item.name || item.id}
+        html={contentNotice.html}
+        onClose={() => setDetailNoticeOpen(false)}
+        showConfirm={false}
+      />
       <PackageNoticeModal
         open={actions.noticeModal.open}
         title={actions.noticeModal.title}

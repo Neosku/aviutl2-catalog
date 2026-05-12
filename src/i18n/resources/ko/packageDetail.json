@@ -76,6 +76,8 @@
     "packagePage": "패키지 페이지 열기",
     "versionUnknown": "알 수 없음",
     "licenseUnknown": "알 수 없음",
+    "openNotice": "보기",
+    "openNoticeAria": "주의사항 보기",
     "openLicenseAria": "{{type}} 라이선스 텍스트 열기"
   },
   "relations": {

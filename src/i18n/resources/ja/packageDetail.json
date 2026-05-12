@@ -76,6 +76,8 @@
     "packagePage": "配布元ページを開く",
     "versionUnknown": "不明",
     "licenseUnknown": "不明",
+    "openNotice": "表示",
+    "openNoticeAria": "注意事項を表示",
     "openLicenseAria": "ライセンス {{type}} の本文を表示"
   },
   "relations": {

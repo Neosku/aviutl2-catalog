@@ -20,7 +20,6 @@ export default function PackageContentSection({
   carouselImages,
   detailError,
   description,
-  notice,
   changelog,
   relationSections,
   relationsLoading,
@@ -29,15 +28,13 @@ export default function PackageContentSection({
 }: PackageContentSectionProps) {
   const { t } = useTranslation('package');
   const descriptionMarkup = useMemo(() => ({ __html: description.html }), [description.html]);
-  const noticeMarkup = useMemo(() => ({ __html: notice.html }), [notice.html]);
   const changelogMarkup = useMemo(() => ({ __html: changelog.html }), [changelog.html]);
   const hasRelations = relationSections.length > 0 || relationsLoading || Boolean(relationsError);
   const descriptionRef = useRef<HTMLDivElement | null>(null);
-  const noticeRef = useRef<HTMLDivElement | null>(null);
   const changelogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const refs = [descriptionRef, noticeRef, changelogRef];
+    const refs = [descriptionRef, changelogRef];
     const cleanups = refs
       .map((ref) => {
         const element = ref.current;
@@ -60,7 +57,7 @@ export default function PackageContentSection({
     return () => {
       cleanups.forEach((cleanup) => cleanup?.());
     };
-  }, [changelog.html, description.html, notice.html, onOpenLink]);
+  }, [changelog.html, description.html, onOpenLink]);
 
   return (
     <div className="space-y-6">
@@ -117,26 +114,6 @@ export default function PackageContentSection({
           {description.error ? (
             <p className="error mt-3" role="alert">
               {description.error}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {notice.loading || notice.html || notice.error ? (
-        <section className={surface.cardSection}>
-          <h2 className={sectionTitleClass}>{t('content.notice')}</h2>
-          {notice.loading ? (
-            <p className={text.mutedSm}>{t('content.noticeLoading')}</p>
-          ) : (
-            <div
-              ref={noticeRef}
-              className="prose prose-slate max-w-none dark:prose-invert select-text"
-              dangerouslySetInnerHTML={noticeMarkup}
-            />
-          )}
-          {notice.error ? (
-            <p className="error mt-3" role="alert">
-              {notice.error}
             </p>
           ) : null}
         </section>

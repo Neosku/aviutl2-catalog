@@ -22,7 +22,6 @@ export interface PackageContentSectionProps {
   carouselImages: CarouselImage[];
   detailError: string;
   description: PackageMarkdownState;
-  notice: PackageMarkdownState;
   changelog: PackageMarkdownState;
   relationSections: PackageRelationSection[];
   relationsLoading: boolean;
@@ -43,8 +42,11 @@ export interface PackageSidebarSectionProps {
   busyAction: PackageInstallBusyAction;
   isBusy: boolean;
   progress: PackageProgressView;
+  hasNotice: boolean;
+  noticeLoading: boolean;
   renderableLicenses: PackageLicenseEntry[];
   licenseTypesLabel: string;
+  onOpenNotice: () => void;
   onOpenLicense: (license: PackageLicenseEntry) => void;
   onDownload: () => Promise<void>;
   onUpdate: () => Promise<void>;

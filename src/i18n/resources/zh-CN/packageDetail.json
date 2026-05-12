@@ -76,6 +76,8 @@
     "packagePage": "打开包页面",
     "versionUnknown": "未知",
     "licenseUnknown": "未知",
+    "openNotice": "查看",
+    "openNoticeAria": "查看注意事项",
     "openLicenseAria": "显示许可证 {{type}} 的正文"
   },
   "relations": {

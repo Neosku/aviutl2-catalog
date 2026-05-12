@@ -18,8 +18,11 @@ type PackageSidebarInfoCardProps = Pick<
   | 'latest'
   | 'originalAuthor'
   | 'packagePageUrl'
+  | 'hasNotice'
+  | 'noticeLoading'
   | 'renderableLicenses'
   | 'licenseTypesLabel'
+  | 'onOpenNotice'
   | 'onOpenLicense'
 >;
 
@@ -33,8 +36,11 @@ export default function PackageSidebarInfoCard({
   latest,
   originalAuthor,
   packagePageUrl,
+  hasNotice,
+  noticeLoading,
   renderableLicenses,
   licenseTypesLabel,
+  onOpenNotice,
   onOpenLicense,
 }: PackageSidebarInfoCardProps) {
   const { t } = useTranslation('package');
@@ -110,6 +116,23 @@ export default function PackageSidebarInfoCard({
         <span>{t('sidebar.latestVersion')}</span>
         <span className="text-slate-800 dark:text-slate-200">{latest}</span>
       </div>
+      {hasNotice ? (
+        <div className={cn(layout.rowBetween, text.bodySmMuted)}>
+          <span>{t('content.notice')}</span>
+          <Button
+            type="button"
+            variant={detailMetaChipVariant.variant}
+            size={detailMetaChipVariant.size}
+            radius={detailMetaChipVariant.radius}
+            className={detailMetaChipClassName}
+            onClick={onOpenNotice}
+            disabled={noticeLoading}
+            aria-label={t('sidebar.openNoticeAria')}
+          >
+            {noticeLoading ? t('content.noticeLoading') : t('sidebar.openNotice')}
+          </Button>
+        </div>
+      ) : null}
       {item.installed && installedVersionLabel ? (
         <div className={cn(layout.rowBetween, text.bodySmMuted)}>
           <span>{t('sidebar.currentVersion')}</span>

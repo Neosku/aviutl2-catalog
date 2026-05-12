@@ -8,11 +8,19 @@ interface PackageNoticeModalProps {
   open: boolean;
   title: string;
   html: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onClose: () => void;
+  showConfirm?: boolean;
 }
 
-export default function PackageNoticeModal({ open, title, html, onConfirm, onClose }: PackageNoticeModalProps) {
+export default function PackageNoticeModal({
+  open,
+  title,
+  html,
+  onConfirm,
+  onClose,
+  showConfirm = true,
+}: PackageNoticeModalProps) {
   const { t } = useTranslation(['package', 'common']);
   const htmlMarkup = useMemo(() => ({ __html: html }), [html]);
   if (!open) return null;
@@ -32,13 +40,15 @@ export default function PackageNoticeModal({ open, title, html, onConfirm, onClo
             dangerouslySetInnerHTML={htmlMarkup}
           />
         </div>
-        <div className={layout.footerEnd}>
+        <div className={cn(layout.footerEnd, 'flex-wrap gap-3')}>
           <Button type="button" variant="secondary" onClick={onClose}>
-            {t('package:noticeModal.cancel')}
+            {showConfirm ? t('package:noticeModal.cancel') : t('common:actions.close')}
           </Button>
-          <Button type="button" variant="primary" onClick={onConfirm}>
-            {t('package:noticeModal.continue')}
-          </Button>
+          {showConfirm ? (
+            <Button type="button" variant="primary" onClick={onConfirm}>
+              {t('package:noticeModal.continue')}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

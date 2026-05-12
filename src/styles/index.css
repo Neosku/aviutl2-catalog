@@ -606,6 +606,11 @@ body {
   border-radius: 0.75rem;
 }
 
+.prose :where(h1):not(:where(.not-prose, .not-prose *)) {
+  font-size: 1.625rem;
+  line-height: 2.125rem;
+}
+
 .markdown-badges {
   display: flex;
   flex-wrap: wrap;

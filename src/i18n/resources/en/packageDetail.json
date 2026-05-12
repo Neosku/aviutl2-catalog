@@ -76,6 +76,8 @@
     "packagePage": "Open package page",
     "versionUnknown": "Unknown",
     "licenseUnknown": "Unknown",
+    "openNotice": "View",
+    "openNoticeAria": "View notice",
     "openLicenseAria": "Open license text for {{type}}"
   },
   "relations": {

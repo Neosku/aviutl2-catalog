@@ -76,6 +76,8 @@
     "packagePage": "開啟套件頁面",
     "versionUnknown": "未知",
     "licenseUnknown": "未知",
+    "openNotice": "查看",
+    "openNoticeAria": "查看注意事項",
     "openLicenseAria": "開啟 {{type}} 的授權文字"
   },
   "relations": {
