@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { History } from 'lucide-react';
+import { History, Trash2 } from 'lucide-react';
+import DeprecatedPackageChip from '@/components/DeprecatedPackageChip';
 import ProgressCircle from '@/components/ProgressCircle';
 import PackageNameLink from '@/components/PackageNameLink';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +30,8 @@ const changelogToggleButtonClass = 'flex h-7 w-7 shrink-0 items-center justify-c
 const changelogToggleActiveClass = 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30';
 const changelogToggleInactiveClass =
   'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300';
+const removeActionButtonClass =
+  'inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-900/20';
 
 function UpdatesChangelogBody({ html }: { html: string }) {
   const markup = useMemo(() => ({ __html: html }), [html]);
@@ -65,6 +68,7 @@ export default function UpdatesTableSection({
   changelogEntries,
   onUpdate,
   onTogglePause,
+  onRemove,
 }: UpdatesTableSectionProps) {
   const { t } = useTranslation(['updates', 'package', 'common']);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
@@ -125,6 +129,7 @@ export default function UpdatesTableSection({
               {items.map((item) => {
                 const progress = itemProgress[item.id];
                 const paused = pausedPackageIds.has(item.id);
+                const deprecated = Boolean(item.deprecation);
                 const pauseBusy = pauseBusyIds.has(item.id);
                 const packageTypeLabel = resolvePackageTypeLabel(item.packageType, t, '?', item.typeLabel);
                 const installedVersionLabel =
@@ -169,6 +174,11 @@ export default function UpdatesTableSection({
                       </div>
                       <div className="min-w-0">
                         <PackageNameLink id={item.id} name={item.name} source="updates" />
+                        {deprecated ? (
+                          <div className="mt-1">
+                            <DeprecatedPackageChip message={item.deprecation?.message || ''} />
+                          </div>
+                        ) : null}
                       </div>
                       <div className={cellTruncateClass}>{item.author || '?'}</div>
                       <div className={cellTruncateClass}>{packageTypeLabel}</div>
@@ -189,7 +199,28 @@ export default function UpdatesTableSection({
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
-                            {paused ? (
+                            {deprecated ? (
+                              <>
+                                <button
+                                  className={table.actionButtonSubtle}
+                                  onClick={() => (paused ? onTogglePause(item, false) : onUpdate(item))}
+                                  disabled={bulkUpdating || pauseBusy}
+                                  type="button"
+                                >
+                                  {paused ? (pauseBusy ? t('table.saving') : t('table.resume')) : t('table.update')}
+                                </button>
+                                <button
+                                  className={removeActionButtonClass}
+                                  onClick={() => onRemove(item)}
+                                  disabled={bulkUpdating || pauseBusy}
+                                  title={t('package:actions.remove')}
+                                  aria-label={t('package:actions.remove')}
+                                  type="button"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            ) : paused ? (
                               <button
                                 className={table.actionButtonSubtle}
                                 onClick={() => onTogglePause(item, false)}

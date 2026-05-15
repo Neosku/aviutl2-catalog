@@ -26,6 +26,7 @@ export default function UpdatesPage() {
     handleBulkUpdate,
     handleUpdate,
     handleTogglePause,
+    handleRemove,
   } = useUpdatesPage();
 
   const progressStyle = useMemo(() => ({ width: `${bulkPercent}%` }), [bulkPercent]);
@@ -64,6 +65,7 @@ export default function UpdatesPage() {
             changelogEntries={changelogEntries}
             onUpdate={handleUpdate}
             onTogglePause={handleTogglePause}
+            onRemove={handleRemove}
           />
         </div>
 
@@ -80,6 +82,7 @@ export default function UpdatesPage() {
               changelogEntries={changelogEntries}
               onUpdate={handleUpdate}
               onTogglePause={handleTogglePause}
+              onRemove={handleRemove}
             />
           </div>
         ) : null}

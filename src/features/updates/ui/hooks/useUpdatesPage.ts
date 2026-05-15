@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCatalog, useCatalogDispatch } from '@/utils/catalogStore';
 import { resolveInstallableCatalogItem } from '@/utils/catalogInstallItem';
-import { runInstallerForItem } from '@/utils/installer';
+import { runInstallerForItem, runPackageRemoveAction } from '@/utils/installer';
 import { logError } from '@/utils/logging';
 import usePausedPackageUpdates from '@/utils/usePausedPackageUpdates';
 import { toErrorMessage, toProgressLabel, toProgressRatio } from '../../model/helpers';
@@ -86,7 +86,7 @@ function setRuntimeItemProgress(id: string, progress: ItemUpdateProgress | null)
 }
 
 export default function useUpdatesPage() {
-  const { t } = useTranslation(['updates', 'common']);
+  const { t } = useTranslation(['updates', 'common', 'package']);
   const { items } = useCatalog();
   const dispatch = useCatalogDispatch();
   const [bulkUpdating, setBulkUpdating] = useState(() => runtimeState.bulkUpdating);
@@ -263,6 +263,31 @@ export default function useUpdatesPage() {
     [pausedPackageUpdatesLoaded, t, togglePause],
   );
 
+  const handleRemove = useCallback(
+    async (item: UpdatesItem) => {
+      if (runtimeLocks.bulkUpdating || runtimeLocks.itemUpdatingIds.has(item.id)) return;
+      runtimeLocks.itemUpdatingIds.add(item.id);
+      patchRuntimeState({ error: '' });
+      setRuntimeItemProgress(item.id, { ratio: 0, label: t('package:actions.removing') });
+
+      try {
+        const resolvedItem = (await resolveInstallableCatalogItem(item)) ?? item;
+        await runPackageRemoveAction(resolvedItem, dispatch);
+      } catch (removeError) {
+        patchRuntimeState({
+          error: t('package:errors.actionFailed', {
+            action: t('package:actions.remove'),
+            detail: toErrorMessage(removeError),
+          }),
+        });
+      } finally {
+        runtimeLocks.itemUpdatingIds.delete(item.id);
+        setRuntimeItemProgress(item.id, null);
+      }
+    },
+    [dispatch, t],
+  );
+
   const bulkPercent = Math.round((bulkProgress?.ratio ?? 0) * 100);
   const hasAnyItemUpdating = useMemo(
     () => runtimeLocks.itemUpdatingIds.size > 0 || Object.keys(itemProgress).length > 0,
@@ -286,5 +311,6 @@ export default function useUpdatesPage() {
     handleBulkUpdate,
     handleUpdate,
     handleTogglePause,
+    handleRemove,
   };
 }

@@ -25,4 +25,5 @@ export interface UpdatesTableSectionProps {
   changelogEntries: Record<string, UpdatesChangelogEntry>;
   onUpdate: (item: UpdatesItem) => void;
   onTogglePause: (item: UpdatesItem, paused: boolean) => void;
+  onRemove: (item: UpdatesItem) => void;
 }
