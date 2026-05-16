@@ -139,6 +139,7 @@ pub fn run() {
             commands::version::detect_versions_map,
             commands::zstd::decompress_zstd_to_utf8,
             commands::logging::log_cmd,
+            commands::niconi_commons::write_niconi_commons_ids,
             commands::version::calc_xxh3_hex,
             commands::installed::get_installed_map_cmd,
             commands::installed::add_installed_id_cmd,

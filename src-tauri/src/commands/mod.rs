@@ -4,6 +4,7 @@ pub mod diagnostics;
 pub mod download;
 pub mod installed;
 pub mod logging;
+pub mod niconi_commons;
 pub mod system;
 pub mod version;
 pub mod zstd;

@@ -11,6 +11,7 @@ type InvokeIpcMap = {
   logCmd: CommandSpec<{ level: string; msg: string }, void>;
   collectDeviceInfo: CommandSpec<void, DeviceInfo>;
   setCatalogIndex: CommandSpec<{ items: unknown[] }, void>;
+  writeNiconiCommonsIds: CommandSpec<{ payload: unknown }, void>;
   getInstalledMapCmd: CommandSpec<void, unknown>;
   addInstalledIdCmd: CommandSpec<{ id: string; version: string }, void>;
   removeInstalledIdCmd: CommandSpec<{ id: string }, void>;

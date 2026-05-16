@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as tauriShell from '@tauri-apps/plugin-shell';
-import * as z from 'zod';
 import { useCatalog } from '@/utils/catalogStore';
+import { logError } from '@/utils/logging';
 import { normalize } from '@/utils/text';
+import { exportNiconiCommonsIdsFromSelectedItems } from '../../model/export';
+import {
+  buildDeselectedIds,
+  buildInitialSelectedMap,
+  buildSelectedNiconiCommonsIds,
+  isInstalledNiconiCommonsItem,
+  loadDeselectedNiconiCommonsIds,
+  saveDeselectedNiconiCommonsIds,
+} from '../../model/selection';
 import type { CopyState, EligibleItem, SelectedMap } from '../../model/types';
 
-const DESELECTED_IDS_STORAGE_KEY = 'niconiCommonsDeselectedIds';
 const EMPTY_COPY_STATE: CopyState = { ok: false, count: 0 };
 
 export default function useNiconiCommonsPage() {
@@ -19,9 +27,7 @@ export default function useNiconiCommonsPage() {
   const [copyState, setCopyState] = useState<CopyState>(EMPTY_COPY_STATE);
 
   const eligibleItems = useMemo((): EligibleItem[] => {
-    return items
-      .filter((item) => item && item.installed)
-      .filter((item): item is EligibleItem => Boolean(item.niconiCommonsId));
+    return items.filter(isInstalledNiconiCommonsItem);
   }, [items]);
 
   const sortedEligible = useMemo((): EligibleItem[] => {
@@ -47,29 +53,7 @@ export default function useNiconiCommonsPage() {
   }, [queryKey, sortedEligible]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const schema = z.array(z.string());
-    let deselectedIds: string[] = [];
-
-    try {
-      const raw = window.localStorage.getItem(DESELECTED_IDS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const result = schema.safeParse(parsed);
-        if (result.success) {
-          deselectedIds = result.data.filter(Boolean);
-        }
-      }
-    } catch {}
-
-    const deselectedSet = new Set(deselectedIds);
-    setSelectedMap(() => {
-      const next: Record<string, true> = {};
-      eligibleItems.forEach((item) => {
-        if (!deselectedSet.has(item.id)) next[item.id] = true;
-      });
-      return next;
-    });
+    setSelectedMap(() => buildInitialSelectedMap(eligibleItems, loadDeselectedNiconiCommonsIds()));
   }, [eligibleItems]);
 
   useEffect(() => {
@@ -78,15 +62,19 @@ export default function useNiconiCommonsPage() {
       skipPersistRef.current = false;
       return;
     }
+    const selectionInitialized = eligibleItems.every((item) =>
+      Object.prototype.hasOwnProperty.call(selectedMap, item.id),
+    );
+    if (!selectionInitialized) return;
 
-    const deselected = eligibleItems.filter((item) => !selectedMap[item.id]).map((item) => item.id);
-    try {
-      window.localStorage.setItem(DESELECTED_IDS_STORAGE_KEY, JSON.stringify(deselected));
-    } catch {}
+    saveDeselectedNiconiCommonsIds(buildDeselectedIds(eligibleItems, selectedMap));
+    void exportNiconiCommonsIdsFromSelectedItems(eligibleItems, selectedMap).catch((error: unknown) => {
+      void logError(`[niconi-commons] export failed: ${String(error)}`);
+    });
   }, [eligibleItems, selectedMap]);
 
   const selectedIds = useMemo(() => {
-    return eligibleItems.filter((item) => selectedMap[item.id]).map((item) => item.niconiCommonsId);
+    return buildSelectedNiconiCommonsIds(eligibleItems, selectedMap);
   }, [eligibleItems, selectedMap]);
 
   const selectedCount = selectedIds.length;

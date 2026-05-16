@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { i18n } from '@/i18n';
+import { exportNiconiCommonsIdsFromDetectedMap } from '@/features/niconi-commons/model/export';
 import { loadBootstrapCatalog } from '@/utils/catalogClient';
 import { buildCatalogBootstrapPackages, buildCatalogSearchIndexItems } from '@/utils/catalogBootstrapModel';
 import type { CatalogDispatch } from '@/utils/catalogStore';
@@ -12,6 +13,7 @@ import { getSettings } from '@/utils/settings';
 
 const PACKAGE_STATE_FLUSH_DELAY_MS = 8000;
 const PACKAGE_STATE_SNAPSHOT_DELAY_MS = 12000;
+const NICONI_COMMONS_EXPORT_DELAY_MS = 5000;
 
 async function logBootstrapError(message: string, error: unknown): Promise<void> {
   try {
@@ -119,6 +121,13 @@ export function useCatalogBootstrap(dispatch: CatalogDispatch): void {
                 'package-state snapshot failed',
                 async () => {
                   await maybeSendPackageStateSnapshot(detected);
+                },
+              );
+              scheduleDelayedBootstrapStep(
+                NICONI_COMMONS_EXPORT_DELAY_MS,
+                'niconi-commons id export failed',
+                async () => {
+                  await exportNiconiCommonsIdsFromDetectedMap(items, detected);
                 },
               );
             }
