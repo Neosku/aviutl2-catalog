@@ -114,16 +114,17 @@ pub fn common_message_current(key: &str) -> String {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Settings {
-    pub aviutl2_root: PathBuf,                   // AviUtl2 のルートディレクトリ
-    pub is_portable_mode: bool,                  // ポータブルモードかどうか
-    pub theme: String,                           // テーマ
-    pub locale: String,                          // UI ロケール
-    pub package_state_opt_out: bool,             // 匿名統計の送信を無効化
-    pub package_updates_paused_ids: Vec<String>, // 一時停止中のパッケージID一覧(UpdateCheckerの更新で使用予定)
-    pub local_mode_enabled: bool,                // ローカル配信カタログを読み込むメンテナー向けモード
-    pub local_manifest_path: PathBuf,            // メンテナー向けモードで読み込むローカルの manifest.json
-    pub app_version: String,                     // 本アプリのバージョン(UpdateCheckerの更新で使用)
-    pub catalog_exe_path: PathBuf,               // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
+    pub aviutl2_root: PathBuf,                        // AviUtl2 のルートディレクトリ
+    pub is_portable_mode: bool,                       // ポータブルモードかどうか
+    pub theme: String,                                // テーマ
+    pub locale: String,                               // UI ロケール
+    pub package_state_opt_out: bool,                  // 匿名統計の送信を無効化
+    pub package_updates_paused_ids: Vec<String>,      // 一時停止中のパッケージID一覧(UpdateCheckerの更新で使用予定)
+    pub deprecated_notice_dismissed_ids: Vec<String>, // 非推奨パッケージ通知を非表示にしたパッケージID一覧
+    pub local_mode_enabled: bool,                     // ローカル配信カタログを読み込むメンテナー向けモード
+    pub local_manifest_path: PathBuf,                 // メンテナー向けモードで読み込むローカルの manifest.json
+    pub app_version: String,                          // 本アプリのバージョン(UpdateCheckerの更新で使用)
+    pub catalog_exe_path: PathBuf,                    // 本ソフトの実行ファイルのパス(UpdateCheckerで使用))
 }
 
 // アプリケーションで使用するディレクトリ一覧
@@ -417,6 +418,26 @@ pub async fn set_package_update_paused(app: AppHandle, package_id: String, pause
     settings.package_updates_paused_ids.dedup();
     settings.save_to_file(&settings_path).map_err(|e| e.to_string())?;
     Ok(settings.package_updates_paused_ids)
+}
+
+#[tauri::command]
+pub async fn dismiss_deprecated_package_notice(app: AppHandle, package_ids: Vec<String>) -> Result<Vec<String>, String> {
+    let normalized_ids: Vec<String> = package_ids.into_iter().map(|id| id.trim().to_string()).filter(|id| !id.is_empty()).collect();
+    if normalized_ids.is_empty() {
+        return Err(common_message_current("backend.errors.packageIdEmpty"));
+    }
+
+    let catalog_config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&catalog_config_dir).map_err(|e| e.to_string())?;
+    let settings_path = catalog_config_dir.join("settings.json");
+    let _settings_guard = SETTINGS_FILE_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut settings = Settings::load_from_file(&settings_path);
+    settings.deprecated_notice_dismissed_ids.retain(|id| !id.trim().is_empty());
+    settings.deprecated_notice_dismissed_ids.extend(normalized_ids);
+    settings.deprecated_notice_dismissed_ids.sort_unstable();
+    settings.deprecated_notice_dismissed_ids.dedup();
+    settings.save_to_file(&settings_path).map_err(|e| e.to_string())?;
+    Ok(settings.deprecated_notice_dismissed_ids)
 }
 
 // aviutl2_rootの初期値を返す

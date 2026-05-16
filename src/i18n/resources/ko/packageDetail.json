@@ -18,6 +18,11 @@
     "next": "다음 이미지",
     "slide": "슬라이드 {{current}}/{{total}}"
   },
+  "deprecationDialog": {
+    "title": "지원 종료 패키지",
+    "description": "다음 패키지는 현재 지원 종료 상태입니다.\n지원 종료된 이유를 확인한 뒤 필요에 따라 제거하세요.",
+    "dismissNextTime": "다시 알리지 않기"
+  },
   "content": {
     "screenshots": "스크린샷",
     "deprecated": "지원 종료",

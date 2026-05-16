@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import RouterFallback from '@/components/RouterFallback';
 import DeepLinkHandler from '@/features/deep-link/ui/DeepLinkHandler';
+import DeprecatedPackagesDialog from '@/features/deprecation/DeprecatedPackagesDialog';
 import AppShell from '@/layouts/app-shell/AppShell';
 import { APP_ROUTE_PATHS } from '@/routePaths';
 import Home from '@/features/home/ui/HomePage';
@@ -22,6 +23,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <DeepLinkHandler />
+      <DeprecatedPackagesDialog />
       <Suspense fallback={<div className="p-6">{t('router.loading')}</div>}>
         <Routes>
           <Route element={<AppShell />}>

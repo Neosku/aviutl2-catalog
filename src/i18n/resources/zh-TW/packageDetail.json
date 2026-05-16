@@ -18,6 +18,11 @@
     "next": "下一張圖片",
     "slide": "第 {{current}}/{{total}} 張"
   },
+  "deprecationDialog": {
+    "title": "已棄用套件",
+    "description": "以下套件目前已棄用。\n請查看棄用原因，並視需要解除安裝。",
+    "dismissNextTime": "不再通知"
+  },
   "content": {
     "screenshots": "截圖",
     "deprecated": "已棄用",

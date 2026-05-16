@@ -18,6 +18,11 @@
     "next": "次の画像へ",
     "slide": "スライド {{current}}/{{total}}"
   },
+  "deprecationDialog": {
+    "title": "非推奨パッケージ",
+    "description": "以下のパッケージは現在非推奨です。\n非推奨となった理由をご確認のうえ、必要に応じてアンインストールしてください。",
+    "dismissNextTime": "再通知しない"
+  },
   "content": {
     "screenshots": "スクリーンショット",
     "deprecated": "非推奨",

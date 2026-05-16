@@ -18,6 +18,11 @@
     "next": "Next image",
     "slide": "Slide {{current}}/{{total}}"
   },
+  "deprecationDialog": {
+    "title": "Deprecated packages",
+    "description": "The following packages are currently deprecated.\nReview why they were deprecated and uninstall them if needed.",
+    "dismissNextTime": "Don't notify again"
+  },
   "content": {
     "screenshots": "Screenshots",
     "deprecated": "Deprecated",

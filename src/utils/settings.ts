@@ -11,6 +11,7 @@ const settingsFileSchema = z.object({
   is_portable_mode: z.boolean().optional(),
   package_state_opt_out: z.boolean().optional(),
   package_updates_paused_ids: z.array(z.string()).optional(),
+  deprecated_notice_dismissed_ids: z.array(z.string()).optional(),
   local_mode_enabled: z.boolean().optional(),
   local_manifest_path: z.string().optional(),
 });

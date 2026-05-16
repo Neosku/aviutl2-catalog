@@ -40,7 +40,7 @@ export default function PackageNoticeModal({
             dangerouslySetInnerHTML={htmlMarkup}
           />
         </div>
-        <div className={cn(layout.footerEnd, 'flex-wrap gap-3')}>
+        <div className={layout.footerEnd}>
           <Button type="button" variant="secondary" onClick={onClose}>
             {showConfirm ? t('package:noticeModal.cancel') : t('common:actions.close')}
           </Button>

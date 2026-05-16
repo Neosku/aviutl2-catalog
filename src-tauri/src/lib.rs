@@ -157,6 +157,7 @@ pub fn run() {
             paths::complete_initial_setup,
             paths::update_settings,
             paths::set_package_update_paused,
+            paths::dismiss_deprecated_package_notice,
             paths::default_aviutl2_root,
             paths::resolve_aviutl2_root,
             paths::get_app_dirs,

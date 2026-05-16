@@ -70,7 +70,7 @@ export const layout = {
     'flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50',
   pulseXs: 'animate-pulse text-xs text-slate-500',
   headerInlineStrong: 'mb-1 flex items-center gap-2 font-semibold',
-  footerEnd: 'flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800',
+  footerEnd: 'flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800',
 } as const;
 
 export const grid = {
